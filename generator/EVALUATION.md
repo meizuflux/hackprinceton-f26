@@ -2,6 +2,8 @@
 
 Baseline reviewed November 14, 2026, on `generator-refinement` at `8b5107d`, before any generator refinement.
 
+The pins this baseline calls `generator/requirements.txt` now live in the PEP 723 block of `generator/generate.py`. The findings below still describe the committed case.
+
 Method: read every module under `generator/`, then checked the committed Kestrel documents against the logs, allele table, manifest, calendar, and ZIP they describe. A second pass read every shipped `.txt` and `.eml` and spot-checked the rows those sentences depend on. Answer-key tags were used only to separate intentional contradictions from generator bugs. The answer key was not written into the tree. `make data-verify` was not run: this machine does not have the pinned Pillow/numpy stack. The ZIP platform split below was reproduced with the stdlib.
 
 This is a baseline, not a post-change score. Intentional lies (the Saturday alibis, the "alone" claim, Ortega's "around 11:30", the staff pointing at Raman and Bellini) are not defects.
