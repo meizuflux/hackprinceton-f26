@@ -1,0 +1,2 @@
+# Generated case data is hashed byte for byte (make data-verify); never convert line endings.
+cases/** -text
