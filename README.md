@@ -9,9 +9,8 @@ This repository currently contains a mocked frontend only. Case data is fictiona
 Requires Bun 1.4.4. From the repository root:
 
 ```sh
-cd frontend
-make install
-make dev
+make frontend-install
+make frontend-dev
 ```
 
 Open [http://localhost:5173](http://localhost:5173). The frontend documentation has the full demo path and additional commands in [frontend/README.md](frontend/README.md).
@@ -19,8 +18,8 @@ Open [http://localhost:5173](http://localhost:5173). The frontend documentation 
 Run tests and build the production bundle from the repository root:
 
 ```sh
-make -C frontend test
-make -C frontend build
+make frontend-test
+make frontend-build
 ```
 
 ## Run with Docker Compose

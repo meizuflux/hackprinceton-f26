@@ -25,7 +25,7 @@
 
 - Keep `AGENTS.md` at the repository root. All frontend application files, dependencies, build outputs, and frontend documentation live in `frontend/`.
 - Run Bun commands from `frontend/`. Root-level orchestration may reference that directory.
-- `frontend/Makefile` provides local install/dev/build/test/preview/format commands. `compose.yaml` at the root builds only the frontend, serving the production bundle through nginx on `127.0.0.1:5173`; rebuild the image after source changes.
+- The root `Makefile` provides `frontend-install`, `frontend-dev`, `frontend-build`, `frontend-test`, `frontend-preview`, and `frontend-format`. Run Make from the repository root; recipes enter `frontend/` automatically. Do not add a nested frontend Makefile. `compose.yaml` at the root builds only the frontend, serving the production bundle through nginx on `127.0.0.1:5173`; rebuild the image after source changes.
 - Use Bun 1.4.4 for frontend dependencies and script execution. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Use `bun run --bun test` to run the Vitest suite (not the separate `bun test` runner). Docker uses the same pinned Bun build image.
 
 ## Specification change approval
