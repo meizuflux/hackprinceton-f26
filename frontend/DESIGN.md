@@ -158,4 +158,4 @@ The inspector docks within the workspace and presents original sources first. So
 - **Don't** imply that illustrative scores or placeholder hashes are computed results.
 - **Don't** rely on the remote font request without the declared system fallbacks.
 
-The board texture is `src/assets/paper.webp`, a generated material asset with its exact prompt in the adjacent JSON sidecar. Blend it softly into `#eee8de` so texture stays subordinate to the evidence. Preserve the surrounding dark interface.
+The board texture is `src/assets/paper.webp`, a generated material asset with its exact prompt in the adjacent JSON sidecar. Show it beneath a flat 50% `#eee8de` overlay: visible paper fibers without competing with the evidence. Preserve the surrounding dark interface.

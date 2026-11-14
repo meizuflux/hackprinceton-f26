@@ -31,4 +31,4 @@ FORM: seed: none (pinned). User: “the pin board is the full background and eve
 
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
 
-REFINEMENT: The user found the first treatment too busy. Keep one ivory card color, nearly flat paper grain, compact 248 × 224px cards, and quiet unboxed relationship labels. Keep Claim and Inference labels visible; reveal their wording on hover, focus, or selection.
+REFINEMENT: The user found the first treatment too busy, then found the softened paper too faint. Keep one ivory card color, visible paper grain beneath a flat 50% warm overlay, compact 248 × 224px cards, and quiet unboxed relationship labels. Keep Claim and Inference labels visible; reveal their wording on hover, focus, or selection.
