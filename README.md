@@ -5,7 +5,12 @@ Compstat is a prototype for an inspectable investigative evidence board. It pres
 This repository contains:
 - **Frontend:** a mocked evidence board. Its case data is fictional and disposable, and ZIP selection runs a simulated flow that does not read ZIP contents.
 - **Case generator:** deterministically builds a synthetic evidence case.
-- **Backend ingestion pipeline:** turns a case ZIP into a traceable SQLite database. The backend is authoritative for case data. It isn't connected to the frontend yet, and the ML, graph and reasoning stages aren't built.
+- **Python backend:**
+  - **Ingestion:** turns a case ZIP into a traceable SQLite database.
+  - **Reasoning:** builds the timeline, connections, contradictions, competing explanations, typed gaps, ranked next steps and cited insights. An optional LangChain deep-agent investigator can add more.
+  - **API:** a FastAPI service.
+
+  The backend is authoritative for case data. The frontend still uses its mock adapter until it is switched to the API.
 
 ## Run locally
 
@@ -68,7 +73,14 @@ make backend-test
 make backend-ingest-kestrel
 ```
 
-On the Kestrel case, all 57 files parse into 5,609 records and all 56 manifest hashes match. Output goes to `backend/runs/kestrel/`. Add `PYTHON=python` where needed.
+Then analyse and serve:
+
+```sh
+make backend-analyze-kestrel
+make backend-serve
+```
+
+On the Kestrel case, all 57 files parse and all 56 manifest hashes match. The analysis identifies the key event, the competing explanations, contradictions, typed gaps and ranked next steps, all cited. Output goes to `backend/runs/kestrel/`. Add `PYTHON=python` where needed.
 
 ## Project docs
 

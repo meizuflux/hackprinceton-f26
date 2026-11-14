@@ -1,0 +1,193 @@
+"""Adapter from analysis results to the investigation board.
+
+Produces the frontend's `CaseData` shape (frontend/src/api/types.ts) plus extra fields the board can use
+as it grows: certainty (observed vs inferred), contradictions, explanations, timeline, uncertain times,
+missing periods, source groups, changes and overrides. The backend is authoritative: the frontend adapts
+to these fields.
+"""
+
+from __future__ import annotations
+
+import math
+
+from .store import iso
+
+NODE_TYPE = {"person": "person", "phone": "device", "email": "device", "device": "device", "account": "device",
+             "sample": "device"}
+COLUMNS = {"event": 0, "person": 1, "device": 2, "location": 3, "statement": 4}
+
+
+def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) -> dict:
+    sources: dict[str, dict] = {}
+
+    def src(c: dict) -> str:
+        cid = c["id"]
+        if cid not in sources:
+            r = case.records.get(c["record_id"])
+            f = case.files[r.file_id] if r else {}
+            meta = {"evidence_id": c["evidence_id"], "locator": c["locator"], "record_type": r.type if r else "",
+                    "reliability": r.reliability if r else "", "file_type": f.get("evidence_type") or "",
+                    "time_precision": r.precision if r else "", "time_flags": ", ".join(r.flags) if r else "",
+                    "who": ", ".join(case.name(p) for p, _, _ in ctx.persons_for(r)) if r else ""}
+            sources[cid] = {"id": cid, "path": c["path"], "kind": r.type if r else "file",
+                            "timestamp": iso(r.ts or r.start) if r and (r.ts or r.start) else "",
+                            "hash": c["sha256"], "excerpt": (r.content if r else "")[:1200],
+                            "metadata": {k: str(v) for k, v in meta.items() if v not in (None, "")}}
+        return cid
+
+    def cites(item_or_list) -> list[str]:
+        lst = item_or_list.citations if hasattr(item_or_list, "citations") else item_or_list
+        return list(dict.fromkeys(src(c) for c in lst))
+
+    nodes: dict[str, dict] = {}
+    edges: dict[str, dict] = {}
+
+    def node(nid, ntype, label, citations, summary="", subtitle="", time=None, certainty="observed", extra=None):
+        if nid not in nodes:
+            nodes[nid] = {"id": nid, "type": ntype, "label": label[:60], "citations": citations, "position": {"x": 0, "y": 0},
+                          "summary": summary[:400], "subtitle": subtitle[:80], "certainty": certainty, **(extra or {})}
+            if time:
+                nodes[nid]["time"] = time
+        else:
+            nodes[nid]["citations"] = list(dict.fromkeys(nodes[nid]["citations"] + citations))[:12]
+        return nid
+
+    def ent_node(eid):
+        t = NODE_TYPE.get(case.etype(eid), "device")
+        return node(f"ent-{eid}", t, case.name(eid), [], subtitle=case.etype(eid))
+
+    def edge(a, b, etype, label, citations, certainty, basis=""):
+        eid = f"{etype}:{a}:{b}"
+        if eid not in edges and a in nodes and b in nodes and a != b:
+            edges[eid] = {"id": eid, "source": a, "target": b, "type": etype, "label": label[:60],
+                          "citations": citations[:8], "certainty": certainty, "basis": basis[:200]}
+
+    # key events and the places/people in them
+    for ep in R.get("episode"):
+        en = node(f"ev-{ep.key}", "event", ep.title, cites(ep), ep.text, "key event", ep.data["start"], "observed",
+                  {"key": ep.key, "score": ep.score})
+        for pl in ep.data.get("places", [])[:4]:
+            ln = node(f"loc-{pl}", "location", pl, [], subtitle="place")
+            recs = [r for r in ep.data["record_ids"] if case.records[r].place == pl][:3]
+            edge(en, ln, "spatial", "occurred at", [src(case.cite(r)) for r in recs], "observed")
+        for p in ep.data.get("persons", [])[:6]:
+            pn = ent_node(p)
+            recs = [r for r in ep.data["record_ids"] if any(q == p for q, _, _ in ctx.persons_for(case.records[r]))]
+            cert = "observed" if any(c == "observed" for r in recs for q, c, _ in ctx.persons_for(case.records[r]) if q == p) else "inferred"
+            basis = "; ".join(sorted({b for r in recs for q, _, b in ctx.persons_for(case.records[r]) if q == p}))[:200]
+            edge(pn, en, "temporal", "recorded at", [src(case.cite(r)) for r in recs[:4]], cert, basis)
+    # findings: anomalies, concurrent presence, co-location, communications
+    for f in R.get("finding"):
+        if f.title.startswith("Unusual event") or "two places" in f.title:
+            fn = node(f"ev-{f.key}", "event", f.title.replace("Unusual event: ", ""), cites(f), f.text,
+                      "unusual event" if f.title.startswith("Unusual") else "conflict", f.data.get("time"), f.certainty,
+                      {"key": f.key, "score": f.score})
+            for p, c, b in f.data.get("persons", []) or ([[f.data["person"], "inferred", ""]] if f.data.get("person") else []):
+                edge(ent_node(p), fn, "temporal", "recorded at", cites(f)[:2], c, b)
+            if f.data.get("place"):
+                edge(fn, node(f"loc-{f.data['place']}", "location", f.data["place"], [], subtitle="place"), "spatial",
+                     "occurred at", cites(f)[:1], "observed")
+        elif "same place" in f.title:
+            a, b = f.data["subjects"]
+            edge(ent_node(a), ent_node(b), "spatial", f"co-located on {len(f.data['days'])} days", cites(f), "inferred",
+                 f.text)
+        elif f.title.startswith("Communication"):
+            a, b = f.data["pair"]
+            edge(ent_node(a), ent_node(b), "communication", f"{f.data['count']} messages/calls", cites(f), "observed", f.text)
+        elif f.title.startswith("Unidentified"):
+            ent_node(f.data["entity"])
+            nodes[f"ent-{f.data['entity']}"]["summary"] = f.text
+    for c in R.get("connection"):
+        d = c.data
+        if d.get("edge") == "alias" and d.get("target_entity"):
+            edge(ent_node(d["source"]), ent_node(d["target_entity"]), "identity", "probably the same", cites(c), "inferred", c.text)
+        elif d.get("edge") == "alias" and d.get("entity_a"):
+            edge(ent_node(d["entity_a"]), ent_node(d["entity_b"]), "identity", "may be the same", cites(c), "inferred", c.text)
+    # statements and contradictions
+    for x in R.get("contradiction"):
+        d = x.data
+        if d.get("statement_record"):
+            sn = node(f"st-{d['statement_record']}", "statement", case.records[d["statement_record"]].content[:60],
+                      [src(case.cite(d["statement_record"]))], case.records[d["statement_record"]].content, "statement",
+                      iso(case.records[d["statement_record"]].ts), "observed")
+            if d.get("subject"):
+                edge(ent_node(d["subject"]), sn, "claim", "stated", [src(case.cite(d["statement_record"]))], "observed")
+            target = next((f"ev-{e.key}" for e in R.get("episode")
+                           if set(d.get("conflicting_records", [])) & set(e.data["record_ids"])), None)
+            if not target and d.get("conflicting_records"):
+                r = case.records[d["conflicting_records"][0]]
+                target = node(f"rec-{r.id}", "event", r.content[:60], [src(case.cite(r.id))], r.content, "record", iso(r.ts))
+            if target:
+                edge(sn, target, "contradicts", "conflicts with", cites(x), "inferred", x.text)
+    # gaps hang off the nodes they concern
+    for g in R.get("gap"):
+        for k in g.data.get("affected", []):
+            hit = next((nid for nid, n in nodes.items() if n.get("key") == k), None)
+            if hit and "gapId" not in nodes[hit]:
+                nodes[hit]["gapId"] = g.id
+    _layout(nodes)
+
+    item_title = {it.key: f"{it.id} {it.title}" for b in R.items.values() for it in b}
+    board = {
+        "id": case.info.get("case_name", "case").lower().replace(" ", "-")[:60],
+        "title": case.info.get("case_name", "Case"),
+        "subtitle": f"{len(case.files)} files · {len(case.records)} records · analysed {extras['analysed_at']}",
+        "timeRange": {"start": timeline[0]["time"] if timeline else "", "end": timeline[-1]["time"] if timeline else ""},
+        "nodes": list(nodes.values()),
+        "edges": list(edges.values()),
+        "gaps": [{"id": g.id, "title": g.title,
+                  "description": f"{g.data['why_it_matters']} Missing: {g.data['missing']}. Next: {g.data['direction']}",
+                  "score": g.score, "affectedClaims": [item_title.get(k, k) for k in g.data.get("affected", [])],
+                  "suggestedEvidence": [a["artifact"] for a in g.data["artifacts"]], "citations": cites(g),
+                  "gapType": g.data["gap_type"], "status": g.status, "direction": g.data["direction"],
+                  "missing": g.data["missing"], "answer": g.data.get("answer"), "key": g.key,
+                  "previousStatus": g.data.get("previous_status")} for g in R.get("gap")],
+        "insights": [{"id": i.id, "title": i.title, "text": i.text, "score": i.score, "citations": cites(i),
+                      "certainty": i.certainty, "confidence": i.data.get("confidence"), "status": i.status,
+                      "observations": [{"text": o["text"], "citations": cites(o["citations"])} for o in i.data["observations"]],
+                      "inference": i.data["inference"], "unknowns": i.data["unknowns"],
+                      "counterevidence": i.data["counterevidence"], "assumptions": i.data["assumptions"],
+                      "limitations": i.data["limitations"], "key": i.key,
+                      **({"explanations": i.data["explanations"]} if "explanations" in i.data else {})} for i in R.get("insight")],
+        "suggestions": [{"id": s.id, "title": s.title, "description": " · ".join(s.data["reasons"]), "priority": s.data["priority"],
+                         "query": s.data["query"], "citations": cites(s),
+                         "gapId": next((g.id for g in R.get("gap") if g.key in s.data["gaps"]), ""),
+                         "gapIds": [g.id for g in R.get("gap") if g.key in s.data["gaps"]], "artifact": s.data["artifact"],
+                         "score": s.score, "key": s.key} for s in R.get("suggestion")],
+        "contradictions": [{"id": x.id, "title": x.title, "text": x.text, "severity": x.data["severity"], "kind": x.data["kind"],
+                            "possibleReasons": x.data["possible_reasons"], "resolvingEvidence": x.data["resolving_evidence"],
+                            "citations": cites(x), "status": x.status, "key": x.key} for x in R.get("contradiction")],
+        "explanations": [{"episode": v["episode_title"], "verdict": v["verdict"], "decided": v["decided"],
+                          "hypotheses": [{"id": h.id, "statement": h.text, "label": h.data["label"], "points": h.data["points"],
+                                          "independentSupport": h.data["independent_support"],
+                                          "supporting": [{"reason": s["reason"], "citation": src(case.cite(s["record_id"]))}
+                                                         for s in h.data["supporting"]],
+                                          "contradicting": [{"reason": s["reason"], "citation": src(case.cite(s["record_id"]))}
+                                                            for s in h.data["contradicting"]],
+                                          "assumptions": h.data["assumptions"], "key": h.key}
+                                         for k in v["ranked"] for h in R.get("hypothesis") if h.key == k],
+                          "discriminatingEvidence": v["discriminating_evidence"]} for v in verdicts],
+        "timeline": [{**t, "citation": src(t["citation"])} for t in timeline],
+        "uncertainTimes": [{"id": u.id, "title": u.title, "text": u.text, "count": u.data["count"], "citations": cites(u)}
+                           for u in R.get("uncertain_time")[:30]],
+        "missingPeriods": [{"id": m.id, "title": m.title, "text": m.text, "kind": m.data["kind"], "start": m.data["start"],
+                            "end": m.data["end"], "citations": cites(m)} for m in R.get("missing_period")],
+        "sourceGroups": [{"id": s.id, "title": s.title, "text": s.text, "citations": cites(s)} for s in R.get("source_group")],
+        "changes": changes,
+        "overrides": overrides,
+        "audit": extras["audit"],
+    }
+    for a in board["audit"]:
+        a["citations"] = [src(c) if isinstance(c, dict) else c for c in a.get("citations", [])]
+    board["sources"] = list(sources.values())
+    return board
+
+
+def _layout(nodes: dict) -> None:
+    cols: dict[int, list] = {}
+    for n in nodes.values():
+        cols.setdefault(COLUMNS.get(n["type"], 2), []).append(n)
+    for c, ns in cols.items():
+        ns.sort(key=lambda n: (n.get("time") or "", n["label"]))
+        for i, n in enumerate(ns):
+            n["position"] = {"x": 80 + c * 320, "y": 60 + i * 130 + (40 if c % 2 else 0)}

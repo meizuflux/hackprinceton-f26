@@ -1,12 +1,19 @@
-# Compstat backend: evidence ingestion
+# Compstat backend
 
-Turns an uploaded case `.zip` into one SQLite database, `case.db`. Every row can be traced back to the exact file and line, row, page or JSON path it came from. This is stages 1–3 of [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md) (ingest, parse, clean). The ML, graph and reasoning stages read from `case.db`.
+Three packages take an uploaded case `.zip` all the way to a cited investigation board:
 
 ```
-upload.zip ──► compstat_ingest ──► case.db (+ ingest_report.json) ──► ML / graph ──► deep agents ──► API ──► frontend
+upload.zip ──► compstat_ingest ──► case.db ──► compstat_reason ──► board.json / analysis.json ──► compstat_api ──► frontend
+              (ingest, parse,      (immutable    (timeline, links, contradictions,       (FastAPI: upload, status,
+               clean, audit)        evidence)     explanations, gaps, next steps,          case, sources, overrides,
+                                                  insights, verification)                 new evidence)
 ```
 
-**The backend is authoritative.** The schema in `case.db` and the report it writes are the source of truth for case data. The frontend's `CaseData` types and fixtures are a view of that data, not a contract the backend must match. When the two disagree, the frontend adapter changes. See "Backend authority" in [`AGENTS.md`](../AGENTS.md).
+- **`compstat_ingest`:** turns the ZIP into `case.db`. Every row traces back to the exact file and line, row, page or JSON path it came from (stages 1–3 of [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md)).
+- **`compstat_reason`:** the logical reasoning pipeline. It uses traditional ML and rules, plus an optional LangChain deep-agent investigator.
+- **`compstat_api`:** the HTTP service the frontend calls.
+
+**The backend is authoritative.** `case.db`, `board.json` and `analysis.json` are the source of truth for case data. The frontend's `CaseData` types are a view of that data, not a contract the backend must match. When the two disagree, the frontend adapter changes. See "Backend" in [`AGENTS.md`](../AGENTS.md).
 
 ## Quick start
 
@@ -17,11 +24,18 @@ python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt           # macOS/Linux: .venv/bin/pip
 
 python -m compstat_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel
+python -m compstat_reason analyze runs/kestrel            # writes runs/kestrel/analysis/v1/{board,analysis,graph}.json
+uvicorn compstat_api.app:app --port 8000                  # then POST /upload, GET /cases/{id}
 python -m compstat_ingest verify runs/kestrel             # re-check evidence hashes, DB hash, audit chain
 python -m pytest -q tests
 ```
 
-Or, from the repository root: `make backend-install`, `make backend-test`, `make backend-ingest-kestrel`.
+Or, from the repository root:
+- `make backend-install`
+- `make backend-test`
+- `make backend-ingest-kestrel`
+- `make backend-analyze-kestrel`
+- `make backend-serve`
 
 Options for `ingest`:
 - `--tz America/Los_Angeles`: time zone for timestamps that don't specify one. Defaults to UTC, or to the time zone named in a submitted manifest.
@@ -49,7 +63,7 @@ runs/kestrel/
 
 ## Results on the Kestrel case
 
-All 57 files parse: 5,609 records, 3,106 of them on the timeline. All 56 `MANIFEST.csv` hashes match.
+All 57 files parse: about 5,600 records, 5,339 of them timestamped. All 56 `MANIFEST.csv` hashes match.
 
 - **Time basis:** each file's `time_basis` is applied. UTC files stay UTC, and local wall-time files are read as `America/Los_Angeles`. Ortega's "around 11:30 at night" on "Saturday 10/17" resolves to 23:30 PDT.
 - **Evidence IDs:** files carry their manifest evidence ID (e.g. `EV-071`), so citations can use `{evidence_id, locator}`.
@@ -124,11 +138,93 @@ WHERE reliability = 'asserted' AND ts_end_utc >= '2026-10-18T05:00:00Z' AND ts_s
 
 ## Sample case
 
-`python examples/make_sample_case.py` builds a small fictional case, `examples/harbor_street_case.zip`, used by `tests/test_ingest.py`. Kestrel remains the main demo case.
+`python examples/make_sample_case.py` builds a small fictional case, `examples/harbor_street_case.zip`, used by the tests. Kestrel remains the main demo case.
 
-## Not done yet (next workstreams)
-- **API:** a FastAPI service (`POST /upload`, `/status`, ...) wrapping `ingest_zip`.
-- **Frontend adapter:** maps `case.db` → `CaseData`.
-- **Content analysis:** OCR, speech-to-text and vision on media.
-- **Cleaning rules from the plan:** reader clock drift, plate edit distance, message noise classifier, RFID single misses. The raw facts they need (`attributes`, `locator`, time flags) are already stored.
+---
+
+# Reasoning pipeline (`compstat_reason`)
+
+```sh
+python -m compstat_reason analyze runs/kestrel                                   # deterministic, no API key needed
+python -m compstat_reason analyze runs/kestrel --llm                             # + LLM claim extraction and deep-agent investigator
+python -m compstat_reason analyze runs/kestrel_v2 --previous runs/kestrel/analysis   # after new evidence: what changed
+python -m compstat_reason override runs/kestrel <stable_key> dismiss --note "reader under repair"
+```
+
+`case.db` is opened read-only. Each run writes a new version, `runs/<case>/analysis/vN/`, containing:
+- **`board.json`:** the frontend `CaseData`, plus extra fields.
+- **`analysis.json`:** every item with full detail.
+- **`graph.json`:** nodes and edges.
+- **`analysis.db`:** an items table and an audit log that continues the ingestion audit chain without a break.
+
+## Stages
+
+| Stage | What it does | Method | Code |
+|---|---|---|---|
+| Connections | Credential → person (from records that list both), account handles → person ("AURION\\rhalvorsen" → Richard Halvorsen), uncertain identity links from ingestion | rules, labelled observed/inferred | `analytics.py` |
+| Findings | Repeated co-location; unusual events per log; one person in two places at once; notable communication (deleted messages, saved aliases, late-night contact); unidentified heavy-contact numbers | space-time join, **IsolationForest per log** with feature explanations, strict concurrency rules, pair statistics | `analytics.py` |
+| Key events | Groups the strongest findings into episodes. The key moment is where an anomaly and a presence conflict coincide, weighted by how many independent systems recorded them | clustering in time | `analytics.py` |
+| Source independence | Recognises the same information repeated: double exports, the same text in several files, reports repeating statements. Corroboration counts independent origins (custodian/system), not records | difflib, shingles | `sources.py` |
+| Timeline | One ordered timeline with every uncertain time explained in plain language, silences in logs that normally report often, and people with no recorded whereabouts around a key event | | `timeline.py` |
+| Claims | Whereabouts, "never been there", "haven't talked to X in weeks" → structured claims with time windows (from the sentence, the incident date in the header, or the key event, always stated as an assumption) | rules (+ LLM structured output with `--llm`) | `claims.py`, `llm.py` |
+| Contradictions | Statement vs records, and record vs record. Each lists conflicting and consistent records, several possible reasons (approximate memory, shared credential, clock or time-zone error, phone away from its owner, untruth as one option) and the evidence that would resolve it | | `contradictions.py` |
+| Competing explanations | For each key event: present / someone else used the credential / an associate took part / system error. Each is scored from supporting and contradicting records, weighted by directness and capped by independent origins. Returns "insufficient evidence to choose" rather than forcing a verdict, and names the evidence that would tell the explanations apart | | `hypotheses.py` |
+| Gaps | Directed questions the data can't answer (who was physically there, where was X, who uses this number, is this account accurate, which explanation fits, what does this unreadable file contain). Each has a type: **missing**, **failed extraction**, **conflicting** or **uncertain** | | `gaps.py` |
+| Next steps | Ranks evidence to obtain by gaps closed, how well it separates explanations, urgency (retention windows), whether it adds an independent kind of source, and speed. Each comes with a concrete request (person, time, place) and the reasons for its rank | | `recommend.py` |
+| Insights | Observations (cited) kept apart from inference, unknowns, counter-evidence, assumptions and limitations. Confidence is a label (low/medium/high) set by independent sources, and never stated as certainty | | `insights.py` |
+| Verification | Every citation must resolve to a record in an evidence file whose SHA-256 still matches. Uncited items are dropped and logged. Accusatory wording is softened, and protected attributes are stripped | | `verify.py` |
+| Overrides and versions | Investigator corrections in `overrides.jsonl` are applied on every run and never deleted (the machine result is kept alongside). With `--previous`, gaps are marked resolved, partially resolved or reopened, and every change is listed with its reason | | `history.py` |
+
+On Kestrel (about 4 seconds, no LLM), the analysis finds:
+- **Key event:** Saturday 22:51 at the briefing-room cabinet.
+- **Leading explanation:** someone else used Richard Halvorsen's credential while his workstation was active (`AURION\rhalvorsen`, linked by account handle).
+- **Plausible explanation:** an associate using +1-408-555-0147, a number with 116 contacts and repeated co-location but no name in the evidence.
+- **Verdict:** insufficient evidence to choose between them.
+- **Contradiction:** Halvorsen's "at home, a quiet night" against his phone's location history.
+- **Top next steps:** CCTV of the cabinet area, DNA and fingerprints, carrier location records, a phone extraction, and analysing the four videos already in the case.
+
+## LLM layer (`--llm`)
+
+Set `ANTHROPIC_API_KEY` in your environment; never commit it. With `--llm`:
+- **Claim extraction:** `claude-opus-5-5` extracts claims from each statement and interview using structured output (`method="json_schema"`, since Opus 5.5 rejects forced tool use). Every claim must cite a sentence ID from that document; invented IDs are discarded.
+- **Investigator:** a deepagents agent (`deepagents` 0.7.x) gets read-only tools (`list_explanations`, `list_open_questions`, `search_records`, `get_record`) and two guarded writers:
+  - `record_insight` rejects insights without valid record IDs, and downgrades "high" to "medium" with fewer than three independent sources.
+  - `answer_question` can mark a gap partially resolved, never resolved.
+- **Verifier subagent:** `claude-sonnet-5-5` checks citations.
+- **Audit:** every model call and tool call is written to the audit log.
+- **Sandboxing:** the agent runs in deepagents' in-memory sandbox, with no file system or shell access.
+- **Labelling:** agent output is marked `generated_by: agent:<model>` and `inferred`.
+
+## API (`compstat_api`)
+
+```sh
+uvicorn compstat_api.app:app --port 8000      # CORS allows http://localhost:5173 (COMPSTAT_CORS to change)
+```
+
+| Method | Path | Purpose |
+|---|---|---|
+| POST | `/upload` (multipart `file`, optional `case_name`, `timezone`, `llm`) | New case → `{jobId, caseId}`. Ingestion and analysis run in the background (100 MB limit) |
+| GET | `/status/{jobId}` | `{status: processing \| ready \| failed, progress, stage, message, caseId}` |
+| GET | `/case` | Latest ready case as `CaseData` (drop-in for the frontend's `getCase()`) |
+| GET | `/cases`, `/cases/{caseId}` | List cases; one case as `CaseData` |
+| GET | `/cases/{caseId}/{section}` | `graph`, `gaps`, `insights`, `suggestions`, `contradictions`, `explanations`, `timeline`, `audit`, `changes`, `sources`, `uncertainTimes`, `missingPeriods`, `sourceGroups` |
+| GET | `/cases/{caseId}/source?id=EV-071:seq=40162` | One cited record in full (source inspector) |
+| GET | `/cases/{caseId}/evidence/{evidenceId}` | The original evidence file (read-only copy) |
+| POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
+| GET / POST | `/cases/{caseId}/overrides` | Read or record investigator corrections (`dismiss`, `confirm`, `set_status`, `set_label`, `note`, `reject_link`) |
+
+Errors are always `{"error": {"code", "message"}}`. Case data lives under `$COMPSTAT_DATA` (default `backend/data/cases/<caseId>/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
+
+### Board fields beyond the current `CaseData` type
+- **`nodes[].certainty` / `edges[].certainty`** (`observed` | `inferred`), plus `edges[].basis`.
+- **`gaps[]`:** `gapType`, `status`, `direction`, `missing`, `answer`, `previousStatus`, `key`.
+- **`insights[]`:** `certainty`, `confidence`, `observations[]` (each cited), `inference`, `unknowns`, `counterevidence`, `assumptions`, `limitations`, and `explanations` for verdict insights.
+- **`suggestions[]`:** `gapIds`, `artifact`, `score`.
+- **Top-level:** `contradictions`, `explanations`, `timeline`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `changes`, `overrides`.
+- **`key`:** every item has a stable key, which is what overrides target.
+
+## Not done yet
+- **Content analysis:** OCR, speech-to-text and vision on media. Videos are flagged as "failed extraction" gaps with a "analyse video already in the case" next step.
+- **Cleaning rules from the plan:** reader clock drift correction, plate edit distance, message noise classifier, RFID single misses.
+- **Scorer:** an evaluation against the locally generated answer key (`make data-truth`).
 - **Not parsed yet:** XLSX, phone backup SQLite databases, disk images. They're hashed and listed as `unsupported`.
