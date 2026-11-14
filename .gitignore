@@ -31,3 +31,8 @@ cases/*/truth/
 # Machine-specific agent settings
 .claude/settings.local.json
 .impeccable/config.local.json
+
+# Backend run outputs and generated sample data
+backend/runs/
+backend/data/
+backend/examples/*.zip

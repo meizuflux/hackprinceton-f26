@@ -1,0 +1,8 @@
+pillow>=10
+python-dateutil>=2.8
+hachoir>=3.2
+pypdf>=4
+python-docx>=1.1
+defusedxml>=0.7
+tzdata>=2024.1
+pytest>=8
