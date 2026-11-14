@@ -52,6 +52,10 @@
 - Identity merges happen only on explicit evidence (contacts, email display names, unambiguous name forms) and are recorded in `entity_links` with a rule and confidence. Fuzzy linkage belongs in the ML stage.
 - Run `make backend-test` after changes. `backend/tests/test_formats.py` re-ingests `cases/kestrel/kestrel_case_upload.zip` and requires every file to parse and every manifest hash to match.
 - Backend run outputs (`backend/runs/`, `backend/data/`) and generated sample zips are not committed.
+- Reasoning lives in `backend/compstat_reason` and never writes to `case.db`. Each run writes a numbered version (`analysis/vN/`) with `board.json` (CaseData plus extra fields), `analysis.json`, `graph.json` and `analysis.db`, whose audit chain continues from the ingestion audit head. Deterministic stages (traditional ML and rules) must work without an API key. The LLM layer (`--llm`, deepagents + Anthropic) only adds claims and agent insights, and both must cite resolvable record IDs.
+- Contradictions list several possible reasons and never conclude that someone lied. Explanations return "insufficient evidence" instead of forcing a verdict. Gaps are typed missing / failed_extraction / conflicting / uncertain. Corroboration counts independent origins, not records.
+- Investigator overrides go to `overrides.jsonl` and are applied on every run. Never delete them or the machine result they annotate. Items are matched across versions by their stable `key`.
+- The HTTP API is `backend/compstat_api` (FastAPI). Errors are `{"error": {"code", "message"}}`. `GET /case` mirrors the frontend's `getCase()`. Root Makefile targets: `backend-analyze-kestrel`, `backend-serve`.
 
 ## Specification change approval
 
