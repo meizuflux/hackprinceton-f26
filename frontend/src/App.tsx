@@ -315,6 +315,10 @@ function Board({
                 fitViewOptions={{
                   padding: { top: "110px", bottom: "60px", x: "50px" },
                 }}
+                panOnScroll
+                panOnScrollSpeed={1}
+                zoomOnScroll={false}
+                zoomOnPinch
                 minZoom={0.3}
                 maxZoom={1.8}
                 nodesConnectable={false}
