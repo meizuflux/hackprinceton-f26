@@ -16,8 +16,11 @@ Do not regenerate or edit these files by hand. Run `make data-generate` (or
 | --- | --- | --- |
 | `evidence/` | The original files, one per evidence item, plus `MANIFEST.csv` with SHA-256 hashes and provenance | Yes |
 | `kestrel_case_upload.zip` | The demo upload: `evidence/` zipped under `kestrel_case/` | Yes (this is the demo ZIP) |
-| `truth/` | Answer key and labels: solution, facts, insights, gaps, questions, record labels, annotations | **No.** Evaluation and training only |
 | `BUILD_INFO.json` | Seed, versions and the hash of every generated file | No |
+
+There is no answer key in the repository: the model has to work the case out from the evidence. For scoring
+a pipeline run afterwards, `make data-truth` writes the answer key to the git-ignored `.truth/kestrel/` folder.
+Never put that folder (or the `generator/` source, which encodes the solution) in the model's input.
 
 ## Evidence by modality
 
@@ -38,22 +41,14 @@ Do not regenerate or edit these files by hand. Run `make data-generate` (or
 | video | 6 | EV-020, EV-021, EV-022, EV-023, EV-024, EV-025 |
 | written_statement | 6 | EV-080, EV-081, EV-082, EV-083, EV-084, EV-085 |
 
-## Labels and classification
+## Classification
 
-- `evidence/MANIFEST.csv`: provenance and classification for each file: custodian, collector, acquisition
-  method, time basis (UTC, local, epoch, burned-in), sensitivity label, and an Admiralty grade (source
-  reliability A-F, information credibility 1-6).
-- `truth/record_labels.csv`: one row per record (badge event, message, cell record, scan, frame-free media
-  file, tagged document line) with `relevance` in key / supporting / context / red_herring / background / noise,
-  a `noise_type` where applicable, and the key tags it supports.
-- `truth/key_locators.json`: every named locator (for example `CAB_1017_EXEC_OPEN -> EV-071 seq=...`).
-- `truth/facts.json`, `insights.json`, `gaps.json`, `questions.json`, `red_herrings.json`, `artifact_value.json`:
-  the expected reasoning output, each item citing exact locators.
-- `truth/video_tracks.jsonl` and `truth/photo_annotations.json`: per-frame boxes and identities for the CCTV
-  clips, and object boxes for the photos.
+`evidence/MANIFEST.csv` classifies every file: modality, format, custodian, collector, acquisition method,
+time basis (UTC, local, epoch, burned-in), sensitivity label, and an Admiralty grade (source reliability A-F,
+information credibility 1-6). It says nothing about which evidence matters.
 
 Timestamps deliberately mix formats (UTC, local without offset, epoch milliseconds, US 12-hour, a reader with
 clock drift) and include duplicates, misreads, missed RFID reads, spam and low-confidence location points, so
-the cleaning step has real work to do. Every noise record is labelled with its `noise_type`.
+the cleaning step has real work to do.
 
 Protected attributes (for example `visitor_log.id_issuing_country`) must not be used as features.
