@@ -528,10 +528,6 @@
 .project-empty .onboarding-button {
   margin: 22px 0 13px;
 }
-.project-local-note {
-  font-size: 11px;
-  color: var(--on-muted);
-}
 .project-demo {
   border: 1px solid #424d39;
   border-radius: 6px;

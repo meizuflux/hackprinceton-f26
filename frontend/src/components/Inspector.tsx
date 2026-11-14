@@ -281,14 +281,6 @@ export function Inspector({
           </section>
         )}
       </div>
-
-      <footer className="inspector-footer">
-        <strong>Fictional case material</strong>
-        <span>
-          Source excerpts are fictional. Scores are illustrative. Inferences
-          require verification; a gap is not proof.
-        </span>
-      </footer>
     </aside>
   );
 }
