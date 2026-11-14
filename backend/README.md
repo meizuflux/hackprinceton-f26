@@ -1,9 +1,9 @@
-# Compstat backend: evidence ingestion
+# Mapletrace backend: evidence ingestion
 
 Turns an uploaded case `.zip` into one SQLite database, `case.db`. Every row can be traced back to the exact file and line, row, page or JSON path it came from. This is stages 1–3 of [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md) (ingest, parse, clean). The ML, graph and reasoning stages read from `case.db`.
 
 ```
-upload.zip ──► compstat_ingest ──► case.db (+ ingest_report.json) ──► ML / graph ──► deep agents ──► API ──► frontend
+upload.zip ──► mapletrace_ingest ──► case.db (+ ingest_report.json) ──► ML / graph ──► deep agents ──► API ──► frontend
 ```
 
 **The backend is authoritative.** The schema in `case.db` and the report it writes are the source of truth for case data. The frontend's `CaseData` types and fixtures are a view of that data, not a contract the backend must match. When the two disagree, the frontend adapter changes. See "Backend authority" in [`AGENTS.md`](../AGENTS.md).
@@ -16,8 +16,8 @@ Requires Python 3.11+. From `backend/`:
 python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt           # macOS/Linux: .venv/bin/pip
 
-python -m compstat_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel
-python -m compstat_ingest verify runs/kestrel             # re-check evidence hashes, DB hash, audit chain
+python -m mapletrace_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel
+python -m mapletrace_ingest verify runs/kestrel             # re-check evidence hashes, DB hash, audit chain
 python -m pytest -q tests
 ```
 
@@ -32,7 +32,7 @@ Options for `ingest`:
 From Python (for the future `POST /upload` handler):
 
 ```python
-from compstat_ingest.pipeline import ingest_zip
+from mapletrace_ingest.pipeline import ingest_zip
 report = ingest_zip("upload.zip", "data/jobs/<job_id>", timezone="America/Los_Angeles")
 ```
 

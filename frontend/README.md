@@ -1,4 +1,4 @@
-# Compstat frontend
+# Mapletrace frontend
 
 React + Vite evidence board for source-linked case review. The UI loads case data through a replaceable API adapter. The current adapter is a mock: it does not read ZIP contents or perform analysis.
 

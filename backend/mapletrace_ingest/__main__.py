@@ -1,7 +1,7 @@
 """Command line:
 
-    python -m compstat_ingest ingest case.zip --out runs/case1 --tz America/New_York
-    python -m compstat_ingest verify runs/case1
+    python -m mapletrace_ingest ingest case.zip --out runs/case1 --tz America/New_York
+    python -m mapletrace_ingest verify runs/case1
 """
 
 from __future__ import annotations
@@ -57,7 +57,7 @@ def cmd_verify(a) -> int:
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="compstat_ingest", description="Ingest a forensic case archive into SQLite.")
+    p = argparse.ArgumentParser(prog="mapletrace_ingest", description="Ingest a forensic case archive into SQLite.")
     sub = p.add_subparsers(dest="cmd", required=True)
     i = sub.add_parser("ingest", help="ingest a .zip of case files")
     i.add_argument("zip")

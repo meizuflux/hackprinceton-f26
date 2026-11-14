@@ -53,7 +53,7 @@ export function WorkspaceNavigation({
             navigate("/");
           }}
         >
-          <Fingerprint size={24} /> compstat
+          <Fingerprint size={24} /> mapletrace
         </a>
         <button className="text-button" onClick={() => navigate("/projects")}>
           <ArrowLeft size={16} /> All projects

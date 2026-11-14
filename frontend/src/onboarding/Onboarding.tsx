@@ -26,7 +26,7 @@ export function Landing({ navigate }: { navigate: Navigate }) {
           }}
         >
           <Fingerprint size={25} aria-hidden="true" />
-          compstat
+          mapletrace
         </a>
         <button
           className="button button-primary"
@@ -126,7 +126,7 @@ export function ProjectManager({
           }}
         >
           <Fingerprint size={25} aria-hidden="true" />
-          compstat
+          mapletrace
         </a>
       </header>
 

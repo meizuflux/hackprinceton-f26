@@ -1,4 +1,4 @@
-# Compstat frontend
+# Mapletrace frontend
 
 - This is a hackathon prototype. Prioritize a clear, reliable three-minute demo.
 - Build with Vite, React, and TypeScript. Use React Flow for the inspectable pin-up board.
@@ -49,9 +49,9 @@
 
 ## Backend
 
-- **The backend is authoritative over the frontend.** Case facts (records, times, entities, citations, hashes) are produced only by the backend. The SQLite schema written by `backend/compstat_ingest` (`case.db`) and its `ingest_report.json` are the source of truth. `frontend/src/api/types.ts` is a presentation contract: when it and the backend disagree, change the frontend types or adapter, never the backend data. The frontend must not compute, infer or hard-code case facts. Fixtures stay disposable placeholders until the real adapter lands.
-- All backend code, dependencies and backend docs live in `backend/` (Python 3.11+, `backend/requirements.txt`). The ingestion package is `backend/compstat_ingest`. Root `Makefile` targets: `backend-install`, `backend-test`, `backend-ingest-kestrel`. Do not add a nested backend Makefile.
-- Ingestion must never alter evidence. Working copies are read-only, every file is SHA-256 hashed before parsing, `MANIFEST.csv` hashes are checked, and every pipeline step is written to the hash-chained `audit_log`. `python -m compstat_ingest verify <run>` must pass.
+- **The backend is authoritative over the frontend.** Case facts (records, times, entities, citations, hashes) are produced only by the backend. The SQLite schema written by `backend/mapletrace_ingest` (`case.db`) and its `ingest_report.json` are the source of truth. `frontend/src/api/types.ts` is a presentation contract: when it and the backend disagree, change the frontend types or adapter, never the backend data. The frontend must not compute, infer or hard-code case facts. Fixtures stay disposable placeholders until the real adapter lands.
+- All backend code, dependencies and backend docs live in `backend/` (Python 3.11+, `backend/requirements.txt`). The ingestion package is `backend/mapletrace_ingest`. Root `Makefile` targets: `backend-install`, `backend-test`, `backend-ingest-kestrel`. Do not add a nested backend Makefile.
+- Ingestion must never alter evidence. Working copies are read-only, every file is SHA-256 hashed before parsing, `MANIFEST.csv` hashes are checked, and every pipeline step is written to the hash-chained `audit_log`. `python -m mapletrace_ingest verify <run>` must pass.
 - Every record carries `locator_json` (row, line, `doc_line`, page, JSON path, ...). Its file carries `external_id` (the manifest evidence ID). Downstream citations are `{evidence_id, locator}`. Uncited facts must not reach the frontend.
 - Timestamps are stored in UTC with an uncertainty window and flags for every assumption. Per-file `time_basis` from `MANIFEST.csv` decides UTC versus local wall time. Human-reported times are `reliability = 'asserted'`, never treated as machine records.
 - Identity merges happen only on explicit evidence (contacts, email display names, unambiguous name forms) and are recorded in `entity_links` with a rule and confidence. Fuzzy linkage belongs in the ML stage.

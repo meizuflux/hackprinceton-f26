@@ -1,5 +1,5 @@
 ---
-name: Compstat
+name: Mapletrace
 description: A calm, evidence-first workspace for inspecting case material.
 colors:
   primary: "#d3dfaf"
@@ -51,13 +51,13 @@ components:
     height: "44px"
 ---
 
-# Design System: Compstat
+# Design System: Mapletrace
 
 ## Overview
 
 **Creative North Star: “The Evidence Pinboard”**
 
-Compstat pairs a dark moss workspace with a tactile cork board and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.
+Mapletrace pairs a dark moss workspace with a tactile cork board and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.
 
 Typography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.
 

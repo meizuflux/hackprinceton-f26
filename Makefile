@@ -56,4 +56,4 @@ backend-test:
 	cd backend && $(PYTHON) -m pytest -q tests
 
 backend-ingest-kestrel:
-	cd backend && $(PYTHON) -m compstat_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel --overwrite
+	cd backend && $(PYTHON) -m mapletrace_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel --overwrite

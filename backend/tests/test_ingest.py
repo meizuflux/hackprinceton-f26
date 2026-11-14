@@ -12,11 +12,11 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "examples"))
 
-from compstat_ingest.__main__ import main as cli  # noqa: E402
-from compstat_ingest.classify import classify_table, classify_text  # noqa: E402
-from compstat_ingest.intake import Limits, extract_zip  # noqa: E402
-from compstat_ingest.pipeline import ingest_zip  # noqa: E402
-from compstat_ingest.timeparse import HumanTimeResolver, parse_timestamp  # noqa: E402
+from mapletrace_ingest.__main__ import main as cli  # noqa: E402
+from mapletrace_ingest.classify import classify_table, classify_text  # noqa: E402
+from mapletrace_ingest.intake import Limits, extract_zip  # noqa: E402
+from mapletrace_ingest.pipeline import ingest_zip  # noqa: E402
+from mapletrace_ingest.timeparse import HumanTimeResolver, parse_timestamp  # noqa: E402
 
 NY = ZoneInfo("America/New_York")
 
