@@ -23,7 +23,7 @@
 - Browser-verified demo path: synthetic ZIP selection → staged mock progress → board; gap and insight inspection; original source expansion; edge inspection; audit trail. Upload modal traps keyboard focus and supports Escape when idle/ready; inspector supports Escape.
 - Run `bun run --bun format` from `frontend/` after changes. No real source files or computed hashes are bundled; source excerpts live only in disposable fixtures.
 
-- Onboarding lives in `frontend/src/onboarding/` with isolated styles: `/` is a standalone landing page, `/projects` is the session project manager, and `/projects/new` opens project naming plus ZIP selection or direct fictional demo entry. The mock adapter exposes one case; the manager keeps one entry for it in React session state. Contact sales prepares a copyable enquiry and does not send messages.
+- Onboarding lives in `frontend/src/onboarding/` with isolated styles: `/` is a standalone landing page, `/projects` is the session project manager, and `/projects/new` opens project naming plus ZIP selection or direct fictional demo entry. The mock adapter exposes one case; the manager keeps one entry for it in React session state. Carry a session project name into the matching case workspace title; direct case routes fall back to the API title. Contact sales prepares a copyable enquiry and does not send messages.
 - Keep prototype labeling focused on upload behavior and explicit fictional case entry points; avoid repeating “demo” in the case workspace chrome. Clearly disclose that ZIP contents are not read and results use fictional data.
 
 ## Repository layout

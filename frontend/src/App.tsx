@@ -46,7 +46,13 @@ import {
 } from "./onboarding/Onboarding";
 const nodeTypes = { evidence: EvidenceNode };
 type Tab = "gaps" | "insights" | "suggestions";
-function Board({ data }: { data: CaseData }) {
+function Board({
+  data,
+  projectName,
+}: {
+  data: CaseData;
+  projectName?: string;
+}) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [tab, setTab] = useState<Tab>("gaps");
   const [dockMode, setDockMode] = useState<
@@ -154,7 +160,7 @@ function Board({ data }: { data: CaseData }) {
           Workspace <ChevronRight size={12} /> Cases <ChevronRight size={12} />
           <span>{data.id}</span>
         </div>
-        <div className="compact-case-title">{data.title}</div>
+        <div className="compact-case-title">{projectName || data.title}</div>
         <div className="toolbar-right">
           <span className="saved">
             <span /> Local session
@@ -869,7 +875,14 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <Board data={caseQuery.data} />
+              <Board
+                data={caseQuery.data}
+                projectName={
+                  projects.find(
+                    (project) => project.caseId === caseQuery.data.id,
+                  )?.name
+                }
+              />
             )}
             <footer className="app-footer">
               <span>
