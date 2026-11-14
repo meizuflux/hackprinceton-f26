@@ -31,7 +31,7 @@ export const api: CaseApi = {
       return {
         status: "ready",
         progress: 100,
-        message: "Demo case ready. The uploaded archive was not parsed.",
+        message: "Fictional case ready. The uploaded archive was not parsed.",
       };
     }
     const progress = Math.min(

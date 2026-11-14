@@ -807,9 +807,7 @@ export default function App() {
             </div>
             <div className="rail-bottom">
               <span className="rail-version">v.01</span>
-              <span className="rail-local">
-                Local
-              </span>
+              <span className="rail-local">Local</span>
             </div>
           </nav>
           <main>

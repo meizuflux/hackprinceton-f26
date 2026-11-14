@@ -163,7 +163,7 @@ export function Landing({ navigate }: { navigate: Navigate }) {
               {
                 icon: FolderOpen,
                 title: "Start with a project",
-                text: "Give your review a home. Select a ZIP or take a guided path with the fictional demo.",
+                text: "Give your review a home. Select a ZIP or follow a guided example.",
               },
               {
                 icon: GitBranch,
@@ -390,8 +390,8 @@ export function ProjectManager({
             <span className="onboarding-eyebrow">TAKE A LOOK AROUND</span>
             <h2>No files? Follow the evidence.</h2>
             <p>
-              Try demo case files: a fictional inventory case with linked
-              sources, open questions, and a review trail.
+              Explore the example case files: a fictional inventory case with
+              linked sources, open questions, and a review trail.
             </p>
           </div>
           <button
@@ -399,7 +399,7 @@ export function ProjectManager({
             disabled={opening}
             onClick={onDemo}
           >
-            {opening ? "Opening demo…" : "Try demo case files"}
+            {opening ? "Opening case files…" : "Open example case"}
             <ArrowRight size={16} />
           </button>
         </section>
