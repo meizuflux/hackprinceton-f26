@@ -5,6 +5,7 @@ from __future__ import annotations
 from collections import Counter
 
 from ..classify import norm_col
+from ..entities import looks_like_person
 from ..timeparse import parse_timestamp
 from . import Outcome
 
@@ -92,8 +93,9 @@ def extract_table(ctx, file_id: int, evidence_type: str, payload: dict, decision
             sender, recipient = row.get(cmap.get("sender", ""), None), row.get(cmap.get("recipient", ""), None)
             direction = row.get(cmap.get("direction", ""), None)
             if not sender and not recipient:
-                other = row.get(cmap.get("party", ""), None) or row.get(cmap.get("phone", ""), None)
-                owner = file_owner or row.get(cmap.get("device", ""), None)
+                # carrier records: the subscriber (msisdn) owns the record, the other party is the counterpart
+                other = row.get(cmap.get("party", ""), None) or (None if cmap.get("party") else row.get(cmap.get("phone", ""), None))
+                owner = file_owner or (row.get(cmap["phone"]) if cmap.get("party") and cmap.get("phone") else None)                     or row.get(cmap.get("device", ""), None)
                 incoming = str(direction or "").lower().startswith(("in", "recv", "mt"))
                 sender, recipient = (other, owner) if incoming else (owner, other)
             dur = _float(row.get(cmap.get("duration", "")))
@@ -126,10 +128,11 @@ def extract_table(ctx, file_id: int, evidence_type: str, payload: dict, decision
                                  entities=[(name, "contact"), (phone, "contact"), (email, "contact")])
             ctx.link_contact(rid, name, phone, email)
         else:  # generic timestamped records (CCTV analytics, badge access, app logs, ...)
-            person = row.get(cmap.get("name", ""), None) or row.get(cmap.get("sender", ""), None)
+            candidates = [row.get(cmap.get(r, ""), None) for r in ("name", "sender")]
+            person = next((c for c in candidates if c and looks_like_person(c)), None)
             device = row.get(cmap.get("device", ""), None)
-            actor = person or device or file_owner
-            event = row.get(cmap.get("event", ""), None)
+            actor = person or device or next((c for c in candidates if c), None)
+            event = row.get(cmap.get("event", ""), None) or row.get(cmap.get("body", ""), None)
             place = row.get(cmap.get("location_name", ""), None)
             lat, lon = _scaled(row, cmap, "lat"), _scaled(row, cmap, "lon")
             summary = event or "; ".join(f"{k}={v}" for k, v in list(extras.items())[:6])
@@ -138,7 +141,8 @@ def extract_table(ctx, file_id: int, evidence_type: str, payload: dict, decision
             rid = ctx.add_record(file_id, "event", ts=ts, actor=actor, content=summary, lat=lat, lon=lon,
                                  attributes={**extras, **({"event": event} if event else {}), **({"place": place} if place else {})},
                                  locator=locator, reliability="recorded",
-                                 entities=[(person or (file_owner if not device else None), "subject"), _device(device)])
+                                 entities=[(person, "subject"), _device(device)]
+                                 + [(c, "subject") for c in candidates if c and c != person])
         created += 1
 
     ctx.save_schema(file_id, payload, decision, len(rows), skipped)

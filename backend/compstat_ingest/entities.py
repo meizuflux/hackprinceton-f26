@@ -45,6 +45,8 @@ _NOT_PERSON = {
     "parkway", "avenue", "road", "entrance", "exit", "interior", "exterior", "zone", "sensor", "unit", "vehicle",
     "printer", "workstation", "laptop", "device", "network", "admin", "support", "noreply", "alerts", "carrier",
     "inventory", "audit", "log", "report", "sso", "alert", "controller", "kiosk", "portal", "app", "bot", "edr",
+    "outlook", "microsoft", "windows", "defender", "chrome", "teams", "zoom", "slack", "update", "client", "kernel",
+    "auditing", "antivirus", "firewall", "backup", "scheduler", "daemon", "auto", "automatic", "system",
 }
 
 

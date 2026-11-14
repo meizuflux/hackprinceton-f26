@@ -63,6 +63,7 @@ _GENERIC_NAME_WORDS = {
     "the", "of", "and", "from", "for", "csv", "json", "txt", "vehicle", "car", "device", "backup", "copy", "final",
     "whatsapp", "imessage", "signal", "email", "emails", "mail", "inbox", "case", "file", "cctv", "cam", "camera",
     "iphone", "android", "pixel", "samsung", "galaxy", "timeline", "cdr", "subscriber", "extraction", "notes",
+    "custody", "audit", "inventory", "visitor", "visitors", "badge", "guard", "tours", "readers", "doors", "acl",
 }
 _MENTION_STOP = {"will", "may", "june", "april", "mark", "bill", "rose", "grace", "hope", "faith", "joy", "page",
                  "long", "young", "white", "black", "brown", "green", "street", "north", "south", "east", "west",
