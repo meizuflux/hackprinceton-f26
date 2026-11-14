@@ -3,7 +3,7 @@ import { useReactFlow, useStore, type Edge, type Node } from "@xyflow/react";
 
 const MAP_WIDTH = 240;
 const MAP_HEIGHT = 148;
-const MAP_PADDING = 16;
+const MAP_PADDING = 22;
 
 type Bounds = { x: number; y: number; width: number; height: number };
 
@@ -35,6 +35,19 @@ function sceneBounds(nodes: Node[]): Bounds {
   };
 }
 
+function unionBounds(a: Bounds, b: Bounds): Bounds {
+  const minX = Math.min(a.x, b.x);
+  const minY = Math.min(a.y, b.y);
+  const maxX = Math.max(a.x + a.width, b.x + b.width);
+  const maxY = Math.max(a.y + a.height, b.y + b.height);
+  return {
+    x: minX,
+    y: minY,
+    width: Math.max(maxX - minX, 1),
+    height: Math.max(maxY - minY, 1),
+  };
+}
+
 function frameScene(bounds: Bounds) {
   const scale = Math.min(
     (MAP_WIDTH - MAP_PADDING * 2) / bounds.width,
@@ -54,7 +67,16 @@ export function CanvasMinimap() {
   const flowHeight = useStore((state) => state.height);
   const { setViewport } = useReactFlow();
   const dragging = useRef(false);
-  const bounds = sceneBounds(nodes);
+  const zoom = transform[2] || 1;
+  const view = {
+    x: -transform[0] / zoom,
+    y: -transform[1] / zoom,
+    width: Math.max(flowWidth, 1) / zoom,
+    height: Math.max(flowHeight, 1) / zoom,
+  };
+  // Frame the pins and the visible area together, then scale just enough
+  // that the viewport rectangle stays inside the map.
+  const bounds = unionBounds(sceneBounds(nodes), view);
   const { scale, offsetX, offsetY } = frameScene(bounds);
   const frame = useRef({
     bounds,
@@ -66,11 +88,10 @@ export function CanvasMinimap() {
   });
   frame.current = { bounds, scale, offsetX, offsetY, flowWidth, flowHeight };
 
-  const zoom = transform[2] || 1;
-  const viewX = (-transform[0] / zoom - bounds.x) * scale + offsetX;
-  const viewY = (-transform[1] / zoom - bounds.y) * scale + offsetY;
-  const viewWidth = (flowWidth / zoom) * scale;
-  const viewHeight = (flowHeight / zoom) * scale;
+  const viewX = (view.x - bounds.x) * scale + offsetX;
+  const viewY = (view.y - bounds.y) * scale + offsetY;
+  const viewWidth = view.width * scale;
+  const viewHeight = view.height * scale;
   const byId = new Map(nodes.map((node) => [node.id, node]));
 
   function focusAt(clientX: number, clientY: number, target: Element) {

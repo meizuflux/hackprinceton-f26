@@ -108,7 +108,7 @@ function Board({
         id: n.id,
         type: "evidence",
         ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
-        position: { x: n.position.x, y: n.position.y * 1.65 },
+        position: { x: 160 + n.position.x * 1.45, y: n.position.y * 2.15 },
         data: {
           ...n,
           onInspect: () => inspect("node", n.id),
