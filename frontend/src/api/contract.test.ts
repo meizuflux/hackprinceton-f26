@@ -81,17 +81,17 @@ describe("mock upload adapter", () => {
     await expect(api.getStatus(jobId)).resolves.toMatchObject({
       status: "processing",
       progress: 0,
-      message: expect.stringContaining("Mock: Parsing artifacts"),
+      message: expect.stringContaining("Preparing workspace"),
     });
     vi.advanceTimersByTime(1_700);
     await expect(api.getStatus(jobId)).resolves.toMatchObject({
       status: "processing",
-      message: expect.stringContaining("Mock: Building graph"),
+      message: expect.stringContaining("Organizing evidence"),
     });
     vi.advanceTimersByTime(1_700);
     await expect(api.getStatus(jobId)).resolves.toMatchObject({
       status: "processing",
-      message: expect.stringContaining("Mock: Scoring gaps"),
+      message: expect.stringContaining("Preparing review"),
     });
     vi.advanceTimersByTime(1_600);
     await expect(api.getStatus(jobId)).resolves.toMatchObject({

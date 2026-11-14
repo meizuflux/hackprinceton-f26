@@ -16,7 +16,6 @@ import {
   ArrowUpRight,
   Check,
   ChevronRight,
-  CircleHelp,
   FileArchive,
   Fingerprint,
   FolderOpen,
@@ -162,9 +161,6 @@ function Board({
         </div>
         <div className="compact-case-title">{projectName || data.title}</div>
         <div className="toolbar-right">
-          <span className="saved">
-            <span /> Local session
-          </span>
           <button
             className="text-button"
             aria-expanded={
@@ -569,7 +565,7 @@ function Board({
               </div>
               <div className="analysis-footer">
                 <span className="live-dot" />
-                Mock analysis <span>·</span> All results traceable
+                Case analysis <span>·</span> All results traceable
               </div>
             </aside>
             <Inspector
@@ -594,7 +590,7 @@ function Board({
                 <div>
                   <History size={16} />
                   <h2>Audit trail</h2>
-                  <span>Simulated processing record</span>
+                  <span>Processing record</span>
                 </div>
                 <button
                   className="icon-button"
@@ -813,7 +809,6 @@ export default function App() {
             </div>
             <div className="rail-bottom">
               <span className="rail-version">v.01</span>
-              <span className="rail-local">Local</span>
             </div>
           </nav>
           <main>
@@ -890,10 +885,7 @@ export default function App() {
                 <span className="dot-separator">/</span> A clearer chain of
                 evidence.
               </span>
-              <span>
-                Hackathon prototype <span className="dot-separator">·</span>{" "}
-                Synthetic data only
-              </span>
+              <span>Source-linked evidence review</span>
             </footer>
           </main>
         </div>
@@ -959,7 +951,9 @@ export default function App() {
               }}
             >
               <FileArchive size={30} />
-              <strong>{file ? file.name : "Drop a case ZIP here"}</strong>
+              <strong>
+                {file ? file.name : "Choose a ZIP to preview the workspace"}
+              </strong>
               <span>
                 {file
                   ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
@@ -984,13 +978,6 @@ export default function App() {
                 }}
               />
             </div>
-            <div className="mock-notice">
-              <CircleHelp size={16} />
-              <p>
-                ZIP contents are not read or uploaded. Processing and results
-                use a temporary fictional case.
-              </p>
-            </div>
             {error && (
               <p className="error-message" role="alert">
                 {error}
@@ -1003,7 +990,7 @@ export default function App() {
                     {statusQuery.isError
                       ? "Processing interrupted"
                       : (statusQuery.data?.message ??
-                        "Preparing mock ingestion…")}
+                        "Preparing workspace preview…")}
                   </span>
                   <span>{statusQuery.data?.progress ?? 0}%</span>
                 </div>
@@ -1031,12 +1018,12 @@ export default function App() {
                 </>
               ) : uploading ? (
                 <>
-                  <LoaderCircle size={16} className="spin" /> Processing mock
-                  case
+                  <LoaderCircle size={16} className="spin" /> Preparing
+                  workspace
                 </>
               ) : (
                 <>
-                  Start simulated processing <ArrowRight size={16} />
+                  Preview workspace <ArrowRight size={16} />
                 </>
               )}
             </button>

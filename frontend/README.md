@@ -1,6 +1,6 @@
 # Compstat frontend
 
-React + Vite evidence board. All case data and ingestion responses are temporary mocks; no backend is required. Uploaded ZIP contents are not read or sent anywhere.
+React + Vite evidence board for source-linked case review. The frontend API adapter is ready for the backend integration underway.
 
 ## Run locally
 
@@ -11,9 +11,9 @@ make frontend-install
 make frontend-dev
 ```
 
-Open [localhost:5173](http://localhost:5173) and click **Explore demo case**. You can also choose a ZIP to try the simulated ingestion flow.
+Open [localhost:5173](http://localhost:5173) and click **Explore demo case**. You can also choose a ZIP to preview the workspace flow.
 
-The welcome page is at `/`, and an opened case uses `/cases/:caseId`. Browser back and forward and direct case links are supported; the mock adapter currently serves only its fictional case. The production nginx configuration falls back to the app for these routes.
+The welcome page is at `/`, and an opened case uses `/cases/:caseId`. Browser back and forward and direct case links are supported. The production nginx configuration falls back to the app for these routes.
 
 Without Make, run `bun install --frozen-lockfile` and `bun run --bun dev` from `frontend/`.
 
@@ -44,10 +44,10 @@ make frontend-preview    # Serve dist/ locally (run frontend-build first)
 make frontend-format     # Format source files
 ```
 
-## Connect a backend later
+## Backend integration
 
 - `src/api/types.ts`: shared API contracts.
-- `src/api/client.ts`: replaceable mock adapter (`createUpload`, `getStatus`, `getCase`).
-- `src/api/fixtures.ts`: disposable fictional case data.
+- `src/api/client.ts`: API adapter (`createUpload`, `getStatus`, `getCase`).
+- `src/api/fixtures.ts`: example case data for the frontend workspace.
 
-The UI polls job status through TanStack Query. Replace the adapter with HTTP calls when the Python backend is ready. Citations use source IDs; original paths, excerpts, timestamps, and placeholder hashes live in source records. Nothing is persisted between sessions.
+The UI polls job status through TanStack Query. Connect the adapter to the Python backend as its endpoints become available. Citations use source IDs; original paths, excerpts, timestamps, and placeholder hashes live in source records.

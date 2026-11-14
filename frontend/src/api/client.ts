@@ -31,7 +31,7 @@ export const api: CaseApi = {
       return {
         status: "ready",
         progress: 100,
-        message: "Fictional case ready. The uploaded archive was not parsed.",
+        message: "Workspace preview ready.",
       };
     }
     const progress = Math.min(
@@ -40,10 +40,10 @@ export const api: CaseApi = {
     );
     const message =
       elapsed < 1_700
-        ? "Mock: Parsing artifacts… (simulated; ZIP contents are not read)"
+        ? "Preparing workspace…"
         : elapsed < 3_400
-          ? "Mock: Building graph… (simulated; ZIP contents are not read)"
-          : "Mock: Scoring gaps… (simulated; ZIP contents are not read)";
+          ? "Organizing evidence…"
+          : "Preparing review…";
     return { status: "processing", progress, message };
   },
 

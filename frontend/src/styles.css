@@ -1267,22 +1267,6 @@ main {
 .dropzone .text-button {
   color: var(--green);
 }
-.mock-notice {
-  display: flex;
-  align-items: flex-start;
-  gap: 9px;
-  color: #9da886;
-  margin-bottom: 20px;
-}
-.mock-notice svg {
-  flex-shrink: 0;
-  margin-top: 2px;
-}
-.mock-notice p {
-  font-size: 12px;
-  line-height: 1.7;
-  color: #c0ccaf;
-}
 .full-width {
   width: 100%;
 }
@@ -1463,18 +1447,6 @@ main {
     monospace;
   margin: 12px 0;
 }
-.inspector-footer {
-  padding: 12px 20px;
-  background: #1a2117;
-  border-top: 1px solid #3d4a30;
-  color: #b4c3a4;
-  font-size: 11px;
-  line-height: 1.7;
-  flex-shrink: 0;
-}
-.inspector-footer p {
-  margin: 0;
-}
 .audit-panel {
   margin: 16px 24px 0;
   border: 1px solid #414d35;
@@ -1572,12 +1544,6 @@ button:active:not(:disabled) {
   display: flex;
   flex-direction: column;
 }
-.rail-local {
-  font-size: 10px;
-  line-height: 1.5;
-  text-align: center;
-  color: #a7b39a;
-}
 .case-description {
   display: flex;
   align-items: center;
@@ -1652,14 +1618,6 @@ button:active:not(:disabled) {
 }
 .inspector-back {
   color: var(--green);
-}
-.inspector-footer strong,
-.inspector-footer span {
-  display: block;
-}
-.inspector-footer strong {
-  color: #d3dec3;
-  margin-bottom: 3px;
 }
 .source-item summary small {
   display: block;
@@ -2441,7 +2399,6 @@ button:active:not(:disabled) {
 .workspace-shell .inspector-back:hover {
   color: #204d2e;
 }
-.workspace-shell .inspector-footer strong,
 .workspace-shell .source-item small {
   color: #526451;
 }
@@ -2727,11 +2684,6 @@ button:active:not(:disabled) {
   background: #f2f3ec;
   border-color: #d9dfcf;
   color: #425742;
-}
-.inspector-footer {
-  background: #f5f4ed;
-  border-color: #deddd4;
-  color: #586959;
 }
 .audit-panel {
   background: #fbfaf6;

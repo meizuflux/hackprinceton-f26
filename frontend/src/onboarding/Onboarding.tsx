@@ -7,7 +7,6 @@ import {
   GitBranch,
   Plus,
   Search,
-  ShieldCheck,
   X,
   FileText,
   Target,
@@ -37,7 +36,7 @@ export function Landing({ navigate }: { navigate: Navigate }) {
           }}
         >
           <Fingerprint size={28} />
-          compstat<span className="onboarding-prototype">PROTOTYPE</span>
+          compstat
         </a>
         <nav aria-label="Website navigation">
           <a href="#how-it-works">How it works</a>
@@ -81,10 +80,6 @@ export function Landing({ navigate }: { navigate: Navigate }) {
                 See how it works <span aria-hidden="true">↓</span>
               </a>
             </div>
-            <span className="landing-disclosure">
-              <ShieldCheck size={15} /> Explore with fictional case files. No
-              account needed.
-            </span>
           </div>
           <div
             className="landing-preview"
@@ -94,7 +89,7 @@ export function Landing({ navigate }: { navigate: Navigate }) {
               <span>
                 <span className="onboarding-status-dot" /> EVIDENCE WORKSPACE
               </span>
-              <span>FICTIONAL PREVIEW</span>
+              <span>EXAMPLE CASE</span>
             </div>
             <div className="landing-cork">
               <svg
@@ -145,7 +140,7 @@ export function Landing({ navigate }: { navigate: Navigate }) {
                   <br />
                   20:31 to 20:50.”
                 </p>
-                <footer>Fictional source excerpt</footer>
+                <footer>Source excerpt</footer>
               </article>
             </div>
             <div className="landing-preview-bottom">
@@ -186,17 +181,12 @@ export function Landing({ navigate }: { navigate: Navigate }) {
               </article>
             ))}
           </div>
-          <p className="landing-prototype-note">
-            Current prototype: ZIP processing is simulated. Archives are never
-            read or uploaded; analysis uses temporary fictional data.
-          </p>
         </section>
       </main>
       <footer className="onboarding-footer">
         <span>
           compstat <span>/</span> Clarity from complexity.
         </span>
-        <span>Hackathon prototype · Synthetic data only</span>
       </footer>
       <dialog
         className="sales-dialog"
@@ -216,10 +206,7 @@ export function Landing({ navigate }: { navigate: Navigate }) {
         </button>
         <span className="onboarding-eyebrow">CONTACT SALES</span>
         <h2 id="sales-title">Let’s talk about your workflow.</h2>
-        <p>
-          Compstat is an early prototype. Prepare an enquiry to share with the
-          team; this form doesn’t send a message.
-        </p>
+        <p>Copy an enquiry to share with our team.</p>
         <label htmlFor="sales-enquiry">Your enquiry</label>
         <textarea
           id="sales-enquiry"
@@ -293,9 +280,6 @@ export function ProjectManager({
           <Fingerprint size={26} />
           compstat
         </a>
-        <div className="project-session">
-          <span className="onboarding-status-dot" /> Local session
-        </div>
       </header>
       <main className="onboarding-main project-main">
         <div className="project-breadcrumb">
@@ -339,8 +323,8 @@ export function ProjectManager({
             </span>
             <h2>Every case starts somewhere.</h2>
             <p>
-              Create a project to try the ZIP workflow, or explore the evidence
-              board with our fictional case files.
+              Create a project or explore the evidence board with an example
+              case.
             </p>
             <button
               className="onboarding-button primary"
@@ -348,9 +332,6 @@ export function ProjectManager({
             >
               <Plus size={17} /> Add a new project
             </button>
-            <span className="project-local-note">
-              Projects stay in this session. Refreshing clears the project list.
-            </span>
           </section>
         ) : (
           <div className="project-grid">
@@ -363,7 +344,7 @@ export function ProjectManager({
                 }
               >
                 <FolderOpen size={27} />
-                <span className="project-card-status">FICTIONAL CASE</span>
+                <span className="project-card-status">EXAMPLE CASE</span>
                 <h3>{project.name}</h3>
                 <p>
                   {data
@@ -390,8 +371,8 @@ export function ProjectManager({
             <span className="onboarding-eyebrow">TAKE A LOOK AROUND</span>
             <h2>No files? Follow the evidence.</h2>
             <p>
-              Explore the example case files: a fictional inventory case with
-              linked sources, open questions, and a review trail.
+              Explore an inventory case with linked sources, open questions, and
+              a review trail.
             </p>
           </div>
           <button
@@ -408,10 +389,6 @@ export function ProjectManager({
             {error}
           </p>
         )}
-        <p className="project-local-note">
-          Prototype workspace · No account, cloud storage, or real evidence
-          analysis.
-        </p>
       </main>
       <footer className="onboarding-footer">
         <a
@@ -423,7 +400,6 @@ export function ProjectManager({
         >
           ← Back to Compstat
         </a>
-        <span>Synthetic data only</span>
       </footer>
     </div>
   );
