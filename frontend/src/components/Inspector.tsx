@@ -85,8 +85,15 @@ export function Inspector({
   const score = "score" in item ? item.score : undefined;
   const edge =
     selection.kind === "edge" ? (item as CaseData["edges"][number]) : undefined;
+  const connector = edge?.directed ? " → " : " — ";
   const description = edge
-    ? `${data.nodes.find((entry) => entry.id === edge.source)?.label ?? edge.source} → ${edge.label} → ${data.nodes.find((entry) => entry.id === edge.target)?.label ?? edge.target}`
+    ? [
+        data.nodes.find((entry) => entry.id === edge.source)?.label ??
+          edge.source,
+        edge.label,
+        data.nodes.find((entry) => entry.id === edge.target)?.label ??
+          edge.target,
+      ].join(connector)
     : "summary" in item
       ? item.summary
       : "description" in item

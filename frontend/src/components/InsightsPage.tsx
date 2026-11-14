@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   ArrowUpRight,
   FileText,
@@ -26,24 +26,37 @@ export function InsightsPage({
     () => new Map(data.sources.map((source) => [source.id, source])),
     [data.sources],
   );
-  const matches = (values: string[]) =>
-    !query || values.some((value) => value.toLocaleLowerCase().includes(query));
-  const insights = data.insights.filter((item) =>
-    matches([item.title, item.text, ...item.citations]),
+  const matches = useCallback(
+    (values: string[]) =>
+      !query ||
+      values.some((value) => value.toLocaleLowerCase().includes(query)),
+    [query],
   );
-  const gaps = data.gaps.filter((item) =>
-    matches([item.title, item.description, ...item.citations]),
+  const insights = useMemo(
+    () =>
+      data.insights.filter((item) =>
+        matches([item.title, item.text, ...item.citations]),
+      ),
+    [data.insights, matches],
   );
-  const suggestions = data.suggestions.filter((item) =>
-    matches([item.title, item.description, item.query, ...item.citations]),
+  const gaps = useMemo(
+    () =>
+      data.gaps.filter((item) =>
+        matches([item.title, item.description, ...item.citations]),
+      ),
+    [data.gaps, matches],
+  );
+  const suggestions = useMemo(
+    () =>
+      data.suggestions.filter((item) =>
+        matches([item.title, item.description, item.query, ...item.citations]),
+      ),
+    [data.suggestions, matches],
   );
 
   return (
     <div className="insights-page">
       <header className="insights-hero">
-        <div className="insights-kicker">
-          <Lightbulb size={14} /> CASE ANALYSIS
-        </div>
         <div className="insights-hero-row">
           <div>
             <h1>Insights</h1>

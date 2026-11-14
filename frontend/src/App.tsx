@@ -21,6 +21,7 @@ import {
   Layers,
   Lightbulb,
   LoaderCircle,
+  Minus,
   PanelRightOpen,
   Search,
   ShieldCheck,
@@ -141,16 +142,20 @@ function Board({
         data: {
           kind: relationshipKind(e.type),
           label: e.label,
+          directed: e.directed === true,
           onInspect: () => inspect("edge", e.id),
         },
         ariaLabel: `${e.label}. Inspect relationship and sources`,
         type: "thread",
-        markerEnd: {
-          type: MarkerType.ArrowClosed,
-          color: "#a1372f",
-          width: 12,
-          height: 12,
-        },
+        markerEnd:
+          e.directed === true
+            ? {
+                type: MarkerType.ArrowClosed,
+                color: "#a1372f",
+                width: 12,
+                height: 12,
+              }
+            : undefined,
         style: {
           stroke: "#a1372f",
           strokeWidth: 3,
@@ -175,41 +180,56 @@ function Board({
     [setNodes],
   );
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
-  const matchingNodes = nodes.filter((n) =>
-    `${n.data.label} ${n.data.summary}`
-      .toLowerCase()
-      .includes(search.trim().toLowerCase()),
+  const normalizedSearch = search.trim().toLowerCase();
+  const matchingNodes = useMemo(
+    () =>
+      normalizedSearch
+        ? nodes.filter((n) =>
+            `${n.data.label} ${n.data.summary}`
+              .toLowerCase()
+              .includes(normalizedSearch),
+          )
+        : nodes,
+    [nodes, normalizedSearch],
   );
-  const visibleNodes = nodes.map((n) => ({
-    ...n,
-    className:
-      search.trim() && !matchingNodes.some((match) => match.id === n.id)
-        ? "dimmed-node"
-        : "",
-    data: {
-      ...n.data,
-      active: selection?.kind === "node" && selection.id === n.id,
-      onInspect: () => inspect("node", n.id),
-      onInspectGap: n.data.gapId
-        ? () => inspect("gap", n.data.gapId!)
-        : undefined,
-    },
-  }));
-  const nodesById = new Map(nodes.map((node) => [node.id, node]));
-  const visibleEdges = edges.map((edge) => {
-    const source = nodesById.get(edge.source);
-    const target = nodesById.get(edge.target);
-    return {
-      ...edge,
-      ...(source && target
-        ? threadHandles(source.position, target.position)
-        : {}),
-      selected: selection?.kind === "edge" && selection.id === edge.id,
-      data: edge.data
-        ? { ...edge.data, onInspect: () => inspect("edge", edge.id) }
-        : undefined,
-    };
-  });
+  const matchingNodeIds = useMemo(
+    () => (normalizedSearch ? new Set(matchingNodes.map((n) => n.id)) : null),
+    [matchingNodes, normalizedSearch],
+  );
+  const visibleNodes = useMemo(
+    () =>
+      nodes.map((n) => ({
+        ...n,
+        className:
+          matchingNodeIds && !matchingNodeIds.has(n.id) ? "dimmed-node" : "",
+        data: {
+          ...n.data,
+          active: selection?.kind === "node" && selection.id === n.id,
+          onInspect: () => inspect("node", n.id),
+          onInspectGap: n.data.gapId
+            ? () => inspect("gap", n.data.gapId!)
+            : undefined,
+        },
+      })),
+    [nodes, matchingNodeIds, selection, inspect],
+  );
+  const visibleEdges = useMemo(() => {
+    const nodesById = new Map(nodes.map((node) => [node.id, node]));
+    return edges.map((edge) => {
+      const source = nodesById.get(edge.source);
+      const target = nodesById.get(edge.target);
+      return {
+        ...edge,
+        ...(source && target
+          ? threadHandles(source.position, target.position)
+          : {}),
+        selected: selection?.kind === "edge" && selection.id === edge.id,
+        data: edge.data
+          ? { ...edge.data, onInspect: () => inspect("edge", edge.id) }
+          : undefined,
+      };
+    });
+  }, [edges, nodes, selection, inspect]);
   return (
     <>
       <div className="workspace">
@@ -324,10 +344,9 @@ function Board({
                 {data.edges
                   .filter(
                     (e) =>
-                      !search.trim() ||
-                      matchingNodes.some(
-                        (n) => n.id === e.source || n.id === e.target,
-                      ),
+                      !matchingNodeIds ||
+                      matchingNodeIds.has(e.source) ||
+                      matchingNodeIds.has(e.target),
                   )
                   .map((e) => (
                     <button key={e.id} onClick={() => inspect("edge", e.id)}>
@@ -340,8 +359,17 @@ function Board({
                       </span>
                       <strong>
                         {data.nodes.find((n) => n.id === e.source)?.label}{" "}
-                        <ArrowRight size={12} /> {e.label}{" "}
-                        <ArrowRight size={12} />{" "}
+                        {e.directed ? (
+                          <ArrowRight size={12} />
+                        ) : (
+                          <Minus size={12} />
+                        )}{" "}
+                        {e.label}{" "}
+                        {e.directed ? (
+                          <ArrowRight size={12} />
+                        ) : (
+                          <Minus size={12} />
+                        )}{" "}
                         {data.nodes.find((n) => n.id === e.target)?.label}
                       </strong>
                       <span>

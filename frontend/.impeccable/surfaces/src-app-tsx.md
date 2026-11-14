@@ -21,7 +21,7 @@ THESIS: The case is a full-screen evidence board. Navigation and review controls
 
 OWN-WORLD: Preserve dark moss controls, faint warm paper, ivory evidence cards, sage actions, amber questions and rust relationships. Sans interface controls; serif source excerpts. Reviewers use laptops during a short presentation, so keep controls readable and surfaces distinct.
 
-CARD DIRECTION: User confirmed a clean modern interface around a traditional detective pinboard, with clarity above all else. Cards use legible Excalidraw-style handwritten titles, clean sans-serif summaries, and subtle outline imperfections; text stays upright, summaries stay brief, and full details remain in source inspection. Red threads must be thick enough to read against faint paper and run smoothly between facing sides, without looping beneath the source or unnecessarily attaching to the target's top. Cards keep clear spacing. Claims, inferences, and open questions retain explicit distinctions and citations.
+CARD DIRECTION: User confirmed a clean modern interface around a traditional detective pinboard, with clarity above all else. Cards use legible Excalidraw-style handwritten titles, summaries, and thread annotations, with clean metadata and subtle paper-shape imperfections; text stays upright, summaries stay brief, and full details remain in source inspection. Red threads must be thick enough to read against faint paper and run smoothly between facing sides, without looping beneath the source or unnecessarily attaching to the target's top. Cards keep clear spacing. Claims, inferences, and open questions retain explicit distinctions and citations.
 
 STORY: Open projects. Create a named project with a ZIP preview, or open the fictional case from the manager. Inspect records and relationships, then gaps, original sources, suggested evidence and audit. Once opened, the fictional case is a project, not a repeated prompt.
 
@@ -32,3 +32,7 @@ FORM: seed: none (pinned). User: “the pin board is the full background and eve
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, DESIGN.md, and every shipping raster carrying its provenance.
 
 REFINEMENT: The user found the first treatment too busy, then found the softened paper too faint. Keep one ivory card color, visible paper grain beneath a flat 50% warm overlay, compact 248 × 224px cards, and quiet unboxed relationship labels. Keep Claim and Inference labels visible; reveal their wording on hover, focus, or selection.
+
+CARD REFINEMENT: The user found the framed cards too formal. Use a single irregular paper silhouette, without an inset frame or footer divider. Keep text upright. Replace visible Inspect copy with an arrow-only button and pointer cursor, retaining the full accessible name. Thread annotations use Excalifont and never split words mid-word. Arrowheads follow explicit API direction; undirected associations and time overlap use plain threads.
+
+PREVIEW AND PINS: Match the minimap to the board's paper silhouettes, inset top pins, smooth red threads, explicit arrow directions, question outlines, and selection. Keep the viewport wash light. Center each pushpin 6px inside the top of its card rather than floating above the paper.

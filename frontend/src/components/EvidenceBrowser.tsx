@@ -26,24 +26,37 @@ export function EvidenceBrowser({
     setActiveSourceId(selectedSourceId);
     if (selectedSourceId) setSearch("");
   }, [selectedSourceId]);
-  const visibleFiles = files.filter((file) =>
-    `${file.path} ${file.kind} ${file.id} ${file.excerpt}`
-      .toLowerCase()
-      .includes(search.trim().toLowerCase()),
+  const normalizedSearch = search.trim().toLowerCase();
+  const visibleFiles = useMemo(
+    () =>
+      normalizedSearch
+        ? files.filter((file) =>
+            `${file.path} ${file.kind} ${file.id} ${file.excerpt}`
+              .toLowerCase()
+              .includes(normalizedSearch),
+          )
+        : files,
+    [files, normalizedSearch],
   );
-  const citedRecords = generalizedRecords.filter(
-    (record) =>
-      record.citations.length > 0 &&
-      record.citations.every(
-        (citation) => citation.evidenceId.trim() && citation.locator.trim(),
+  const citedRecords = useMemo(
+    () =>
+      generalizedRecords.filter(
+        (record) =>
+          record.citations.length > 0 &&
+          record.citations.every(
+            (citation) => citation.evidenceId.trim() && citation.locator.trim(),
+          ),
       ),
+    [generalizedRecords],
   );
-  const visibleRecords = citedRecords.filter(
-    (record) =>
-      record.citations.length > 0 &&
-      JSON.stringify(record)
-        .toLowerCase()
-        .includes(search.trim().toLowerCase()),
+  const visibleRecords = useMemo(
+    () =>
+      normalizedSearch
+        ? citedRecords.filter((record) =>
+            JSON.stringify(record).toLowerCase().includes(normalizedSearch),
+          )
+        : citedRecords,
+    [citedRecords, normalizedSearch],
   );
 
   if (mode === "generalized") {
@@ -54,7 +67,6 @@ export function EvidenceBrowser({
             <Files size={17} />
           </div>
           <div>
-            <p className="evidence-eyebrow">INGESTION OUTPUT</p>
             <h2>Generalized files</h2>
           </div>
           <span className="evidence-state-chip">
@@ -156,7 +168,6 @@ export function EvidenceBrowser({
           <FileSearch size={17} />
         </div>
         <div>
-          <p className="evidence-eyebrow">SOURCE INDEX</p>
           <h2>Raw evidence</h2>
         </div>
         <span className="evidence-state-chip">

@@ -39,14 +39,39 @@
         "displayName": "Muted Sage Gray",
         "canonical": "#b0b8a6",
         "tonalRamp": ["#20221e", "#373b32", "#50564a", "#69715f", "#838b78", "#99a28d", "#a5ae9a", "#b0b8a6"]
+      },
+      "thread": {
+        "role": "accent",
+        "displayName": "Thread Red",
+        "canonical": "#a1372f",
+        "tonalRamp": ["#42120e", "#5c1d18", "#7a2822", "#903129", "#a1372f", "#b44a42", "#c9665f", "#de8a84"]
+      },
+      "pushpin": {
+        "role": "accent",
+        "displayName": "Pushpin Rust",
+        "canonical": "#ad604a",
+        "tonalRamp": ["#4a251b", "#633224", "#7d3f2e", "#944e39", "#ad604a", "#bf7560", "#d18d7a", "#e2a999"]
+      },
+      "paper-card": {
+        "role": "neutral",
+        "displayName": "Paper Card Ivory",
+        "canonical": "#faf8f1",
+        "tonalRamp": ["#42413a", "#66645b", "#8a887e", "#b0ada2", "#d4d0c5", "#e8e5db", "#f2f0e6", "#faf8f1"]
       }
     },
     "typographyMeta": {
       "display": { "displayName": "Display", "purpose": "Welcome-page lead." },
       "headline": { "displayName": "Headline", "purpose": "Case and section headings." },
+      "title": { "displayName": "Title", "purpose": "Component and modal titles." },
+      "section": { "displayName": "Section", "purpose": "Subheadings and major cards." },
       "body": { "displayName": "Body", "purpose": "Default interface reading text." },
-      "label": { "displayName": "Label Mono", "purpose": "Compact metadata and eyebrow labels." },
-      "evidence": { "displayName": "Evidence handwriting", "purpose": "Locally bundled Excalifont for upright evidence-card titles; summaries and metadata use DM Sans." }
+      "detail": { "displayName": "Detail", "purpose": "Secondary descriptions and inputs." },
+      "compact": { "displayName": "Compact", "purpose": "Badges and metadata." },
+      "micro": { "displayName": "Micro", "purpose": "Small timestamps and counts." },
+      "label": { "displayName": "Label Mono", "purpose": "Compact metadata and labels." },
+      "evidence": { "displayName": "Evidence handwriting", "purpose": "Locally bundled Excalifont for upright evidence-card titles." },
+      "evidence-summary": { "displayName": "Evidence summary", "purpose": "Excalifont handwriting for evidence summaries." },
+      "evidence-thread": { "displayName": "Evidence thread annotation", "purpose": "Excalifont handwriting for thread connection labels." }
     },
     "shadows": [
       { "name": "card-rest", "value": "1px 4px 8px #181b1740", "purpose": "Subtle lift under paper evidence cards." },
@@ -87,9 +112,9 @@
     {
       "name": "Evidence Pin",
       "kind": "card",
-      "description": "Compact paper record card with locally bundled Excalifont, a subtly uneven outline, and a direct linked-question action. 248 × 224px; two-line titles and summaries, full text in source inspection.",
+      "description": "Compact paper record card with locally bundled Excalifont, a single uneven paper silhouette, a centered pushpin 6px inside the top edge, arrow-only source inspection, and a direct linked-question action. 248 × 224px; two-line titles and summaries, full text in source inspection.",
       "html": "<article class=\"ds-evidence-pin\"><span class=\"ds-pin\"></span><small>EVENT · 14:32</small><h3>Riverside meeting</h3><p>Source-linked evidence summary for review.</p><footer>2 sources <button>Inspect ↗</button></footer></article>",
-      "css": ".ds-evidence-pin { position: relative; width: 248px; height: 224px; padding: 16px 16px 0; border-radius: 4px 6px 3px 5px; background: #faf8f1; color: #383c31; box-shadow: 0 3px 8px #4e443b1a; } .ds-evidence-pin h3 { font: 400 20px/1.2 Excalifont, \"DM Sans\", sans-serif; } .ds-evidence-pin p { font: 400 14px/1.4 \"DM Sans\", sans-serif; }"
+      "css": ".ds-evidence-pin { position: relative; width: 248px; height: 224px; padding: 14px 17px 4px; isolation: isolate; color: #383c31; cursor: pointer; } .ds-evidence-pin h3 { font: 400 21px/1.18 Excalifont, \"DM Sans\", sans-serif; } .ds-evidence-pin p { font: 400 15px/1.4 Excalifont, \"DM Sans\", sans-serif; }"
     },
     {
       "name": "Source Disclosure",
@@ -109,7 +134,7 @@
     ],
     "rules": [
       { "name": "The Evidence-State Rule", "body": "Use sage for interaction and amber for questions; keep observed records legible on paper-toned cards.", "section": "colors" },
-      {"name": "Legible handwriting and threads", "body": "Keep evidence-card text upright, with handwriting limited to titles. Keep at least 40px between settled cards. Smooth 3px red threads attach to facing edges against faint paper. Keep connection labels quiet and unboxed. Claims and inferences remain dashed and explicitly labeled.", "section": "components"}
+      {"name": "Legible handwriting and threads", "body": "Keep evidence-card text upright, with handwriting on titles, summaries, question links, and thread annotations; use sans-serif metadata. Omit inset frames, footer dividers, and visible Inspect copy. Keep an accessible arrow-only inspection button. Keep at least 40px between settled cards. Smooth 3px red threads attach to facing edges against faint paper. Keep handwritten connection labels quiet and unboxed, wrapping only at spaces. Arrowheads require explicit API direction; unknown or undirected relationships use plain threads. Claims and inferences remain dashed and explicitly labeled. The minimap reuses note silhouettes, inset top pins, facing-side curves, explicit direction, and selection; use a light viewport wash.", "section": "components"}
     ],
     "dos": [
       "Do keep the main demo action visually prominent and controls readable.",

@@ -1,3 +1,4 @@
+import { memo } from "react";
 import {
   BaseEdge,
   EdgeLabelRenderer,
@@ -10,10 +11,13 @@ import {
 export type ThreadData = {
   kind: "observed" | "claim" | "inference";
   label: string;
+  directed: boolean;
   onInspect: () => void;
 };
 
-export function ThreadEdge(props: EdgeProps<Edge<ThreadData>>) {
+export const ThreadEdge = memo(function ThreadEdge(
+  props: EdgeProps<Edge<ThreadData>>,
+) {
   const [path, x, y] = getBezierPath({ ...props, curvature: 0.22 });
   const data = props.data;
   if (!data) return null;
@@ -21,7 +25,7 @@ export function ThreadEdge(props: EdgeProps<Edge<ThreadData>>) {
     props.sourcePosition === Position.Left ||
     props.sourcePosition === Position.Right;
   const labelWidth = horizontal
-    ? Math.max(64, Math.min(166, Math.abs(props.targetX - props.sourceX) - 16))
+    ? Math.max(64, Math.min(166, Math.abs(props.targetX - props.sourceX) - 4))
     : 166;
   return (
     <>
@@ -55,4 +59,4 @@ export function ThreadEdge(props: EdgeProps<Edge<ThreadData>>) {
       </EdgeLabelRenderer>
     </>
   );
-}
+});

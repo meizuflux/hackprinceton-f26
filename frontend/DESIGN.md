@@ -6,8 +6,11 @@ colors:
   workspace: "#171a19"
   question: "#d4ad6a"
   paper: "#e8e4d5"
+  paper-card: "#faf8f1"
   text: "#e8e8df"
   text-muted: "#b0b8a6"
+  thread: "#a1372f"
+  pushpin: "#ad604a"
 typography:
   display:
     fontFamily: "Newsreader, Georgia, serif"
@@ -17,13 +20,41 @@ typography:
     fontFamily: "DM Sans, sans-serif"
     fontSize: "26px"
     fontWeight: 500
+  title:
+    fontFamily: "DM Sans, sans-serif"
+    fontSize: "20px"
+    fontWeight: 500
+  section:
+    fontFamily: "DM Sans, sans-serif"
+    fontSize: "16px"
+    fontWeight: 550
   body:
     fontFamily: "DM Sans, sans-serif"
     fontSize: "14px"
     fontWeight: 400
+  detail:
+    fontFamily: "DM Sans, sans-serif"
+    fontSize: "12px"
+    fontWeight: 400
+  compact:
+    fontFamily: "DM Sans, sans-serif"
+    fontSize: "11px"
+    fontWeight: 400
+  micro:
+    fontFamily: "DM Sans, sans-serif"
+    fontSize: "10px"
+    fontWeight: 400
   evidence:
     fontFamily: "Excalifont, DM Sans, sans-serif"
-    fontSize: "20px"
+    fontSize: "21px"
+    fontWeight: 400
+  evidence-summary:
+    fontFamily: "Excalifont, DM Sans, sans-serif"
+    fontSize: "15px"
+    fontWeight: 400
+  evidence-thread:
+    fontFamily: "Excalifont, DM Sans, sans-serif"
+    fontSize: "14.5px"
     fontWeight: 400
   label:
     fontFamily: "IBM Plex Mono, monospace"
@@ -32,9 +63,12 @@ typography:
     letterSpacing: "1.4px"
 rounded:
   pin: "2px"
+  subtle: "3px"
   control: "4px"
   button: "5px"
+  panel: "6px"
   surface: "7px"
+  card: "8px"
 spacing:
   sm: "8px"
   md: "12px"
@@ -94,9 +128,9 @@ The palette moves between quiet dark greens, warm evidence paper, and two focuse
 **Body Font:** DM Sans (with sans-serif fallback)
 **Label/Mono Font:** IBM Plex Mono (with monospace fallback)
 
-The serif face gives source excerpts a document-like character. Evidence-card titles use a locally bundled Excalifont for legible handwriting; summaries, controls, metadata, and relationship labels retain DM Sans. IBM Plex Mono distinguishes compact metadata and numbers. The other fonts are requested from Google Fonts; if unavailable, the declared fallback stacks apply.
+The serif face gives source excerpts a document-like character. Evidence-card titles, summaries, question links, and thread annotations use locally bundled Excalifont for legible handwriting. Workspace controls and card metadata retain DM Sans. IBM Plex Mono distinguishes compact metadata and numbers. The other fonts are requested from Google Fonts; if unavailable, the declared fallback stacks apply.
 
-Excalifont is distributed with its upstream SIL Open Font License in `public/fonts/`. The Latin subset is bundled; unsupported characters fall back to DM Sans. Card titles use 20px/1.2, and summaries use DM Sans at 14px/1.4. Keep text upright and high contrast; imperfections belong to the outline, never the letter alignment.
+Excalifont is distributed with its upstream SIL Open Font License in `public/fonts/`. The Latin subset is bundled; unsupported characters fall back to DM Sans. Card titles use 21px/1.18, summaries use 15px/1.4, and thread annotations use 14.5px/1.25. Annotation words wrap only at spaces. Keep text upright and high contrast; imperfections belong to the outline, never the letter alignment.
 
 ### Hierarchy
 - **Display** (400, responsive 41–68px): welcome-page lead.
@@ -130,16 +164,16 @@ Controls and workspace panels use gently rounded corners, while evidence cards a
 - **Focus:** shared sage focus outline; search remains visible in the board toolbar.
 
 ### Cards / Containers
-- **Corner Style:** evidence cards use 2px corners; the enclosing workspace uses 7px.
+- **Corner Style:** evidence cards use gently varying paper silhouettes; the enclosing workspace uses 7px.
 - **Background:** one ivory paper surface keeps attention on content; icons and text identify record types.
 - **Shadow Strategy:** subtle lift at rest, stronger amber outline for the selected card.
-- **Internal Padding:** evidence cards use compact 12–15px insets.
+- **Internal Padding:** evidence cards use 14px at the top and 17px at the sides.
 
 ### Signature Component: Evidence Pin
 
-Paper cards sit on the faint paper canvas with a centered pin, record type, title, brief summary, time where available, citation count, and an inspect action. They measure 248 × 224px, with softly uneven outlines and one quiet ivory surface. Titles and summaries show at most two lines; inspection preserves the full text and citations. A separate Open question button opens the card's cited gap directly. A gap signals a question requiring verification; it does not establish proof.
+Paper cards sit on the faint paper canvas with a centered pushpin inset 6px inside the paper's top edge, record type, title, brief summary, time where available, citation count, and an inspect action. They measure 248 × 224px, with a single gently uneven paper silhouette and one quiet ivory surface. Each silhouette varies slightly by card without tilting the text. Omit the inset frame and footer divider; use an arrow-only source-inspection button with a full accessible name. The whole card shows a pointer cursor and remains draggable. Titles and summaries show at most two lines; inspection preserves the full text and citations. A separate Open question button opens the card's cited gap directly. A gap signals a question requiring verification; it does not establish proof.
 
-Initial placement and completed card drops preserve at least 40px between cards. Layout is presentation geometry only and does not create case relationships. Threads use the facing card edges, choosing horizontal or vertical attachment from their positions rather than routing every connection through a top pin. Smooth 3px red curves and small arrowheads show direction against the pale background. Claims and inferences use dashed red threads with compact explicit labels; hover, focus, or selection reveals their relationship wording. Observed relationship labels use a quiet flat backing without a border. Every relationship label is a keyboard-accessible source-inspection button. The minimap uses the same red relationship vocabulary and a sage viewport indicator.
+Initial placement and completed card drops preserve at least 40px between cards. Layout is presentation geometry only and does not create case relationships. Threads use the facing card edges, choosing horizontal or vertical attachment from their positions rather than routing every connection through a top pin. Smooth 3px red curves connect the cards. Small arrowheads appear only when the API adapter explicitly sets `directed: true`; an omitted direction is rendered without an arrowhead. Badge association and time overlap are undirected in the disposable mock. Preserve the supplied source and target order; never reverse a relationship from screen position or guessed meaning. The list and inspector use matching directional or undirected notation. Claims and inferences use dashed red threads with compact explicit labels; hover, focus, or selection reveals their relationship wording. Observed relationship labels use a quiet flat backing without a border. Every relationship label is a keyboard-accessible source-inspection button. The minimap reuses the same paper silhouettes, inset top pushpins, facing-edge Bezier connections, explicit direction, and live selection state. Question cards receive an amber outline rather than a different fill. A lightly shaded sage viewport indicator keeps the preview legible while tracking pan and zoom.
 
 ### Signature Component: Source Inspector
 

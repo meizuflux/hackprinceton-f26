@@ -1,4 +1,6 @@
+import { memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
+import { paperOutline } from "./paper-note";
 import {
   UserRound,
   MapPin,
@@ -28,7 +30,10 @@ const icons = {
   event: CalendarClock,
   statement: FileText,
 };
-export function EvidenceNode({ data }: NodeProps<Node<PinData>>) {
+export const EvidenceNode = memo(function EvidenceNode({
+  id,
+  data,
+}: NodeProps<Node<PinData>>) {
   const Icon = icons[data.type as keyof typeof icons] || FileText;
   return (
     <div
@@ -36,11 +41,11 @@ export function EvidenceNode({ data }: NodeProps<Node<PinData>>) {
     >
       <svg
         className="pin-outline"
-        viewBox="0 0 248 252"
+        viewBox="0 0 248 224"
         preserveAspectRatio="none"
         aria-hidden="true"
       >
-        <path d="M4 4 C82 2 166 5 244 3 C246 80 244 168 245 248 C166 250 82 247 3 249 C2 168 5 82 4 4 Z" />
+        <path d={paperOutline(id)} />
       </svg>
       {[Position.Top, Position.Right, Position.Bottom, Position.Left].map(
         (side) => (
@@ -94,10 +99,11 @@ export function EvidenceNode({ data }: NodeProps<Node<PinData>>) {
             data.onInspect();
           }}
           aria-label={`Inspect ${data.label} and sources`}
+          title={`Open ${data.label} and sources`}
         >
-          Inspect <ArrowUpRight size={12} />
+          <ArrowUpRight size={16} aria-hidden="true" />
         </button>
       </div>
     </div>
   );
-}
+});

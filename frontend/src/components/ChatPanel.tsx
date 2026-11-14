@@ -110,7 +110,6 @@ export function ChatPanel({
     <section className="chat-panel" aria-label="Ask about this case">
       <header className="chat-panel-heading">
         <div>
-          <span className="chat-eyebrow">CASE REVIEW</span>
           <h1>Ask about this case</h1>
         </div>
         {status?.available && (

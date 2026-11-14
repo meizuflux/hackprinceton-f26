@@ -11,13 +11,14 @@
 .evidence-pin {
   position: relative;
   height: 224px;
-  padding: 16px 16px 0;
-  background: #faf8f1;
-  border-radius: 4px 6px 3px 5px;
-  box-shadow: 0 3px 8px #4e443b1a;
+  padding: 14px 17px 4px;
   color: #383c31;
   display: flex;
   flex-direction: column;
+  cursor: pointer;
+}
+.evidence-pin:active {
+  cursor: grabbing;
 }
 .pin-outline {
   position: absolute;
@@ -25,10 +26,15 @@
   width: 100%;
   height: 100%;
   pointer-events: none;
-  fill: none;
+  fill: #faf8f1;
   stroke: #766d56;
-  stroke-width: 1.1;
-  opacity: 0.35;
+  stroke-width: 0.7;
+  stroke-opacity: 0.3;
+  filter: drop-shadow(0 3px 4px #4e443b26);
+  z-index: -1;
+}
+.evidence-pin {
+  isolation: isolate;
 }
 .evidence-pin.active {
   outline: 3px solid var(--amber);
@@ -36,12 +42,13 @@
 }
 .pushpin {
   position: absolute;
-  top: -3px;
-  left: calc(50% - 3px);
-  width: 6px;
-  height: 6px;
+  top: 6px;
+  left: calc(50% - 3.5px);
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #9e6c5c;
+  background: #ad604a;
+  box-shadow: 0 1px 2px #63453540;
 }
 .pin-type,
 .pin-type > span,
@@ -56,15 +63,15 @@
 }
 .pin-type {
   justify-content: space-between;
-  text-transform: uppercase;
-  font-size: 10px;
-  letter-spacing: 0.04em;
+  text-transform: capitalize;
+  font-size: 11px;
+  letter-spacing: 0;
   color: #5b604f;
   margin-bottom: 6px;
 }
 .evidence-pin h3 {
   font:
-    400 20px/1.2 "Excalifont",
+    400 21px/1.18 "Excalifont",
     "DM Sans",
     sans-serif;
   letter-spacing: 0;
@@ -86,7 +93,8 @@
 }
 .pin-summary {
   font:
-    400 14px/1.4 "DM Sans",
+    400 15px/1.4 "Excalifont",
+    "DM Sans",
     sans-serif;
   color: #454a3d;
   margin-top: 6px;
@@ -104,22 +112,26 @@
   letter-spacing: 0;
 }
 .pin-gap {
-  background: #e9ddc2;
+  background: transparent;
   color: #69461b;
   border-radius: 3px;
-  padding: 5px 7px;
-  font-size: 11px;
+  padding: 3px 0;
+  font:
+    400 14px/1.2 "Excalifont",
+    "DM Sans",
+    sans-serif;
   margin-top: auto;
   margin-bottom: 6px;
   min-height: 26px;
   flex-shrink: 0;
   text-align: left;
+  align-self: flex-start;
 }
 .pin-gap svg:last-child {
-  margin-left: auto;
+  margin-left: 3px;
 }
 .pin-gap:hover {
-  background: #dfcc9f;
+  background: #e9ddc2;
 }
 .pin-gap:focus-visible {
   outline-color: #69461b;
@@ -127,12 +139,11 @@
 }
 .pin-footer {
   justify-content: space-between;
-  border-top: 1px solid #88876c44;
   margin-top: auto;
-  padding: 4px 0;
+  padding: 0;
   color: #50573e;
   font-size: 11px;
-  min-height: 38px;
+  min-height: 34px;
   flex-shrink: 0;
 }
 .pin-gap + .pin-footer {
@@ -143,7 +154,10 @@
   color: #36452b;
   font-size: 13px;
   min-height: 32px;
-  padding: 6px 4px;
+  min-width: 32px;
+  padding: 6px;
+  justify-content: center;
+  border-radius: 4px;
 }
 .pin-inspect:hover {
   background: #bdc6a875;
@@ -171,19 +185,21 @@
   position: absolute;
   pointer-events: all;
   max-width: 166px;
-  padding: 3px 6px;
+  padding: 3px 4px;
   background: #eee8de;
   color: #5d493c;
   border-radius: 3px;
-  font-size: 11.5px;
-  line-height: 1.35;
+  font:
+    400 14.5px/1.25 "Excalifont",
+    "DM Sans",
+    sans-serif;
   text-align: center;
-  overflow-wrap: anywhere;
+  overflow-wrap: normal;
 }
 .thread-label strong {
   display: block;
-  font-size: 11.5px;
-  font-weight: 500;
+  font-size: 14px;
+  font-weight: 400;
   color: #79442f;
 }
 .thread-label:not(.observed) > span {

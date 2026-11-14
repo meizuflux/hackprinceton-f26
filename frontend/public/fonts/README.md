@@ -4,4 +4,4 @@
 
 Copyright (c) 2024 by Excalidraw. Font design: Your Own Font Foundry (Virgil); Ján Filípek / DizajnDesign (Excalifont modifications). Distributed under the SIL Open Font License 1.1; see `Excalifont-LICENSE.txt` for the upstream notice and license.
 
-The font is served locally for card titles. Interface text retains the standard sans-serif stack, which also covers characters outside this subset.
+The font is served locally for card titles, summaries, question links, and thread annotations. Interface text retains the standard sans-serif stack, which also covers characters outside this subset.

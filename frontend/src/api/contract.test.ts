@@ -44,6 +44,21 @@ describe("demo case contract", () => {
     expect(isMock).toBe(true);
     await expect(api.getCase()).resolves.toBe(demoCase);
   });
+
+  it("declares direction explicitly without making associations or time overlaps directional", () => {
+    for (const edge of demoCase.edges)
+      expect(typeof edge.directed).toBe("boolean");
+    expect(
+      demoCase.edges
+        .filter((edge) =>
+          ["associated_with", "time_overlap"].includes(edge.type),
+        )
+        .every((edge) => edge.directed === false),
+    ).toBe(true);
+    expect(
+      demoCase.edges.find((edge) => edge.type === "made_by"),
+    ).toMatchObject({ source: "statement", target: "alex", directed: true });
+  });
 });
 
 describe("mock upload adapter", () => {

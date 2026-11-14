@@ -242,9 +242,9 @@
   height: var(--minimap-height);
   display: block;
   overflow: hidden;
-  border: 1px solid #d9d3c2;
-  border-radius: 12px;
-  background: #f7f4ec;
+  border: 1px solid #b4ab9a;
+  border-radius: 6px;
+  background: #eee8de;
   box-shadow: var(--shadow);
   cursor: grab;
   touch-action: none;
@@ -252,22 +252,36 @@
 .board-minimap-map:active {
   cursor: grabbing;
 }
-.board-minimap-map line {
-  stroke: #a84e40;
-  stroke-width: 1;
+.board-minimap-thread {
+  fill: none;
+  stroke: #a1372f;
+  stroke-width: 1.2;
+  stroke-linecap: round;
 }
-.board-minimap-map line.is-inferred {
-  stroke: #a84e40;
+.board-minimap-thread.is-inferred {
   stroke-dasharray: 3 2;
 }
-.board-minimap-map rect {
-  fill: #d8d1bf;
+.board-minimap-thread.is-active {
+  stroke: #782a23;
+  stroke-width: 1.8;
 }
-.board-minimap-map rect.is-gap {
-  fill: #ce9a53;
+.board-minimap-pin {
+  fill: #faf8f1;
+  stroke: #9c9584;
+  stroke-width: 0.75;
+}
+.board-minimap-pin.is-gap {
+  stroke: #a57838;
+}
+.board-minimap-pin.is-active {
+  stroke: #a57838;
+  stroke-width: 1.8;
+}
+.board-minimap-pushpin {
+  fill: #ad604a;
 }
 .board-minimap-map rect.board-minimap-view {
-  fill: #77876533;
+  fill: #6978550c;
   stroke: #697855;
   stroke-width: 1.5;
   pointer-events: none;

@@ -22,6 +22,8 @@ export interface EvidenceEdge {
   type: string;
   label: string;
   citations: CitationId[];
+  /** Arrowheads require an explicit direction from the adapter. */
+  directed?: boolean;
 }
 
 export interface SourceRecord {
