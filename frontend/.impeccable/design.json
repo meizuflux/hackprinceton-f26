@@ -1,0 +1,124 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-14T15:00:00Z",
+  "title": "Design System: Compstat",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Soft Sage",
+        "canonical": "#d3dfaf",
+        "tonalRamp": ["#20251c", "#353d2e", "#4c5740", "#667451", "#829264", "#9eae7e", "#b8c99a", "#d3dfaf"]
+      },
+      "workspace": {
+        "role": "neutral",
+        "displayName": "Moss Workspace",
+        "canonical": "#171a19",
+        "tonalRamp": ["#101211", "#171a19", "#202523", "#2b302d", "#3a403d", "#505853", "#747b76", "#a5aaa5"]
+      },
+      "question": {
+        "role": "secondary",
+        "displayName": "Question Amber",
+        "canonical": "#d4ad6a",
+        "tonalRamp": ["#302517", "#4d3a20", "#6b502a", "#896737", "#a67f47", "#c39757", "#d4ad6a", "#e5d1a5"]
+      },
+      "paper": {
+        "role": "neutral",
+        "displayName": "Evidence Paper",
+        "canonical": "#e8e4d5",
+        "tonalRamp": ["#292820", "#454337", "#625f4f", "#807d6a", "#9d9a86", "#bab7a3", "#d1cebc", "#e8e4d5"]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Warm Text",
+        "canonical": "#e8e8df",
+        "tonalRamp": ["#292925", "#45453f", "#62625b", "#808078", "#9d9d95", "#b9b9b0", "#d1d1c9", "#e8e8df"]
+      },
+      "text-muted": {
+        "role": "neutral",
+        "displayName": "Muted Sage Gray",
+        "canonical": "#b0b8a6",
+        "tonalRamp": ["#20221e", "#373b32", "#50564a", "#69715f", "#838b78", "#99a28d", "#a5ae9a", "#b0b8a6"]
+      }
+    },
+    "typographyMeta": {
+      "display": { "displayName": "Display", "purpose": "Welcome-page lead." },
+      "headline": { "displayName": "Headline", "purpose": "Case and section headings." },
+      "body": { "displayName": "Body", "purpose": "Default interface reading text." },
+      "label": { "displayName": "Label Mono", "purpose": "Compact metadata and eyebrow labels." }
+    },
+    "shadows": [
+      { "name": "card-rest", "value": "1px 4px 8px #181b1740", "purpose": "Subtle lift under paper evidence cards." },
+      { "name": "card-selected", "value": "0 0 0 3px #d9b36d, 2px 5px 15px #1b201b66", "purpose": "Selection outline and lift for the active evidence card." }
+    ],
+    "motion": [
+      { "name": "control-transition", "value": "0.18s", "purpose": "Background, text, border, and card-shadow state changes." }
+    ],
+    "breakpoints": [
+      { "name": "workspace-stack", "value": "900px" },
+      { "name": "mobile", "value": "540px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Primary demo and upload action.",
+      "html": "<button class=\"ds-button-primary\">Start demo</button>",
+      "css": ".ds-button-primary { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 12px 18px; border: 1px solid var(--green); border-radius: 5px; background: var(--green); color: #252d20; font: 550 14px/1.4 \"DM Sans\", sans-serif; cursor: pointer; transition: background 0.18s, color 0.18s, border-color 0.18s; } .ds-button-primary:hover { background: #e1ebc5; } .ds-button-primary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Secondary workspace action.",
+      "html": "<button class=\"ds-button-secondary\">View sources</button>",
+      "css": ".ds-button-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px 18px; border: 1px solid #444d3e; border-radius: 5px; background: transparent; color: #d9ded1; font: 550 14px/1.4 \"DM Sans\", sans-serif; cursor: pointer; transition: background 0.18s, color 0.18s, border-color 0.18s; } .ds-button-secondary:hover { background: #2a3027; } .ds-button-secondary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }"
+    },
+    {
+      "name": "Board Search",
+      "kind": "input",
+      "description": "Visible search field for evidence pins.",
+      "html": "<label class=\"ds-search\"><span aria-hidden=\"true\">⌕</span><input placeholder=\"Find a pin…\" aria-label=\"Find evidence\"></label>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 8px; border: 1px solid #3b4233; border-radius: 4px; background: #191e18; color: #858e7e; } .ds-search input { width: 110px; border: 0; outline: 0; background: transparent; color: #d5ddc9; font: 400 12px \"DM Sans\", sans-serif; } .ds-search:focus-within { outline: 2px solid var(--green); outline-offset: 4px; }"
+    },
+    {
+      "name": "Evidence Pin",
+      "kind": "card",
+      "description": "Paper record card displayed on the cork board.",
+      "html": "<article class=\"ds-evidence-pin\"><span class=\"ds-pin\"></span><small>EVENT · 14:32</small><h3>Riverside meeting</h3><p>Source-linked evidence summary for review.</p><footer>2 sources <button>Inspect ↗</button></footer></article>",
+      "css": ".ds-evidence-pin { position: relative; width: 185px; padding: 15px 12px 0; border: 1px solid #ede8d6; border-radius: 2px; background: #e8e4d5; color: #3b3b30; box-shadow: 1px 4px 8px #181b1740; } .ds-evidence-pin .ds-pin { position: absolute; top: -5px; left: 50%; width: 9px; height: 9px; border-radius: 50%; background: #a34735; transform: translateX(-50%); } .ds-evidence-pin small { color: #5f624f; font: 400 10px \"DM Sans\", sans-serif; text-transform: uppercase; } .ds-evidence-pin h3 { margin: 9px 0 4px; font: 600 17px/1.2 \"DM Sans\", sans-serif; } .ds-evidence-pin p { margin: 10px 0; color: #4c4d3d; font: 400 13px/1.5 \"Newsreader\", Georgia, serif; } .ds-evidence-pin footer { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #88876c44; color: #50573e; font: 400 10px \"DM Sans\", sans-serif; } .ds-evidence-pin button { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; } .ds-evidence-pin button:focus-visible { outline: 2px solid #697b58; outline-offset: 2px; }"
+    },
+    {
+      "name": "Source Disclosure",
+      "kind": "custom",
+      "description": "Expandable original source excerpt in the inspector.",
+      "html": "<details class=\"ds-source-item\" open><summary><span><strong>messages/sample.txt</strong><small>Message excerpt</small></span><span aria-hidden=\"true\">⌄</span></summary><blockquote>Fictional excerpt shown for the demo.</blockquote></details>",
+      "css": ".ds-source-item { border: 1px solid #3b4233; border-radius: 4px; background: #20251f; color: #e8e8df; } .ds-source-item summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; cursor: pointer; list-style: none; } .ds-source-item summary strong, .ds-source-item summary small { display: block; } .ds-source-item summary strong { font: 500 13px \"DM Sans\", sans-serif; } .ds-source-item summary small { margin-top: 4px; color: #b0b8a6; font: 400 11px \"DM Sans\", sans-serif; } .ds-source-item blockquote { margin: 0; padding: 12px; border-top: 1px solid #303530; color: #b0b8a6; font: 400 13px/1.5 \"Newsreader\", Georgia, serif; } .ds-source-item summary:focus-visible { outline: 2px solid #d3dfaf; outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Evidence Pinboard",
+    "overview": "Compstat pairs a dark moss workspace with a tactile cork board and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.\n\nTypography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.",
+    "keyCharacteristics": [
+      "Dark moss workspace with a cork evidence surface.",
+      "Paper-toned pinned cards with restrained accent colors.",
+      "Sources and uncertainty are visible parts of the review flow."
+    ],
+    "rules": [
+      { "name": "The Evidence-State Rule", "body": "Use sage for interaction and amber for questions; keep observed records legible on paper-toned cards.", "section": "colors" }
+    ],
+    "dos": [
+      "Do keep the main demo action visually prominent and controls readable.",
+      "Do pair graph inspection with a searchable list view.",
+      "Do label illustrative scores and keep questions distinct from observed evidence.",
+      "Do keep source inspection near the item being reviewed."
+    ],
+    "donts": [
+      "Don't use amber question styling as proof that a claim is true.",
+      "Don't imply that illustrative scores or placeholder hashes are computed results.",
+      "Don't rely on the remote font request without the declared system fallbacks."
+    ]
+  }
+}
