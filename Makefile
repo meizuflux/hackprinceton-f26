@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
-	data-install data-generate data-verify
+	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel
 
 PYTHON ?= python3
 
@@ -14,6 +14,10 @@ help:
 	@echo "make data-install      Install pinned case-generator dependencies (PYTHON=python3)"
 	@echo "make data-generate     Regenerate the synthetic Kestrel case in cases/kestrel/"
 	@echo "make data-verify       Rebuild the case in a temp dir and check every file hash"
+	@echo "make data-truth        Write the answer key to .truth/kestrel/ (git-ignored; scoring only)"
+	@echo "make backend-install   Install backend ingestion dependencies (PYTHON=python3)"
+	@echo "make backend-test      Run backend tests, including a full Kestrel ingestion"
+	@echo "make backend-ingest-kestrel  Ingest the Kestrel upload ZIP into backend/runs/kestrel/"
 
 frontend-install:
 	cd frontend && bun install --frozen-lockfile
@@ -41,3 +45,15 @@ data-generate:
 
 data-verify:
 	$(PYTHON) generator/generate.py --verify
+
+data-truth:
+	$(PYTHON) generator/generate.py --truth-out .truth/kestrel
+
+backend-install:
+	$(PYTHON) -m pip install -r backend/requirements.txt
+
+backend-test:
+	cd backend && $(PYTHON) -m pytest -q tests
+
+backend-ingest-kestrel:
+	cd backend && $(PYTHON) -m compstat_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel --overwrite

@@ -305,8 +305,7 @@ exclusion would likely not apply on current evidence, but G-09 must be closed fi
 """
 
 
-def write_all(out: Out, reg: Registry):
-    R = "truth/"
+def write_all(out: Out, reg: Registry, R: str = ""):
     fact_ids = {f[0] for f in FACTS}
     facts = [{"id": fid, "kind": "observation", "statement": s, "citations": reg.cite(*tags)} for fid, s, tags in FACTS]
     out.json(R + "facts.json", facts)

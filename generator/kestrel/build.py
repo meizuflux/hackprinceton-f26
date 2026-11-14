@@ -88,8 +88,11 @@ Do not regenerate or edit these files by hand. Run `make data-generate` (or
 | --- | --- | --- |
 | `evidence/` | The original files, one per evidence item, plus `MANIFEST.csv` with SHA-256 hashes and provenance | Yes |
 | `{ZIP_NAME}` | The demo upload: `evidence/` zipped under `kestrel_case/` | Yes (this is the demo ZIP) |
-| `truth/` | Answer key and labels: solution, facts, insights, gaps, questions, record labels, annotations | **No.** Evaluation and training only |
 | `BUILD_INFO.json` | Seed, versions and the hash of every generated file | No |
+
+There is no answer key in the repository: the model has to work the case out from the evidence. For scoring
+a pipeline run afterwards, `make data-truth` writes the answer key to the git-ignored `.truth/kestrel/` folder.
+Never put that folder (or the `generator/` source, which encodes the solution) in the model's input.
 
 ## Evidence by modality
 
@@ -97,34 +100,35 @@ Do not regenerate or edit these files by hand. Run `make data-generate` (or
 | --- | --- | --- |
 {mods}
 
-## Labels and classification
+## Classification
 
-- `evidence/MANIFEST.csv`: provenance and classification for each file: custodian, collector, acquisition
-  method, time basis (UTC, local, epoch, burned-in), sensitivity label, and an Admiralty grade (source
-  reliability A-F, information credibility 1-6).
-- `truth/record_labels.csv`: one row per record (badge event, message, cell record, scan, frame-free media
-  file, tagged document line) with `relevance` in key / supporting / context / red_herring / background / noise,
-  a `noise_type` where applicable, and the key tags it supports.
-- `truth/key_locators.json`: every named locator (for example `CAB_1017_EXEC_OPEN -> EV-071 seq=...`).
-- `truth/facts.json`, `insights.json`, `gaps.json`, `questions.json`, `red_herrings.json`, `artifact_value.json`:
-  the expected reasoning output, each item citing exact locators.
-- `truth/video_tracks.jsonl` and `truth/photo_annotations.json`: per-frame boxes and identities for the CCTV
-  clips, and object boxes for the photos.
+`evidence/MANIFEST.csv` classifies every file: modality, format, custodian, collector, acquisition method,
+time basis (UTC, local, epoch, burned-in), sensitivity label, and an Admiralty grade (source reliability A-F,
+information credibility 1-6). It says nothing about which evidence matters.
 
 Timestamps deliberately mix formats (UTC, local without offset, epoch milliseconds, US 12-hour, a reader with
 clock drift) and include duplicates, misreads, missed RFID reads, spam and low-confidence location points, so
-the cleaning step has real work to do. Every noise record is labelled with its `noise_type`.
+the cleaning step has real work to do.
 
 Protected attributes (for example `visitor_log.id_issuing_country`) must not be used as features.
 """
 
 
-def build(root: str, seed: str = common.DEFAULT_SEED) -> dict:
+def build(root: str, seed: str = common.DEFAULT_SEED, truth_dir: str | None = None) -> dict:
+    """Write the case to `root`. The answer key is always computed (its citations are checked) but is only
+    written when `truth_dir` is given, and never inside the case folder."""
     common.SEED = seed
     if os.path.isdir(root):
         for name in ("evidence", "truth"):
             shutil.rmtree(Out(root).path(name), ignore_errors=True)
     out = Out(root)
+    tmp_truth = None
+    if truth_dir is None:
+        tmp_truth = tempfile.mkdtemp(prefix="kestrel_truth_")
+        truth_dir = tmp_truth
+    elif os.path.isdir(truth_dir):
+        shutil.rmtree(Out(truth_dir).path(""), ignore_errors=True)
+    tout = Out(truth_dir)
     reg = Registry()
     logs.write_all(out, reg)
     messages.write_all(out, reg)
@@ -133,9 +137,11 @@ def build(root: str, seed: str = common.DEFAULT_SEED) -> dict:
     check_dna(g, mixes)
     texts.write_all(out, reg)
     media.write_all(out, reg)
-    out.jsonl("truth/video_tracks.jsonl", media.ANN_TRACKS)
-    out.json("truth/photo_annotations.json", media.ANN_PHOTOS)
-    truth.write_all(out, reg)
+    tout.jsonl("video_tracks.jsonl", media.ANN_TRACKS)
+    tout.json("photo_annotations.json", media.ANN_PHOTOS)
+    truth.write_all(tout, reg)
+    if tmp_truth:
+        shutil.rmtree(tmp_truth, ignore_errors=True)
     missing = [e.eid for e in CATALOG if not os.path.exists(out.path(e.path))]
     assert not missing, f"catalog entries without files: {missing}"
     write_manifest(out)
@@ -198,10 +204,15 @@ def main(argv=None) -> int:
     ap.add_argument("--verify", action="store_true", help="rebuild in a temp dir and compare with --out")
     ap.add_argument("--seed", default=common.DEFAULT_SEED,
                     help="noise seed; other seeds give training variants with the same key facts")
+    ap.add_argument("--truth-out", default=None,
+                    help="also write the answer key (solution, labels, annotations) to this folder; "
+                         "keep it out of git and out of the model's input")
     a = ap.parse_args(argv)
     if a.verify:
         return verify(a.out)
-    info = build(a.out, a.seed)
+    info = build(a.out, a.seed, a.truth_out)
+    if a.truth_out:
+        print(f"Answer key written to {a.truth_out} (do not commit or feed to the model)")
     total = sum(os.path.getsize(Out(a.out).path(r)) for r in info["files"])
     print(f"Built {len(info['files'])} files ({total / 1e6:.1f} MB) in {a.out}")
     return 0

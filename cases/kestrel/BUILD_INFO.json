@@ -12,7 +12,7 @@
   },
   "note": "Text, CSV and JSON outputs are byte-stable across platforms. JPEG, MP4 and ZIP bytes are stable for the pinned library versions in generator/requirements.txt.",
   "files": {
-    "README.md": "f1868a28f2c3df785b8b24be206107906171e348ee408585f4c2fd2fcc917c52",
+    "README.md": "c10c4a478d24f8d8eb42f89bb8cf6b2226fee515d79503145c3e11320cf1bd1a",
     "evidence/00_intake/custody_log.csv": "d326a7b3662718e8ecd5e9954c17d90835fcebfd47bf693ceb9ce7f503c61751",
     "evidence/00_intake/incident_report.txt": "f5683b213544f1d645c5a92ca2699336912ee07cdf3039c66ec5cd284409b64f",
     "evidence/00_intake/insurer_fnol.txt": "47f524ff777b02c05b65cbe2a00895a141f3d41a951c87a552f583dc90ad3d7c",
@@ -70,20 +70,6 @@
     "evidence/09_email/halvorsen_2255.eml": "43eb43ce2e4cd2805ce8fbf698be6ee5dea9f9945066bcaa463e36188b10520a",
     "evidence/09_email/inv_alert.eml": "aa29b8c3d0b624e7289d7bf80673d4b2125509137e599a01283c90545220023a",
     "evidence/MANIFEST.csv": "d73b031cf606f0c48a8a0fafaa5a16618f4150820f46329e94ae5d345730d460",
-    "kestrel_case_upload.zip": "e9ad1b2322bde843d4b29dc5baf9e61f5d05228edc07e6e45ed8414ec439526f",
-    "truth/artifact_value.json": "1eb612736bcece613cf69eaaa43f283d668782b9a0169ef4cd9e49705934d9f5",
-    "truth/entities.json": "e683ce5d450378ba39017af43a02306d474665fefe3d04fcbdc4ce2e173f6cd6",
-    "truth/evidence_labels.csv": "bb174fa0da1d38855896dba5252982007d8eab8dd5dff1ee15d0a99d61286afe",
-    "truth/facts.json": "2c8624b68f6c2e530c78274c0261daa1d4580c110ea81e144eb03b36096a18f5",
-    "truth/gaps.json": "07790f62d564bca540084662e63c6df8d387809ac7dfa231ae1eb4e97ffce037",
-    "truth/insights.json": "1c7c8aa723f5905e5f0a972f701096c87f692a9830b9a1c1e1b8e64a62fa63e7",
-    "truth/key_locators.json": "93f2029e4354e0adf8417bb73fe802fab36828fbef8cb27f1ed9688ee7683f96",
-    "truth/photo_annotations.json": "02add66ae441291d9be6c6030350e14a45457e9d66133adc3f43ea88ce23b347",
-    "truth/questions.json": "69ace32c808723b0344c7ddfc4867cedd8d04531ecfac977a006d46f51871b20",
-    "truth/record_labels.csv": "6b587555282a288de164bea0534793d014294cb84f1f4ae94e8eb32d1e19884c",
-    "truth/red_herrings.json": "0b5ed7e76c15394211b84221eda0c35665e7cdf1e4c6c86a094e326dfc1a6306",
-    "truth/solution.md": "231e43753b1df5b124df0fc9f6777fdf6f1579b4b456bb6d5f617dd4fd5210ae",
-    "truth/true_timeline.csv": "38b07e18fda177d8002b3c965c9daa09b22cd980c9ae6d46af0a73f96200d2ed",
-    "truth/video_tracks.jsonl": "b8acf390de81f0573c3bb591b07e32917aa49e1bc58d1aee1cc067e2fbd09ff5"
+    "kestrel_case_upload.zip": "e9ad1b2322bde843d4b29dc5baf9e61f5d05228edc07e6e45ed8414ec439526f"
   }
 }
