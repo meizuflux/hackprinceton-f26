@@ -1,9 +1,13 @@
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import {
   Files,
+  FolderOpen,
   GitBranch,
   Lightbulb,
   MessageSquare,
+  PanelLeftClose,
+  PanelLeftOpen,
+  Plus,
   ScanText,
 } from "lucide-react";
 import type { CaseData } from "../api/types";
@@ -38,6 +42,8 @@ export function CaseWorkspace({
   children: ReactNode;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
+  const [toolbarExpanded, setToolbarExpanded] = useState(false);
+  const toolbarToggle = useRef<HTMLButtonElement>(null);
   // React Flow needs a visible container for its initial fit. Retain it after
   // the first visit so later section changes preserve pan, zoom and selection.
   const [boardVisited, setBoardVisited] = useState(view === "board");
@@ -69,37 +75,107 @@ export function CaseWorkspace({
     navigate(casePath(data.id, "evidence", id));
   return (
     <div className="case-workspace">
-      <header className="case-navigation">
-        <nav aria-label="Case sections">
-          {views.map(({ id, label, icon: Icon }) => (
-            <a
-              key={id}
-              href={casePath(data.id, id)}
-              aria-current={view === id ? "page" : undefined}
-              onClick={(event) => {
-                if (
-                  event.metaKey ||
-                  event.ctrlKey ||
-                  event.shiftKey ||
-                  event.altKey
-                )
-                  return;
-                event.preventDefault();
-                navigate(casePath(data.id, id));
-              }}
-            >
-              <Icon size={15} aria-hidden="true" />
-              <span>{label}</span>
-            </a>
-          ))}
-        </nav>
-        <span
-          className="case-navigation-name"
-          title={projectName || data.title}
-        >
-          {projectName || data.title}
-        </span>
-      </header>
+      <aside
+        className="case-toolbar"
+        data-expanded={toolbarExpanded}
+        aria-label="Workspace toolbar"
+        onKeyDown={(event) => {
+          if (event.key === "Escape" && toolbarExpanded) {
+            event.preventDefault();
+            setToolbarExpanded(false);
+            toolbarToggle.current?.focus();
+          }
+        }}
+      >
+        <div className="case-toolbar-header">
+          <button
+            ref={toolbarToggle}
+            className="case-toolbar-toggle"
+            type="button"
+            aria-label={
+              toolbarExpanded
+                ? "Collapse workspace toolbar"
+                : "Expand workspace toolbar"
+            }
+            title={toolbarExpanded ? "Collapse toolbar" : "Expand toolbar"}
+            aria-expanded={toolbarExpanded}
+            aria-controls="case-toolbar-content"
+            onClick={() => setToolbarExpanded((expanded) => !expanded)}
+          >
+            {toolbarExpanded ? (
+              <PanelLeftClose size={16} />
+            ) : (
+              <PanelLeftOpen size={16} />
+            )}
+          </button>
+          <span
+            className="case-toolbar-caption"
+            hidden={!toolbarExpanded}
+            title={projectName || data.title}
+          >
+            Workspace
+          </span>
+        </div>
+        <div id="case-toolbar-content" className="case-toolbar-content">
+          <nav className="case-toolbar-sections" aria-label="Case sections">
+            {views.map(({ id, label, icon: Icon }) => (
+              <a
+                key={id}
+                href={casePath(data.id, id)}
+                aria-current={view === id ? "page" : undefined}
+                aria-label={label}
+                title={!toolbarExpanded ? label : undefined}
+                onClick={(event) => {
+                  if (
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  )
+                    return;
+                  event.preventDefault();
+                  navigate(casePath(data.id, id));
+                  if (window.matchMedia("(max-width: 640px)").matches)
+                    setToolbarExpanded(false);
+                }}
+              >
+                <Icon size={16} aria-hidden="true" />
+                <span hidden={!toolbarExpanded}>{label}</span>
+              </a>
+            ))}
+          </nav>
+          <nav
+            className="case-toolbar-project-actions"
+            aria-label="Project navigation"
+          >
+            {[
+              { label: "All projects", path: "/projects", icon: FolderOpen },
+              { label: "New project", path: "/projects/new", icon: Plus },
+            ].map(({ label, path, icon: Icon }) => (
+              <a
+                key={path}
+                href={path}
+                aria-label={label}
+                title={!toolbarExpanded ? label : undefined}
+                onClick={(event) => {
+                  if (
+                    event.metaKey ||
+                    event.ctrlKey ||
+                    event.shiftKey ||
+                    event.altKey
+                  )
+                    return;
+                  event.preventDefault();
+                  navigate(path);
+                }}
+              >
+                <Icon size={16} aria-hidden="true" />
+                <span hidden={!toolbarExpanded}>{label}</span>
+              </a>
+            ))}
+          </nav>
+        </div>
+      </aside>
       <div className="case-panels">
         <section
           className="case-board-panel"

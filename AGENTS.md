@@ -28,6 +28,7 @@
 - Case sections use browser-history routes: the mind map stays at `/cases/:caseId`, with `/evidence`, `/files`, `/insights`, and `/chat` subpages. Evidence citation links append the encoded source ID under `/evidence/:sourceId`. Keep the board mounted across section changes to preserve its viewport and review context.
 - Raw evidence currently indexes fictional source excerpts; original bytes and normalized ingestion records remain unavailable until the authoritative ingestion adapter supplies them. Never synthesize normalized records from frontend fixture metadata. “Generalized files” means normalized ingestion records.
 - Chat in this pass is frontend UI and an optional HTTP contract only; no Deep Agents service or model calls are implemented. Keep keys server-side, avoid simulated replies, and show the unavailable state until a matching case service is connected. See `frontend/CHAT.md` for the handoff contract.
+- Case navigation lives in a compact floating left toolbar using the board controls' dark surface, border, and spacing. It is 48px wide collapsed and 192px expanded, with 34px rows and 16px icons; omit the large wordmark and project block. Expansion overlays the canvas so it preserves the graph viewport. Keep accessible names and tooltips on collapsed icons; Escape collapses while focus is inside the toolbar. On small screens, selecting a section collapses it.
 
 ## Repository layout
 

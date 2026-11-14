@@ -15,7 +15,7 @@ Open [localhost:5173](http://localhost:5173), choose **Open projects**, then ope
 
 The welcome page is at `/`, and an opened case uses `/cases/:caseId`. Browser back and forward and direct case links are supported. The production nginx configuration falls back to the app for these routes.
 
-Each case has Mind map, Raw evidence, Generalized files, Insights, and Chat sections. The latter four use `/evidence`, `/files`, `/insights`, and `/chat` under the case URL. Source links from the map and insights open `/evidence/:sourceId`; switching sections preserves the map viewport and review context. Raw evidence currently shows fictional excerpts, with original files explicitly unavailable. Generalized files means normalized ingestion records; this view stays empty until authoritative backend records are supplied.
+Each case has Mind map, Raw evidence, Generalized files, Insights, and Chat sections in a collapsible left toolbar. The icon rail expands to show labels and project actions; Escape collapses it while focused inside the toolbar. The latter four sections use `/evidence`, `/files`, `/insights`, and `/chat` under the case URL. Source links from the map and insights open `/evidence/:sourceId`; switching sections and expanding the toolbar preserve the map viewport and review context. Raw evidence currently shows fictional excerpts, with original files explicitly unavailable. Generalized files means normalized ingestion records; this view stays empty until authoritative backend records are supplied.
 
 Without Make, run `bun install --frozen-lockfile` and `bun run --bun dev` from `frontend/`.
 
