@@ -9,6 +9,12 @@ related_targets: ["src/styles.css", "src/styles/", "src/components/Inspector.tsx
 
 Mode: Operate; landing: Persuade. Code-first implementation. Product truth: root `SPEC.md`, read only. The user confirmed the landing primary action goes to projects.
 
+## Confirmed frontend scope
+
+Impeccable init is limited to the frontend. Root `SPEC.md` remains the canonical product record; do not create `PRODUCT.md` or require backend documentation changes to begin frontend work. Read `SPEC.md`, `frontend/DESIGN.md`, and this brief directly when the context loader does not discover them.
+
+The user confirmed the next goal: remove visual clutter and inconsistency and present a cohesive, clear design. Apply that goal across the landing page, project manager, upload flow, case sections, board controls, and review dock. Preserve the established evidence-pinboard identity and working interactions. This init records scope only; it does not establish a new visual world or claim that the interface has passed a fresh visual review.
+
 ## Direction contract
 
 THESIS: The case is a full-screen evidence board. Navigation and review controls float above it; marketing chrome never consumes working space.

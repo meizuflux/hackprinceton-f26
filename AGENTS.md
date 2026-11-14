@@ -13,6 +13,7 @@
 ## Implementation decisions
 
 - The single canonical product spec and Impeccable product context live in root `SPEC.md`; do not create a second `PRODUCT.md`; app-specific settings live in `frontend/.impeccable/`. Future landing pages use the confirmed code-first workflow. Keep the root skill installation and `AGENTS.md` at the repository root.
+- Impeccable initialization and design work are frontend-only. If its context loader does not discover root `SPEC.md` or the frontend artifacts, read them directly rather than creating another product record or reopening init. Backend documentation updates are not a prerequisite. The next design pass should make the existing frontend cohesive and clear while preserving its confirmed identity and evidence-review behavior.
 - API seam: `CaseApi` in `frontend/src/api/types.ts`; `frontend/src/api/client.ts` owns mock jobs. UI loads the case through TanStack Query and never imports fixtures directly.
 - Mock uploads never read ZIP contents. Keep this limitation visible beside upload controls. Fixture hashes and confidence scores are illustrative, not computed.
 - Luna subagents are requested for delegated work. Fetch remote refs at task start and before coordinating or integrating shared work; do not run `git fetch` continuously or poll on a timer. Make one signed commit per feature.
