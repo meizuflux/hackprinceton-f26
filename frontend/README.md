@@ -16,6 +16,20 @@ Open [localhost:5173](http://localhost:5173) and click **Explore demo case**. Yo
 
 Without Make, use `npm ci` and `npm run dev` inside `frontend/`.
 
+## Run with Docker
+
+Requires Docker with Compose and a running Docker daemon. Stop any local Vite server using port 5173 first. From the repository root, build and start the production demo container:
+
+```sh
+docker compose up --build -d
+```
+
+Open [localhost:5173](http://localhost:5173). After source changes, rebuild and restart with `docker compose up --build -d`. Stop the container with:
+
+```sh
+docker compose down
+```
+
 ## Useful commands
 
 Run these inside `frontend/`:

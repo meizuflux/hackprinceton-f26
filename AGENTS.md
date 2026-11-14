@@ -24,3 +24,4 @@
 
 - Keep `AGENTS.md` at the repository root. All frontend application files, dependencies, build outputs, and frontend documentation live in `frontend/`.
 - Run Node/npm commands from `frontend/`. Root-level orchestration may reference that directory.
+- `frontend/Makefile` provides local install/dev/build/test/preview/format commands. `compose.yaml` at the root builds only the frontend, serving the production bundle through nginx on `127.0.0.1:5173`; rebuild the image after source changes.
