@@ -1,6 +1,6 @@
 # Compstat frontend
 
-React + Vite evidence board for source-linked case review. The frontend API adapter is ready for the backend integration underway.
+React + Vite evidence board for source-linked case review. The UI loads case data through a replaceable API adapter. The current adapter is a mock: it does not read ZIP contents or perform analysis.
 
 ## Run locally
 
@@ -11,7 +11,7 @@ make frontend-install
 make frontend-dev
 ```
 
-Open [localhost:5173](http://localhost:5173) and click **Explore demo case**. You can also choose a ZIP to preview the workspace flow.
+Open [localhost:5173](http://localhost:5173), choose **Open projects**, then open the fictional case or select a ZIP to preview the workspace. ZIP selection does not read the archive.
 
 The welcome page is at `/`, and an opened case uses `/cases/:caseId`. Browser back and forward and direct case links are supported. The production nginx configuration falls back to the app for these routes.
 

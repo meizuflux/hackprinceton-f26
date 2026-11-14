@@ -62,7 +62,7 @@ Each workstream can be built in parallel against the Kestrel data. Acceptance cr
 - Training variants: `python generator/generate.py --seed <s> --out <dir>` (same facts, different noise).
 
 ### WS1 Ingestion service (`backend/`, FastAPI, Python 3.11+)
-- `POST /upload` (ZIP up to 100 MB, matching the frontend limit) returns `jobId`; the work runs as a background task.
+- `POST /upload` returns `jobId`; the work runs as a background task. The frontend mock does not enforce a size cap. A production limit is still an open backend decision; 100 MB is a reasonable starting proposal, not a current frontend contract.
 - Unzip safely: no paths outside the job folder, size and count limits. Hash every file; compare with `MANIFEST.csv` if present.
 - Parsers, all emitting `Event(time_utc, kind, actors, place, attrs, source)`:
 
