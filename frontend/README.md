@@ -13,6 +13,8 @@ make frontend-dev
 
 Open [localhost:5173](http://localhost:5173) and click **Explore demo case**. You can also choose a ZIP to try the simulated ingestion flow.
 
+The welcome page is at `/`, and an opened case uses `/cases/:caseId`. Browser back and forward and direct case links are supported; the mock adapter currently serves only its fictional case. The production nginx configuration falls back to the app for these routes.
+
 Without Make, run `bun install --frozen-lockfile` and `bun run --bun dev` from `frontend/`.
 
 ## Run with Docker

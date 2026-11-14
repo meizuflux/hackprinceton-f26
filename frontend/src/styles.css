@@ -2138,3 +2138,301 @@ button:active:not(:disabled) {
     transition: none !important;
   }
 }
+
+/* Canvas-first review workspace */
+.workspace-shell {
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  height: calc(100dvh - 146px);
+  margin: 0;
+}
+.workspace-summary {
+  min-height: 34px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 24px 5px;
+  color: #abb69e;
+  font-size: 11px;
+}
+.workspace-summary-spacer {
+  flex: 1;
+}
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+  flex: 1;
+  min-height: 0;
+  height: auto;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  overflow: visible;
+  background: transparent;
+}
+.workspace:has(> .review-dock.is-open) {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 350px);
+}
+.workspace > .board-area {
+  min-width: 0;
+  min-height: 0;
+  height: 100%;
+  overflow: hidden;
+  border: 0;
+  border-radius: 0;
+  background: #1c211c;
+}
+.review-dock {
+  min-width: 0;
+  min-height: 0;
+  width: auto;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #1d221c;
+  border-left: 1px solid #555c42;
+  box-shadow: -12px 0 28px #11150e30;
+}
+.review-dock[hidden],
+.workspace .analysis-panel[hidden],
+.workspace .inspector[hidden],
+.workspace .audit-panel[hidden] {
+  display: none !important;
+}
+.review-dock-header {
+  min-height: 52px;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  border-bottom: 1px solid #414735;
+  background: #23291f;
+}
+.review-dock-header h2 {
+  font-size: 14px;
+  font-weight: 550;
+  color: #e0e5d5;
+}
+.review-dock {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.review-dock > .analysis-panel,
+.review-dock > .inspector,
+.review-dock > .audit-panel {
+  width: 100%;
+  max-width: none;
+  min-height: 0;
+  max-height: none;
+  height: 100%;
+  flex: 1;
+  border: 0;
+  box-shadow: none;
+  margin: 0;
+}
+.review-dock > .audit-panel {
+  border-radius: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+}
+.review-dock > .audit-panel .audit-steps {
+  flex-direction: column;
+  gap: 18px;
+}
+.review-dock .inspector-head {
+  padding: 14px 16px;
+}
+.review-dock .inspector-body {
+  padding: 0 16px 16px;
+}
+.review-toggle {
+  min-height: 36px;
+  padding: 7px 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: 1px solid #66704e;
+  border-radius: 4px;
+  background: #2b3425;
+  color: #d9e4c7;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.review-toggle:hover,
+.review-toggle[aria-expanded="true"] {
+  border-color: #b2c18f;
+  background: #36412c;
+  color: #f0f3e7;
+}
+.review-toggle:focus-visible,
+.review-dock .icon-button:focus-visible {
+  outline-offset: 2px;
+}
+.react-flow__controls {
+  bottom: 18px !important;
+  left: 16px !important;
+  z-index: 8;
+  box-shadow: 0 3px 12px #171a1488 !important;
+}
+.board-legend {
+  left: 66px;
+}
+.case-toolbar {
+  min-height: 30px;
+  padding: 3px 24px 0;
+}
+.board-toolbar {
+  height: 44px;
+}
+.react-flow__minimap {
+  right: 14px !important;
+  bottom: 18px !important;
+  z-index: 7;
+  box-shadow: 0 3px 12px #171a1488;
+}
+.canvas-wrap .react-flow__pane {
+  cursor: grab;
+}
+.canvas-wrap .react-flow__pane:active {
+  cursor: grabbing;
+}
+
+@media (max-width: 900px) {
+  .workspace-shell {
+    height: auto;
+    min-height: 0;
+    margin: 0;
+  }
+  .workspace-summary {
+    flex-wrap: wrap;
+    min-height: 34px;
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+  .workspace,
+  .workspace:has(> .review-dock.is-open) {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: visible;
+  }
+  .workspace > .board-area {
+    flex: none;
+    height: min(620px, 68vh);
+    min-height: 390px;
+  }
+  .workspace > .board-area {
+    border-radius: 0;
+  }
+  .review-dock {
+    flex: none;
+    width: 100%;
+    min-height: min(620px, 72vh);
+    border-left: 0;
+    border-top: 1px solid #555c42;
+    box-shadow: 0 -10px 24px #11150e30;
+  }
+  .review-dock {
+    min-height: 420px;
+  }
+  .review-dock > .analysis-panel,
+  .review-dock > .inspector,
+  .review-dock > .audit-panel {
+    height: auto;
+  }
+  .react-flow__controls {
+    bottom: 14px !important;
+    left: 12px !important;
+  }
+  .react-flow__minimap {
+    right: 10px !important;
+    bottom: 14px !important;
+  }
+  .board-legend {
+    left: 62px;
+    bottom: 18px;
+  }
+  .case-toolbar {
+    padding-right: 20px;
+    padding-left: 20px;
+  }
+}
+@media (max-width: 540px) {
+  .workspace-shell {
+    margin: 0;
+  }
+  .workspace-summary {
+    padding-right: 12px;
+    padding-left: 12px;
+  }
+  .case-toolbar {
+    padding: 3px 12px 0;
+  }
+  .board-toolbar {
+    min-height: 44px;
+  }
+  .workspace > .board-area {
+    height: 480px;
+    min-height: 0;
+  }
+  .review-dock {
+    min-height: 0;
+  }
+  .review-dock {
+    min-height: 440px;
+  }
+  .board-toolbar {
+    flex-wrap: nowrap;
+    height: 48px;
+    min-height: 48px;
+    padding: 6px 10px;
+    gap: 7px;
+  }
+  .board-view {
+    width: auto;
+    flex: 0 0 auto;
+    gap: 5px;
+    font-size: 11px;
+  }
+  .board-actions {
+    width: auto;
+    min-width: 0;
+    flex: 1;
+    justify-content: flex-end;
+    gap: 5px;
+  }
+  .board-search {
+    flex: 1;
+    min-width: 0;
+    padding: 5px 6px;
+  }
+  .board-legend {
+    left: 54px;
+    bottom: 13px;
+    max-width: calc(100% - 154px);
+    gap: 6px;
+    font-size: 8px;
+  }
+  .react-flow__controls {
+    left: 8px !important;
+    bottom: 10px !important;
+  }
+  .react-flow__minimap {
+    width: 72px !important;
+    height: 48px !important;
+    right: 8px !important;
+    bottom: 10px !important;
+  }
+  .review-toggle {
+    min-height: 34px;
+    padding: 6px 8px;
+  }
+}

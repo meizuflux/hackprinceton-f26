@@ -100,7 +100,7 @@ The serif face gives evidence excerpts a document-like character. DM Sans carrie
 
 ## Layout
 
-The case workspace places the evidence board beside analysis and inspection content. At widths up to 900px, these areas stack vertically and the inspector becomes a dock below the board; at widths up to 540px, the navigation rail gives way to a full-width layout and board search spans the available toolbar width. The board offers graph and list views, visible search, pan and zoom controls, fit view, and a minimap. The shared spacing rhythm uses compact 8–24px steps.
+The evidence board fills the case workspace beneath compact case controls. Analysis, source inspection, and audit share a collapsible review dock alongside the canvas. At widths up to 900px, the dock stacks below the board; at widths up to 540px, the navigation rail gives way to a full-width layout and board search spans the available toolbar width. Opening a dock preserves the graph viewport and returning from an inspector restores review context. The board offers graph and list views, visible search, pan and zoom controls, fit view, and a minimap. The shared spacing rhythm uses compact 8–24px steps.
 
 ## Elevation & Depth
 

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow,
   Background,
@@ -26,6 +26,7 @@ import {
   Layers,
   Lightbulb,
   LoaderCircle,
+  PanelRightOpen,
   Plus,
   Search,
   ShieldCheck,
@@ -38,31 +39,49 @@ import { api } from "./api/client";
 import type { CaseData } from "./api/types";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { Inspector, type Selection } from "./components/Inspector";
+import { casePath, useRouter } from "./routing";
 const nodeTypes = { evidence: EvidenceNode };
 type Tab = "gaps" | "insights" | "suggestions";
 function Board({ data }: { data: CaseData }) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [tab, setTab] = useState<Tab>("gaps");
-  const [audit, setAudit] = useState(false);
+  const [dockMode, setDockMode] = useState<
+    "closed" | "analysis" | "inspector" | "audit"
+  >("closed");
+  const [returnMode, setReturnMode] = useState<"closed" | "analysis" | "audit">(
+    "analysis",
+  );
+  const [auditReturnMode, setAuditReturnMode] = useState<"closed" | "analysis">(
+    "closed",
+  );
   const [search, setSearch] = useState("");
   const [boardView, setBoardView] = useState<"graph" | "list">("graph");
   const analysisRef = useRef<HTMLElement>(null);
   const searchRef = useRef<HTMLInputElement>(null);
-  useEffect(() => {
-    if (audit)
-      document
-        .getElementById("case-audit")
-        ?.scrollIntoView({ block: "nearest" });
-  }, [audit]);
+  const openerRef = useRef<HTMLElement | null>(null);
+  const reviewButtonRef = useRef<HTMLButtonElement>(null);
   const inspect = useCallback(
-    (kind: Selection["kind"], id: string, sourceId?: string) =>
-      setSelection({ kind, id, sourceId }),
-    [],
+    (kind: Selection["kind"], id: string, sourceId?: string) => {
+      openerRef.current =
+        document.activeElement instanceof HTMLElement &&
+        document.activeElement !== document.body
+          ? document.activeElement
+          : null;
+      setReturnMode(dockMode === "inspector" ? returnMode : dockMode);
+      setSelection({ kind, id, sourceId });
+      setDockMode("inspector");
+    },
+    [dockMode, returnMode],
   );
   const closeInspector = useCallback(() => {
     setSelection(null);
-    requestAnimationFrame(() => analysisRef.current?.focus());
-  }, []);
+    setDockMode(returnMode);
+    requestAnimationFrame(() => {
+      if (openerRef.current?.isConnected) openerRef.current.focus();
+      else if (returnMode === "analysis") analysisRef.current?.focus();
+      else reviewButtonRef.current?.focus();
+    });
+  }, [returnMode]);
   const initialNodes: Node<PinData>[] = useMemo(
     () =>
       data.nodes.map((n) => ({
@@ -121,6 +140,7 @@ function Board({ data }: { data: CaseData }) {
     data: {
       ...n.data,
       active: selection?.kind === "node" && selection.id === n.id,
+      onInspect: () => inspect("node", n.id),
     },
   }));
   return (
@@ -130,429 +150,486 @@ function Board({ data }: { data: CaseData }) {
           Workspace <ChevronRight size={12} /> Cases <ChevronRight size={12} />
           <span>{data.id}</span>
         </div>
+        <div className="compact-case-title">{data.title}</div>
         <div className="toolbar-right">
           <span className="saved">
             <span /> Local session
           </span>
           <button
-            className={`text-button ${audit ? "selected" : ""}`}
-            aria-expanded={audit}
-            aria-controls="case-audit"
-            onClick={() => setAudit(!audit)}
+            className="text-button"
+            aria-expanded={
+              dockMode === "audit" ||
+              (dockMode === "inspector" && returnMode === "audit")
+            }
+            aria-controls="review-dock"
+            onClick={() => {
+              if (dockMode === "audit") setDockMode(auditReturnMode);
+              else {
+                setAuditReturnMode(
+                  dockMode === "analysis"
+                    ? "analysis"
+                    : dockMode === "inspector"
+                      ? returnMode === "analysis"
+                        ? "analysis"
+                        : "closed"
+                      : "closed",
+                );
+                setDockMode("audit");
+              }
+            }}
           >
             <History size={15} /> Audit trail
           </button>
         </div>
       </div>
-      <section className="case-heading">
-        <div>
-          <h1>
-            {data.title}
-            <span className="case-status">
-              <span /> In review
-            </span>
-          </h1>
-          <p className="case-description">
-            <span className="demo-tag">Synthetic demo</span>
-            {data.subtitle}
-          </p>
+      <div className="workspace-shell">
+        <div className="workspace-summary">
+          <span className="demo-tag">Synthetic demo</span>
+          <span>{data.subtitle}</span>
+          <span className="workspace-summary-spacer" />
+          <span>{data.sources.length} artifacts</span>
+          <span>{data.nodes.length} entities</span>
+          <button
+            ref={reviewButtonRef}
+            className={`review-toggle ${dockMode === "analysis" ? "selected" : ""}`}
+            aria-expanded={
+              dockMode === "analysis" ||
+              (dockMode === "inspector" && returnMode === "analysis")
+            }
+            aria-controls="review-dock"
+            onClick={() => {
+              if (dockMode === "analysis") setDockMode("closed");
+              else {
+                setDockMode("analysis");
+                setSelection(null);
+              }
+            }}
+          >
+            <PanelRightOpen size={15} /> Review gaps{" "}
+            <strong>{data.gaps.length}</strong>
+          </button>
         </div>
-        <div className="case-stats">
-          <div>
-            <strong>{data.sources.length.toString().padStart(2, "0")}</strong>
-            <span>Artifacts</span>
-          </div>
-          <div>
-            <strong>{data.nodes.length.toString().padStart(2, "0")}</strong>
-            <span>Entities</span>
-          </div>
-          <div className="stat-amber">
-            <strong>{data.gaps.length.toString().padStart(2, "0")}</strong>
-            <span>Open gaps</span>
-          </div>
-        </div>
-      </section>
-      <div className="workspace">
-        <div className="board-area">
-          <div className="board-toolbar">
-            <div className="board-view">
-              <GitBranch size={15} />
-              <span>Evidence board</span>
-              <span className="view-divider" />{" "}
-              <span className="muted">
-                {data.nodes.length} pins · {data.edges.length} connections
-              </span>
+        <div className="workspace">
+          <div className="board-area">
+            <div className="board-toolbar">
+              <div className="board-view">
+                <GitBranch size={15} />
+                <span>Evidence board</span>
+                <span className="view-divider" />{" "}
+                <span className="muted">
+                  {data.nodes.length} pins · {data.edges.length} connections
+                </span>
+              </div>
+              <div className="board-actions">
+                <label className="board-search">
+                  <Search size={14} />
+                  <input
+                    ref={searchRef}
+                    aria-label="Find evidence"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    placeholder="Find a pin…"
+                  />
+                  {search && (
+                    <button
+                      className="icon-button"
+                      aria-label="Clear evidence search"
+                      onClick={() => {
+                        setSearch("");
+                        searchRef.current?.focus();
+                      }}
+                    >
+                      <X size={13} />
+                    </button>
+                  )}
+                </label>
+                <button
+                  className="text-button view-toggle"
+                  aria-pressed={boardView === "list"}
+                  onClick={() =>
+                    setBoardView(boardView === "graph" ? "list" : "graph")
+                  }
+                >
+                  {boardView === "graph" ? (
+                    <Layers size={15} />
+                  ) : (
+                    <GitBranch size={15} />
+                  )}
+                  {boardView === "graph" ? "List" : "Board"}
+                </button>
+              </div>
             </div>
-            <div className="board-actions">
-              <label className="board-search">
-                <Search size={14} />
-                <input
-                  ref={searchRef}
-                  aria-label="Find evidence"
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Find a pin…"
-                />
-                {search && (
-                  <button
-                    className="icon-button"
-                    aria-label="Clear evidence search"
-                    onClick={() => {
-                      setSearch("");
-                      searchRef.current?.focus();
-                    }}
-                  >
-                    <X size={13} />
-                  </button>
-                )}
-              </label>
-              <button
-                className="text-button view-toggle"
-                aria-pressed={boardView === "list"}
-                onClick={() =>
-                  setBoardView(boardView === "graph" ? "list" : "graph")
-                }
-              >
-                {boardView === "graph" ? (
-                  <Layers size={15} />
-                ) : (
-                  <GitBranch size={15} />
-                )}
-                {boardView === "graph" ? "List" : "Board"}
-              </button>
-            </div>
-          </div>
-          <div className="canvas-wrap">
-            {boardView === "list" ? (
-              <div className="evidence-list">
-                <h2>Evidence & connections</h2>
-                <p>Inspect any record to review its original sources.</p>
-                {matchingNodes.map((n) => (
-                  <button key={n.id} onClick={() => inspect("node", n.id)}>
-                    <span className="list-record-type">{n.data.type}</span>
-                    <strong>{n.data.label}</strong>
-                    <span>
-                      {n.data.citations.length} sources{" "}
-                      <ArrowUpRight size={14} />
-                    </span>
-                  </button>
-                ))}
-                <h3>Relationships</h3>
-                {data.edges
-                  .filter(
-                    (e) =>
-                      !search.trim() ||
-                      matchingNodes.some(
-                        (n) => n.id === e.source || n.id === e.target,
-                      ),
-                  )
-                  .map((e) => (
-                    <button key={e.id} onClick={() => inspect("edge", e.id)}>
-                      <span className="list-record-type">
-                        {["claim", "describes", "reported_near"].includes(
-                          e.type,
-                        )
-                          ? "Claim"
-                          : "Observed"}
-                      </span>
-                      <strong>
-                        {data.nodes.find((n) => n.id === e.source)?.label}{" "}
-                        <ArrowRight size={12} /> {e.label}{" "}
-                        <ArrowRight size={12} />{" "}
-                        {data.nodes.find((n) => n.id === e.target)?.label}
-                      </strong>
+            <div className="canvas-wrap">
+              {boardView === "list" ? (
+                <div className="evidence-list">
+                  <h2>Evidence & connections</h2>
+                  <p>Inspect any record to review its original sources.</p>
+                  {matchingNodes.map((n) => (
+                    <button key={n.id} onClick={() => inspect("node", n.id)}>
+                      <span className="list-record-type">{n.data.type}</span>
+                      <strong>{n.data.label}</strong>
                       <span>
-                        {e.citations.length} sources <ArrowUpRight size={14} />
+                        {n.data.citations.length} sources{" "}
+                        <ArrowUpRight size={14} />
                       </span>
                     </button>
                   ))}
-              </div>
-            ) : (
-              <ReactFlow
-                nodes={visibleNodes}
-                edges={edges}
-                onNodesChange={onNodesChange}
-                onEdgesChange={onEdgesChange}
-                nodeTypes={nodeTypes}
-                onNodeClick={(_, n) => inspect("node", n.id)}
-                onEdgeClick={(_, e) => inspect("edge", e.id)}
-                onPaneClick={() => setSelection(null)}
-                fitView
-                fitViewOptions={{ padding: 0.1 }}
-                minZoom={0.3}
-                maxZoom={1.8}
-                nodesConnectable={false}
-                deleteKeyCode={null}
-                proOptions={{ hideAttribution: true }}
-              >
-                <Background
-                  variant={BackgroundVariant.Dots}
-                  gap={20}
-                  size={1}
-                  color="#a48c692b"
-                />
-                <Controls showInteractive={false} />
-                <MiniMap
-                  pannable
-                  zoomable
-                  nodeColor={(n) => (n.data.gapId ? "#ce9a53" : "#d4c9ae")}
-                  maskColor="#242721aa"
-                />
-              </ReactFlow>
-            )}
-            {search.trim() && (
-              <div className="search-feedback" role="status">
-                {matchingNodes.length
-                  ? `${matchingNodes.length} matching pin${matchingNodes.length === 1 ? "" : "s"}.${boardView === "graph" ? " Other pins are dimmed." : ""}`
-                  : "No matching evidence. Try a name, device, or location."}
-              </div>
-            )}
-            {boardView === "graph" && (
-              <>
-                <div className="board-caption">
-                  <span className="live-dot" /> Every connection has a source.
+                  <h3>Relationships</h3>
+                  {data.edges
+                    .filter(
+                      (e) =>
+                        !search.trim() ||
+                        matchingNodes.some(
+                          (n) => n.id === e.source || n.id === e.target,
+                        ),
+                    )
+                    .map((e) => (
+                      <button key={e.id} onClick={() => inspect("edge", e.id)}>
+                        <span className="list-record-type">
+                          {["claim", "describes", "reported_near"].includes(
+                            e.type,
+                          )
+                            ? "Claim"
+                            : "Observed"}
+                        </span>
+                        <strong>
+                          {data.nodes.find((n) => n.id === e.source)?.label}{" "}
+                          <ArrowRight size={12} /> {e.label}{" "}
+                          <ArrowRight size={12} />{" "}
+                          {data.nodes.find((n) => n.id === e.target)?.label}
+                        </strong>
+                        <span>
+                          {e.citations.length} sources{" "}
+                          <ArrowUpRight size={14} />
+                        </span>
+                      </button>
+                    ))}
                 </div>
-                <div className="board-legend">
-                  <span>
-                    <i className="legend-line" />
-                    Observed link
-                  </span>
-                  <span>
-                    <i className="legend-line dashed" />
-                    Claim to verify
-                  </span>
-                  <span>
-                    <i className="legend-gap" />
-                    Evidence gap
-                  </span>
+              ) : (
+                <ReactFlow
+                  nodes={visibleNodes}
+                  edges={edges}
+                  onNodesChange={onNodesChange}
+                  onEdgesChange={onEdgesChange}
+                  nodeTypes={nodeTypes}
+                  onNodeClick={(_, n) => inspect("node", n.id)}
+                  onEdgeClick={(_, e) => inspect("edge", e.id)}
+                  onPaneClick={() => {
+                    if (dockMode === "inspector") closeInspector();
+                  }}
+                  fitView
+                  fitViewOptions={{ padding: 0.1 }}
+                  minZoom={0.3}
+                  maxZoom={1.8}
+                  nodesConnectable={false}
+                  deleteKeyCode={null}
+                  proOptions={{ hideAttribution: true }}
+                >
+                  <Background
+                    variant={BackgroundVariant.Dots}
+                    gap={20}
+                    size={1}
+                    color="#a48c692b"
+                  />
+                  <Controls showInteractive={false} />
+                  <MiniMap
+                    pannable
+                    zoomable
+                    nodeColor={(n) => (n.data.gapId ? "#ce9a53" : "#d4c9ae")}
+                    maskColor="#242721aa"
+                  />
+                </ReactFlow>
+              )}
+              {search.trim() && (
+                <div className="search-feedback" role="status">
+                  {matchingNodes.length
+                    ? `${matchingNodes.length} matching pin${matchingNodes.length === 1 ? "" : "s"}.${boardView === "graph" ? " Other pins are dimmed." : ""}`
+                    : "No matching evidence. Try a name, device, or location."}
                 </div>
-              </>
-            )}
-          </div>
-          <div className="board-bottom">
-            <span>
-              <ShieldCheck size={13} /> Fictional evidence · Original sources
-              linked
-            </span>
-            <span>
-              Drag pins to arrange <span className="dot-separator">·</span>{" "}
-              Scroll to zoom
-            </span>
-          </div>
-        </div>
-        <aside
-          className="analysis-panel"
-          ref={analysisRef}
-          tabIndex={-1}
-          aria-label="Case review"
-          hidden={!!selection}
-        >
-          <div className="analysis-heading">
-            <div className="intelligence-icon">
-              <GitBranch size={17} />
-            </div>
-            <div>
-              <h2>Follow the evidence</h2>
-              <p>Open a lead. Check its sources.</p>
+              )}
+              {boardView === "graph" && (
+                <>
+                  <div className="board-caption">
+                    <span className="live-dot" /> Every connection has a source.
+                  </div>
+                  <div className="board-legend">
+                    <span>
+                      <i className="legend-line" />
+                      Observed link
+                    </span>
+                    <span>
+                      <i className="legend-line dashed" />
+                      Claim to verify
+                    </span>
+                    <span>
+                      <i className="legend-gap" />
+                      Evidence gap
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
-          <div
-            className="analysis-tabs"
-            role="tablist"
-            aria-label="Case analysis"
+          <aside
+            className={`review-dock ${dockMode !== "closed" ? "is-open" : ""}`}
+            id="review-dock"
+            data-mode={dockMode}
+            aria-label="Review dock"
+            hidden={dockMode === "closed"}
           >
-            {(
-              [
-                ["gaps", "Gaps", data.gaps.length],
-                ["insights", "Insights", data.insights.length],
-                ["suggestions", "Next evidence", null],
-              ] as const
-            ).map(([id, label, count]) => (
+            <div className="review-dock-header">
+              <div>
+                <span className="dock-kicker">CASE REVIEW</span>
+                <h2>
+                  {dockMode === "audit"
+                    ? "Audit trail"
+                    : dockMode === "inspector"
+                      ? "Source inspection"
+                      : "Follow the evidence"}
+                </h2>
+              </div>
               <button
-                key={id}
-                role="tab"
-                id={`tab-${id}`}
-                aria-controls={`panel-${id}`}
-                aria-selected={tab === id}
-                tabIndex={tab === id ? 0 : -1}
-                onKeyDown={(event) => {
-                  const tabs: Tab[] = ["gaps", "insights", "suggestions"];
-                  const offset =
-                    event.key === "ArrowRight"
-                      ? 1
-                      : event.key === "ArrowLeft"
-                        ? -1
-                        : 0;
-                  if (offset || event.key === "Home" || event.key === "End") {
-                    event.preventDefault();
-                    const next =
-                      event.key === "Home"
-                        ? "gaps"
-                        : event.key === "End"
-                          ? "suggestions"
-                          : tabs[
-                              (tabs.indexOf(tab) + offset + tabs.length) %
-                                tabs.length
-                            ];
-                    setTab(next);
-                    document.getElementById(`tab-${next}`)?.focus();
-                  }
+                className="icon-button"
+                aria-label="Close review dock"
+                onClick={() => {
+                  setSelection(null);
+                  setDockMode("closed");
+                  reviewButtonRef.current?.focus();
                 }}
-                className={tab === id ? "active" : ""}
-                onClick={() => setTab(id)}
               >
-                {label}
-                {count !== null && <span>{count}</span>}
+                <X size={16} />
               </button>
-            ))}
-          </div>
-          <div
-            className="panel-content"
-            role="tabpanel"
-            id={`panel-${tab}`}
-            aria-labelledby={`tab-${tab}`}
-          >
-            <div className="panel-section-label">
-              <span>
-                {tab === "gaps"
-                  ? "Priority order · illustrative scores"
-                  : tab === "insights"
-                    ? "Inferences · require verification"
-                    : "Suggested evidence to request"}
-              </span>
-              <SlidersHorizontal size={12} />
             </div>
-            {tab === "gaps" &&
-              data.gaps.map((g, i) => (
-                <button
-                  key={g.id}
-                  className={`analysis-card gap-card ${selection?.id === g.id ? "selected" : ""}`}
-                  onClick={() => inspect("gap", g.id)}
-                >
-                  <div className="card-topline">
-                    <span className="card-index">0{i + 1}</span>
-                    <span className="priority-badge">
-                      <span>Demo score</span> {Math.round(g.score * 100)}
-                    </span>
-                  </div>
-                  <h3>{g.title}</h3>
-                  <p>{g.description}</p>
-                  <div className="card-bottomline">
-                    <span>
-                      <ShieldCheck size={12} /> {g.citations.length} cited
-                      source{g.citations.length === 1 ? "" : "s"}
-                    </span>
-                    <span>
-                      Review gap <ArrowUpRight size={13} />
-                    </span>
-                  </div>
-                </button>
-              ))}
-            {tab === "insights" &&
-              data.insights.map((g) => (
-                <button
-                  key={g.id}
-                  className={`analysis-card insight-card ${selection?.id === g.id ? "selected" : ""}`}
-                  onClick={() => inspect("insight", g.id)}
-                >
-                  <div className="insight-label">
-                    <Lightbulb size={13} /> Inference · illustrative{" "}
-                    {Math.round(g.score * 100)}%
-                  </div>
-                  <h3>{g.title}</h3>
-                  <p>{g.text}</p>
-                  <div className="card-bottomline">
-                    <span>{g.citations.length} cited sources</span>
-                    <ArrowUpRight size={14} />
-                  </div>
-                </button>
-              ))}
-            {tab === "suggestions" &&
-              data.suggestions.map((g, i) => (
-                <button
-                  key={g.id}
-                  className={`analysis-card ${selection?.id === g.id ? "selected" : ""}`}
-                  onClick={() => inspect("suggestion", g.id)}
-                >
-                  <div className="insight-label">
-                    <Target size={13} /> PRIORITY {i + 1}
-                  </div>
-                  <h3>{g.title}</h3>
-                  <p>{g.description}</p>
-                  <div className="card-bottomline">
-                    <span>View example query</span>
-                    <ArrowUpRight size={14} />
-                  </div>
-                </button>
-              ))}
-            <div className="reasoning-note">
-              <ShieldCheck size={16} />
-              <p>
-                {tab === "gaps"
-                  ? "A gap is a question, not a conclusion. Scores help prioritize what to verify next."
-                  : "Inferences require investigator verification. Open any result to inspect its sources."}
-              </p>
-            </div>
-          </div>
-          <div className="analysis-footer">
-            <span className="live-dot" />
-            Mock analysis <span>·</span> All results traceable
-          </div>
-        </aside>
-        <Inspector
-          selection={selection}
-          data={data}
-          onSelect={setSelection}
-          onClose={closeInspector}
-        />
-      </div>
-      {audit && (
-        <section className="audit-panel" id="case-audit">
-          <div className="audit-heading">
-            <div>
-              <History size={16} />
-              <h2>Audit trail</h2>
-              <span>Simulated processing record</span>
-            </div>
-            <button
-              className="icon-button"
-              aria-label="Close audit trail"
-              onClick={() => setAudit(false)}
+            <aside
+              className="analysis-panel"
+              ref={analysisRef}
+              tabIndex={-1}
+              aria-label="Case review"
+              hidden={dockMode !== "analysis"}
             >
-              <X size={17} />
-            </button>
-          </div>
-          <div className="audit-steps">
-            {data.audit.map((a) => (
-              <div className="audit-step" key={a.id}>
-                <Check size={13} />
-                <time>{a.time}</time>
-                <h3>{a.title}</h3>
-                <p>{a.description}</p>
-                {a.citations.map((id) => (
+              <div className="analysis-heading">
+                <div className="intelligence-icon">
+                  <GitBranch size={17} />
+                </div>
+                <div>
+                  <h2>Follow the evidence</h2>
+                  <p>Open a lead. Check its sources.</p>
+                </div>
+              </div>
+              <div
+                className="analysis-tabs"
+                role="tablist"
+                aria-label="Case analysis"
+              >
+                {(
+                  [
+                    ["gaps", "Gaps", data.gaps.length],
+                    ["insights", "Insights", data.insights.length],
+                    ["suggestions", "Next evidence", null],
+                  ] as const
+                ).map(([id, label, count]) => (
                   <button
                     key={id}
-                    onClick={() => {
-                      inspect("source", id);
+                    role="tab"
+                    id={`tab-${id}`}
+                    aria-controls={`panel-${id}`}
+                    aria-selected={tab === id}
+                    tabIndex={tab === id ? 0 : -1}
+                    onKeyDown={(event) => {
+                      const tabs: Tab[] = ["gaps", "insights", "suggestions"];
+                      const offset =
+                        event.key === "ArrowRight"
+                          ? 1
+                          : event.key === "ArrowLeft"
+                            ? -1
+                            : 0;
+                      if (
+                        offset ||
+                        event.key === "Home" ||
+                        event.key === "End"
+                      ) {
+                        event.preventDefault();
+                        const next =
+                          event.key === "Home"
+                            ? "gaps"
+                            : event.key === "End"
+                              ? "suggestions"
+                              : tabs[
+                                  (tabs.indexOf(tab) + offset + tabs.length) %
+                                    tabs.length
+                                ];
+                        setTab(next);
+                        document.getElementById(`tab-${next}`)?.focus();
+                      }
                     }}
+                    className={tab === id ? "active" : ""}
+                    onClick={() => setTab(id)}
                   >
-                    {data.sources
-                      .find((s) => s.id === id)
-                      ?.path.split("/")
-                      .pop()}{" "}
-                    <ArrowUpRight size={10} />
+                    {label}
+                    {count !== null && <span>{count}</span>}
                   </button>
                 ))}
               </div>
-            ))}
-          </div>
-        </section>
-      )}
+              <div
+                className="panel-content"
+                role="tabpanel"
+                id={`panel-${tab}`}
+                aria-labelledby={`tab-${tab}`}
+              >
+                <div className="panel-section-label">
+                  <span>
+                    {tab === "gaps"
+                      ? "Priority order · illustrative scores"
+                      : tab === "insights"
+                        ? "Inferences · require verification"
+                        : "Suggested evidence to request"}
+                  </span>
+                  <SlidersHorizontal size={12} />
+                </div>
+                {tab === "gaps" &&
+                  data.gaps.map((g, i) => (
+                    <button
+                      key={g.id}
+                      className={`analysis-card gap-card ${selection?.id === g.id ? "selected" : ""}`}
+                      onClick={() => inspect("gap", g.id)}
+                    >
+                      <div className="card-topline">
+                        <span className="card-index">0{i + 1}</span>
+                        <span className="priority-badge">
+                          <span>Demo score</span> {Math.round(g.score * 100)}
+                        </span>
+                      </div>
+                      <h3>{g.title}</h3>
+                      <p>{g.description}</p>
+                      <div className="card-bottomline">
+                        <span>
+                          <ShieldCheck size={12} /> {g.citations.length} cited
+                          source{g.citations.length === 1 ? "" : "s"}
+                        </span>
+                        <span>
+                          Review gap <ArrowUpRight size={13} />
+                        </span>
+                      </div>
+                    </button>
+                  ))}
+                {tab === "insights" &&
+                  data.insights.map((g) => (
+                    <button
+                      key={g.id}
+                      className={`analysis-card insight-card ${selection?.id === g.id ? "selected" : ""}`}
+                      onClick={() => inspect("insight", g.id)}
+                    >
+                      <div className="insight-label">
+                        <Lightbulb size={13} /> Inference · illustrative{" "}
+                        {Math.round(g.score * 100)}%
+                      </div>
+                      <h3>{g.title}</h3>
+                      <p>{g.text}</p>
+                      <div className="card-bottomline">
+                        <span>{g.citations.length} cited sources</span>
+                        <ArrowUpRight size={14} />
+                      </div>
+                    </button>
+                  ))}
+                {tab === "suggestions" &&
+                  data.suggestions.map((g, i) => (
+                    <button
+                      key={g.id}
+                      className={`analysis-card ${selection?.id === g.id ? "selected" : ""}`}
+                      onClick={() => inspect("suggestion", g.id)}
+                    >
+                      <div className="insight-label">
+                        <Target size={13} /> PRIORITY {i + 1}
+                      </div>
+                      <h3>{g.title}</h3>
+                      <p>{g.description}</p>
+                      <div className="card-bottomline">
+                        <span>View example query</span>
+                        <ArrowUpRight size={14} />
+                      </div>
+                    </button>
+                  ))}
+                <div className="reasoning-note">
+                  <ShieldCheck size={16} />
+                  <p>
+                    {tab === "gaps"
+                      ? "A gap is a question, not a conclusion. Scores help prioritize what to verify next."
+                      : "Inferences require investigator verification. Open any result to inspect its sources."}
+                  </p>
+                </div>
+              </div>
+              <div className="analysis-footer">
+                <span className="live-dot" />
+                Mock analysis <span>·</span> All results traceable
+              </div>
+            </aside>
+            <Inspector
+              selection={dockMode === "inspector" ? selection : null}
+              data={data}
+              onSelect={setSelection}
+              onClose={closeInspector}
+              backLabel={
+                returnMode === "audit"
+                  ? "Back to audit"
+                  : returnMode === "closed"
+                    ? "Back to board"
+                    : tab === "gaps"
+                      ? "Back to gaps"
+                      : tab === "insights"
+                        ? "Back to insights"
+                        : "Back to next evidence"
+              }
+            />
+            <section className="audit-panel" hidden={dockMode !== "audit"}>
+              <div className="audit-heading">
+                <div>
+                  <History size={16} />
+                  <h2>Audit trail</h2>
+                  <span>Simulated processing record</span>
+                </div>
+                <button
+                  className="icon-button"
+                  aria-label="Close audit trail"
+                  onClick={() => setDockMode(auditReturnMode)}
+                >
+                  <X size={17} />
+                </button>
+              </div>
+              <div className="audit-steps">
+                {data.audit.map((a) => (
+                  <div className="audit-step" key={a.id}>
+                    <Check size={13} />
+                    <time>{a.time}</time>
+                    <h3>{a.title}</h3>
+                    <p>{a.description}</p>
+                    {a.citations.map((id) => (
+                      <button
+                        key={id}
+                        onClick={() => {
+                          inspect("source", id);
+                        }}
+                      >
+                        {data.sources
+                          .find((s) => s.id === id)
+                          ?.path.split("/")
+                          .pop()}{" "}
+                        <ArrowUpRight size={10} />
+                      </button>
+                    ))}
+                  </div>
+                ))}
+              </div>
+            </section>
+          </aside>
+        </div>
+      </div>
     </>
   );
 }
 export default function App() {
-  const [started, setStarted] = useState(false);
+  const { route, navigate } = useRouter();
+  const queryClient = useQueryClient();
+  const [openingCase, setOpeningCase] = useState(false);
   const [uploadOpen, setUploadOpen] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
@@ -560,10 +637,11 @@ export default function App() {
   const [uploading, setUploading] = useState(false);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const caseQueryKey = ["case"] as const;
   const caseQuery = useQuery({
-    queryKey: ["case"],
+    queryKey: caseQueryKey,
     queryFn: () => api.getCase(),
-    enabled: started,
+    enabled: route.kind === "case",
   });
   const statusQuery = useQuery({
     queryKey: ["upload", jobId],
@@ -586,6 +664,7 @@ export default function App() {
     const handleKey = (event: KeyboardEvent) => {
       if (
         event.key === "Escape" &&
+        !openingCase &&
         (!uploading || ready || statusQuery.isError)
       ) {
         event.preventDefault();
@@ -609,7 +688,7 @@ export default function App() {
       window.removeEventListener("keydown", handleKey);
       previous?.focus();
     };
-  }, [uploadOpen, uploading, ready, statusQuery.isError]);
+  }, [uploadOpen, uploading, ready, statusQuery.isError, openingCase]);
 
   async function upload() {
     if (!file) return;
@@ -630,9 +709,24 @@ export default function App() {
     setFile(null);
     setError("");
   }
-  function demo() {
-    setStarted(true);
-    closeUpload();
+  async function openCase() {
+    setError("");
+    setOpeningCase(true);
+    try {
+      const data = await queryClient.fetchQuery({
+        queryKey: caseQueryKey,
+        queryFn: () => api.getCase(),
+      });
+      if (route.kind !== "case" || route.caseId !== data.id)
+        navigate(casePath(data.id));
+      if (uploadOpen) closeUpload();
+    } catch (e) {
+      setError(
+        e instanceof Error ? e.message : "Could not open the case. Try again.",
+      );
+    } finally {
+      setOpeningCase(false);
+    }
   }
   return (
     <div className="app-shell">
@@ -643,17 +737,17 @@ export default function App() {
           aria-label="Compstat home"
           onClick={(e) => {
             e.preventDefault();
-            setStarted(false);
+            navigate("/");
           }}
         >
           <Fingerprint size={26} />
         </a>
         <div className="rail-links">
           <button
-            className={!started ? "" : "active"}
+            className={route.kind === "case" ? "active" : ""}
             aria-label="Evidence workspace"
             title="Evidence workspace"
-            onClick={() => setStarted(true)}
+            onClick={() => void openCase()}
           >
             <Layers size={21} />
             <span>Board</span>
@@ -694,7 +788,29 @@ export default function App() {
             </button>
           </div>
         </header>
-        {!started ? (
+        {route.kind === "not-found" ? (
+          <div className="center-state">
+            <h2>Page not found</h2>
+            <button
+              className="button button-primary"
+              onClick={() => navigate("/")}
+            >
+              Go home
+            </button>
+          </div>
+        ) : route.kind === "case" &&
+          caseQuery.data &&
+          caseQuery.data.id !== route.caseId ? (
+          <div className="center-state">
+            <h2>Case not found</h2>
+            <button
+              className="button button-primary"
+              onClick={() => navigate("/")}
+            >
+              Go home
+            </button>
+          </div>
+        ) : route.kind === "welcome" ? (
           <div className="welcome">
             <div className="welcome-copy">
               <h1>
@@ -707,8 +823,13 @@ export default function App() {
                 what’s missing, and follow every insight back to its source.
               </p>
               <div className="welcome-actions">
-                <button className="button button-primary" onClick={demo}>
-                  Explore demo case <ArrowRight size={16} />
+                <button
+                  className="button button-primary"
+                  onClick={() => void openCase()}
+                  disabled={openingCase}
+                >
+                  {openingCase ? "Opening demo case…" : "Explore demo case"}{" "}
+                  <ArrowRight size={16} />
                 </button>
                 <button
                   className="button button-secondary"
@@ -717,6 +838,11 @@ export default function App() {
                   <Upload size={16} /> Try a ZIP
                 </button>
               </div>
+              {error && (
+                <p className="error-message" role="alert">
+                  {error}
+                </p>
+              )}
               <div className="welcome-trust">
                 <ShieldCheck size={15} />
                 <span>Synthetic case. Every lead linked to its sources.</span>
@@ -812,6 +938,7 @@ export default function App() {
           onClick={(e) => {
             if (
               e.target === e.currentTarget &&
+              !openingCase &&
               (!uploading || ready || statusQuery.isError)
             )
               closeUpload();
@@ -825,7 +952,9 @@ export default function App() {
           >
             <button
               className="icon-button modal-close"
-              disabled={uploading && !ready && !statusQuery.isError}
+              disabled={
+                openingCase || (uploading && !ready && !statusQuery.isError)
+              }
               onClick={closeUpload}
               aria-label="Close upload"
             >
@@ -911,10 +1040,15 @@ export default function App() {
             )}
             <button
               className="button button-primary full-width"
-              disabled={!file || (uploading && !ready)}
-              onClick={ready ? demo : upload}
+              disabled={!file || (uploading && !ready) || openingCase}
+              onClick={ready ? () => void openCase() : upload}
             >
-              {ready ? (
+              {openingCase ? (
+                <>
+                  <LoaderCircle size={16} className="spin" /> Opening evidence
+                  board
+                </>
+              ) : ready ? (
                 <>
                   <Check size={16} /> Open evidence board
                 </>
@@ -931,8 +1065,10 @@ export default function App() {
             </button>
             <button
               className="demo-link"
-              disabled={uploading && !ready && !statusQuery.isError}
-              onClick={demo}
+              disabled={
+                openingCase || (uploading && !ready && !statusQuery.isError)
+              }
+              onClick={() => void openCase()}
             >
               No files yet? Explore the synthetic demo
             </button>

@@ -13,6 +13,7 @@ type InspectorProps = {
   data: CaseData;
   onClose: () => void;
   onSelect: (selection: Selection) => void;
+  backLabel?: string;
 };
 
 export function Inspector({
@@ -20,6 +21,7 @@ export function Inspector({
   data,
   onClose,
   onSelect,
+  backLabel = "Back to review",
 }: InspectorProps) {
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -117,7 +119,7 @@ export function Inspector({
       <header className="inspector-head">
         <div>
           <button className="text-button inspector-back" onClick={onClose}>
-            <ArrowLeft size={14} /> Back to review
+            <ArrowLeft size={14} /> {backLabel}
           </button>
           <h2>{title}</h2>
         </div>
