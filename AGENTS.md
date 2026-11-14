@@ -28,7 +28,7 @@
 
 ## Repository layout
 
-- Keep `AGENTS.md` at the repository root. All frontend application files, dependencies, build outputs, and frontend documentation live in `frontend/`.
+- Keep `AGENTS.md` at the repository root. All frontend application files, dependencies, build outputs, and frontend documentation live in `frontend/`. All backend code lives in `backend/` (see "Backend").
 - Run Bun commands from `frontend/`. Root-level orchestration may reference that directory.
 - The root `Makefile` provides `frontend-install`, `frontend-dev`, `frontend-build`, `frontend-test`, `frontend-preview`, and `frontend-format`. Run Make from the repository root; recipes enter `frontend/` automatically. Do not add a nested frontend Makefile. Docker and the root `compose.yaml` are optional for server deployment; do not start Docker, run Compose, or rebuild container images for routine frontend work unless the user explicitly requests it.
 - Use Bun 1.4.4 for frontend dependencies and script execution. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Use `bun run --bun test` to run the Vitest suite (not the separate `bun test` runner). Docker uses the same pinned Bun build image.
@@ -41,6 +41,17 @@
 - All people, companies, numbers (555-01xx), plates and domains (`.example`) are fictional. Do not add real people or organizations to case data.
 - Protected attributes (for example `id_issuing_country`, nationality) must never be model features. The case includes a deliberate bias trap (RH-03).
 - Cite evidence as `evidence_id` plus locator (for example `EV-071 seq=40162`, `EV-090 line=15`).
+
+## Backend
+
+- **The backend is authoritative over the frontend.** Case facts (records, times, entities, citations, hashes) are produced only by the backend. The SQLite schema written by `backend/compstat_ingest` (`case.db`) and its `ingest_report.json` are the source of truth. `frontend/src/api/types.ts` is a presentation contract: when it and the backend disagree, change the frontend types or adapter, never the backend data. The frontend must not compute, infer or hard-code case facts. Fixtures stay disposable placeholders until the real adapter lands.
+- All backend code, dependencies and backend docs live in `backend/` (Python 3.11+, `backend/requirements.txt`). The ingestion package is `backend/compstat_ingest`. Root `Makefile` targets: `backend-install`, `backend-test`, `backend-ingest-kestrel`. Do not add a nested backend Makefile.
+- Ingestion must never alter evidence. Working copies are read-only, every file is SHA-256 hashed before parsing, `MANIFEST.csv` hashes are checked, and every pipeline step is written to the hash-chained `audit_log`. `python -m compstat_ingest verify <run>` must pass.
+- Every record carries `locator_json` (row, line, `doc_line`, page, JSON path, ...). Its file carries `external_id` (the manifest evidence ID). Downstream citations are `{evidence_id, locator}`. Uncited facts must not reach the frontend.
+- Timestamps are stored in UTC with an uncertainty window and flags for every assumption. Per-file `time_basis` from `MANIFEST.csv` decides UTC versus local wall time. Human-reported times are `reliability = 'asserted'`, never treated as machine records.
+- Identity merges happen only on explicit evidence (contacts, email display names, unambiguous name forms) and are recorded in `entity_links` with a rule and confidence. Fuzzy linkage belongs in the ML stage.
+- Run `make backend-test` after changes. `backend/tests/test_formats.py` re-ingests `cases/kestrel/kestrel_case_upload.zip` and requires every file to parse and every manifest hash to match.
+- Backend run outputs (`backend/runs/`, `backend/data/`) and generated sample zips are not committed.
 
 ## Specification change approval
 

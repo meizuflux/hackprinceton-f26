@@ -2,7 +2,10 @@
 
 Compstat is a prototype for an inspectable investigative evidence board. It presents a fictional case through cited evidence, relationships, ranked gaps, suggested evidence, source inspection, and an audit trail.
 
-This repository contains a mocked frontend and a deterministic generator for a synthetic evidence case. The frontend's case data is fictional and disposable; ZIP selection runs a simulated ingestion flow and does not read ZIP contents. There is no backend or real analysis yet.
+This repository contains:
+- **Frontend:** a mocked evidence board. Its case data is fictional and disposable, and ZIP selection runs a simulated flow that does not read ZIP contents.
+- **Case generator:** deterministically builds a synthetic evidence case.
+- **Backend ingestion pipeline:** turns a case ZIP into a traceable SQLite database. The backend is authoritative for case data. It isn't connected to the frontend yet, and the ML, graph and reasoning stages aren't built.
 
 ## Run locally
 
@@ -50,6 +53,23 @@ make data-verify
 
 `make data-verify` rebuilds the case in a temporary folder and checks every file against the committed hashes. On systems where Python is `python`, add `PYTHON=python`.
 
+## Backend ingestion
+
+[`backend/`](backend/README.md) ingests an uploaded case ZIP into `case.db`:
+- **Integrity:** every file is hashed and checked against `MANIFEST.csv`.
+- **Records:** every message, call, location point, log event, calendar entry, statement sentence, interview turn, photo, video, email and lab result becomes a timestamped record with an exact locator.
+- **Audit:** every step is written to a hash-chained audit log.
+
+The backend is authoritative: the frontend adapts to its schema, not the other way round. Requires Python 3.11+. From the repository root:
+
+```sh
+make backend-install
+make backend-test
+make backend-ingest-kestrel
+```
+
+On the Kestrel case, all 57 files parse into 5,609 records and all 56 manifest hashes match. Output goes to `backend/runs/kestrel/`. Add `PYTHON=python` where needed.
+
 ## Project docs
 
 - [Frontend guide](frontend/README.md)
@@ -57,5 +77,6 @@ make data-verify
 - [Agent and implementation notes](AGENTS.md)
 - [Case data generator](generator/README.md)
 - [Backend implementation plan (proposal)](docs/IMPLEMENTATION_PLAN.md)
+- [Backend ingestion](backend/README.md)
 
 Before changing `SPEC.md`, propose the changes to the user and team members and wait for their explicit approval. Keep `SPEC.md` as the single product specification.
