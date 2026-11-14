@@ -3,10 +3,8 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow,
   Controls,
-  MiniMap,
   useNodesState,
   useEdgesState,
-  useStore,
   type Node,
   type Edge,
 } from "@xyflow/react";
@@ -30,6 +28,7 @@ import {
 } from "lucide-react";
 import { api } from "./api/client";
 import type { CaseData } from "./api/types";
+import { CanvasMinimap } from "./components/CanvasMinimap";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { Inspector, type Selection } from "./components/Inspector";
 import { casePath, useRouter } from "./routing";
@@ -42,42 +41,6 @@ import {
 const nodeTypes = { evidence: EvidenceNode };
 type Tab = "gaps" | "insights" | "suggestions";
 type RelationshipKind = "observed" | "claim" | "inference";
-
-function minimapSize(flowWidth: number, flowHeight: number) {
-  const maxWidth = 176;
-  const maxHeight = 120;
-  if (flowWidth <= 0 || flowHeight <= 0) {
-    return { width: maxWidth, height: 110 };
-  }
-  const aspect = flowHeight / flowWidth;
-  let width = maxWidth;
-  let height = Math.round(width * aspect);
-  if (height > maxHeight) {
-    height = maxHeight;
-    width = Math.round(height / aspect);
-  }
-  return { width: Math.max(width, 1), height: Math.max(height, 1) };
-}
-
-function CanvasMinimap() {
-  const flowWidth = useStore((state) => state.width);
-  const flowHeight = useStore((state) => state.height);
-  return (
-    <MiniMap
-      pannable
-      zoomable
-      offsetScale={0}
-      style={minimapSize(flowWidth, flowHeight)}
-      nodeBorderRadius={2}
-      nodeStrokeWidth={0}
-      nodeColor={(node) => (node.data.gapId ? "#ce9a53" : "#d4c9ae")}
-      bgColor="#66583f"
-      maskColor="#171a1988"
-      maskStrokeColor="#d3dfaf"
-      maskStrokeWidth={1}
-    />
-  );
-}
 
 function relationshipKind(type: string): RelationshipKind {
   if (type === "time_overlap") return "inference";

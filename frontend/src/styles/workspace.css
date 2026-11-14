@@ -217,20 +217,62 @@
 .react-flow__controls-button svg {
   fill: currentColor !important;
 }
-.react-flow__minimap {
-  right: 16px !important;
-  bottom: 16px !important;
-  background: #66583f !important;
-  border: 0;
-  outline: 1px solid #646c56;
-  border-radius: var(--radius);
-  overflow: hidden;
-  box-shadow: var(--shadow);
+.board-minimap {
+  position: absolute;
+  z-index: 5;
+  right: 16px;
+  bottom: 16px;
+  width: 240px;
 }
-.react-flow__minimap-svg {
-  display: block;
+.board-minimap-map {
   width: 100%;
-  height: 100%;
+  height: 148px;
+  display: block;
+  overflow: hidden;
+  border: 1px solid #d9d3c2;
+  border-radius: 12px;
+  background: #f7f4ec;
+  box-shadow: var(--shadow);
+  cursor: grab;
+  touch-action: none;
+}
+.board-minimap-map:active {
+  cursor: grabbing;
+}
+.board-minimap-map line {
+  stroke: #b86350;
+  stroke-width: 1;
+}
+.board-minimap-map line.is-inferred {
+  stroke: #bd985a;
+  stroke-dasharray: 3 2;
+}
+.board-minimap-map rect {
+  fill: #d8d1bf;
+}
+.board-minimap-map rect.is-gap {
+  fill: #ce9a53;
+}
+.board-minimap-map rect.board-minimap-view {
+  fill: #7d8cff55;
+  stroke: #6d7cf0;
+  stroke-width: 1.5;
+  pointer-events: none;
+}
+.board-minimap-zoom {
+  position: absolute;
+  left: 8px;
+  bottom: 8px;
+  min-height: 26px;
+  padding: 0 8px;
+  display: inline-flex;
+  align-items: center;
+  border-radius: 8px;
+  background: #e7e4f4;
+  color: #3d4258;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  pointer-events: none;
 }
 .board-legend {
   position: absolute;
@@ -419,9 +461,13 @@
     font-size: 10px;
     justify-content: center;
   }
-  .react-flow__minimap {
-    bottom: 54px !important;
-    right: 12px !important;
+  .board-minimap {
+    right: 12px;
+    bottom: 54px;
+    width: 188px;
+  }
+  .board-minimap-map {
+    height: 116px;
   }
   .react-flow__controls {
     bottom: 12px !important;
