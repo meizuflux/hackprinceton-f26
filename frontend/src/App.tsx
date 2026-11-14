@@ -33,6 +33,7 @@ import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { Inspector, type Selection } from "./components/Inspector";
 import { casePath, useRouter } from "./routing";
 import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
+import { CaseWorkspace } from "./components/CaseWorkspace";
 import {
   Landing,
   ProjectManager,
@@ -50,9 +51,13 @@ function relationshipKind(type: string): RelationshipKind {
 function Board({
   data,
   projectName,
+  onOpenSource,
+  active,
 }: {
   data: CaseData;
   projectName?: string;
+  onOpenSource: (sourceId: string) => void;
+  active: boolean;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [tab, setTab] = useState<Tab>("gaps");
@@ -544,10 +549,11 @@ function Board({
             </div>
           </aside>
           <Inspector
-            selection={dockMode === "inspector" ? selection : null}
+            selection={active && dockMode === "inspector" ? selection : null}
             data={data}
             onSelect={setSelection}
             onClose={closeInspector}
+            onOpenSource={onOpenSource}
             backLabel={
               returnMode === "audit"
                 ? "Back to audit"
@@ -792,14 +798,31 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <Board
+              <CaseWorkspace
+                key={caseQuery.data.id}
                 data={caseQuery.data}
+                view={route.kind === "case" ? (route.view ?? "board") : "board"}
+                sourceId={route.kind === "case" ? route.sourceId : undefined}
+                navigate={navigate}
                 projectName={
                   projects.find(
                     (project) => project.caseId === caseQuery.data.id,
                   )?.name
                 }
-              />
+              >
+                <Board
+                  data={caseQuery.data}
+                  active={route.kind === "case" && !route.view}
+                  projectName={
+                    projects.find(
+                      (project) => project.caseId === caseQuery.data.id,
+                    )?.name
+                  }
+                  onOpenSource={(sourceId) =>
+                    navigate(casePath(caseQuery.data.id, "evidence", sourceId))
+                  }
+                />
+              </CaseWorkspace>
             )}
           </main>
         </div>

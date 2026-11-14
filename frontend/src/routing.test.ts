@@ -47,4 +47,32 @@ describe("application routes", () => {
     expect(() => casePath(".")).toThrow();
     expect(() => casePath("..")).toThrow();
   });
+
+  it("round-trips each workspace section and evidence citation deep link", () => {
+    for (const view of ["evidence", "files", "insights", "chat"] as const) {
+      expect(parseRoute(casePath("case one", view))).toEqual({
+        kind: "case",
+        caseId: "case one",
+        view,
+      });
+    }
+    expect(parseRoute(casePath("case one", "evidence", "source 2"))).toEqual({
+      kind: "case",
+      caseId: "case one",
+      view: "evidence",
+      sourceId: "source 2",
+    });
+    for (const path of [
+      "/cases/a/unknown",
+      "/cases/a/chat/source",
+      "/cases/a/evidence/%2F",
+      "/cases/a/evidence/%ZZ",
+      "/cases/a/evidence/..",
+      "/cases/a/files/x/y",
+    ]) {
+      expect(parseRoute(path), path).toEqual({ kind: "not-found" });
+    }
+    expect(() => casePath("a", "chat", "source")).toThrow();
+    expect(() => casePath("a", "evidence", "../source")).toThrow();
+  });
 });

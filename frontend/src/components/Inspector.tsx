@@ -14,6 +14,7 @@ type InspectorProps = {
   onClose: () => void;
   onSelect: (selection: Selection) => void;
   backLabel?: string;
+  onOpenSource?: (sourceId: string) => void;
 };
 
 export function Inspector({
@@ -22,6 +23,7 @@ export function Inspector({
   onClose,
   onSelect,
   backLabel = "Back to review",
+  onOpenSource,
 }: InspectorProps) {
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -179,6 +181,15 @@ export function Inspector({
                 </summary>
                 <div className="source-meta">
                   <blockquote>{source.excerpt}</blockquote>
+                  {onOpenSource && (
+                    <button
+                      className="text-button"
+                      type="button"
+                      onClick={() => onOpenSource(source.id)}
+                    >
+                      Open in raw evidence →
+                    </button>
+                  )}
                   <p>
                     <strong>Recorded:</strong> {source.timestamp}
                   </p>

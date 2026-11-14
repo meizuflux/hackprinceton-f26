@@ -25,6 +25,9 @@
 
 - Onboarding lives in `frontend/src/onboarding/` with isolated styles: `/` is a standalone landing page, `/projects` is the session project manager, and `/projects/new` opens project naming plus ZIP selection. Direct fictional case entry stays on `/projects` until that case is already in the session; do not repeat it in the upload modal. The mock adapter exposes one case; the manager keeps one entry for it in React session state. Carry a session project name into the matching case workspace title; direct case routes fall back to the API title. Contact sales is not part of the prototype; do not add an enquiry form or a fake destination. The mock upload adapter validates a ZIP extension and a nonempty file only. It does not enforce a size cap, and it never reads ZIP contents.
 - Keep prototype labeling focused on upload behavior and explicit fictional case entry points; avoid repeating “demo” in the case workspace chrome. Clearly disclose that ZIP contents are not read and results use fictional data.
+- Case sections use browser-history routes: the mind map stays at `/cases/:caseId`, with `/evidence`, `/files`, `/insights`, and `/chat` subpages. Evidence citation links append the encoded source ID under `/evidence/:sourceId`. Keep the board mounted across section changes to preserve its viewport and review context.
+- Raw evidence currently indexes fictional source excerpts; original bytes and normalized ingestion records remain unavailable until the authoritative ingestion adapter supplies them. Never synthesize normalized records from frontend fixture metadata. “Generalized files” means normalized ingestion records.
+- Chat in this pass is frontend UI and an optional HTTP contract only; no Deep Agents service or model calls are implemented. Keep keys server-side, avoid simulated replies, and show the unavailable state until a matching case service is connected. See `frontend/CHAT.md` for the handoff contract.
 
 ## Repository layout
 
