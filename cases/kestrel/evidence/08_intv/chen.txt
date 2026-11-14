@@ -1,0 +1,18 @@
+[0001] SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+[0002] SOUTH BAY REGIONAL POLICE DEPARTMENT - INTERVIEW TRANSCRIPT
+[0003] Case: SBRPD-26-104417
+[0004] Subject: Andrew Chen
+[0005] Date and time: 2026-10-20 13:30
+[0006] Location: Aurion Building E, conference room 2-07
+[0007] Present: Det. Sam Okoye, Andrew Chen
+[0008] Recorded: audio and video
+
+[0009] OKOYE: You were in the building on Saturday afternoon.
+[0010] CHEN: From about 2 to 4:30, in Lab 2A. A firmware build for the keynote demo rig had to run on the bench.
+[0011] OKOYE: Did you go to floor 4?
+[0012] CHEN: No. I don't have access to the executive suite or the EBC, and I'm not on the cabinet list.
+[0013] OKOYE: You traveled to Shenzhen in September.
+[0014] CHEN: For a supplier quality audit at Pearl River Substrate. My VP approved it. The approval is in my email.
+[0015] OKOYE: Did you see anyone else in the building?
+[0016] CHEN: No. I left through P2 at about 4:30.
+[0017] [Interview ended 13:46]

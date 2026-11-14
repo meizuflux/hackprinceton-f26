@@ -1,0 +1,99 @@
+record_id,time_created_utc,event_id,computer,account,logon_type,credential_provider,source,message
+WS-00001,2026-10-16T10:00:12.8721265Z,19,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-WindowsUpdateClient,Installation Successful: Security Intelligence Update
+WS-00002,2026-10-16T15:16:05.6274729Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.
+WS-00003,2026-10-16T15:16:30.8123849Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00004,2026-10-16T15:17:30.8645353Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00005,2026-10-16T15:18:30.7467349Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00006,2026-10-16T15:19:30.5934057Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00007,2026-10-16T15:20:30.5571303Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00008,2026-10-16T15:21:30.3170619Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00009,2026-10-16T15:22:30.6702475Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00010,2026-10-16T15:23:30.7591306Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00011,2026-10-16T15:24:30.8239702Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00012,2026-10-16T15:25:30.7916426Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00013,2026-10-16T15:26:30.6415170Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00014,2026-10-16T15:27:30.6187434Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00015,2026-10-16T15:28:30.6592808Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00016,2026-10-16T15:29:30.8937029Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00017,2026-10-16T15:30:30.8734190Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00018,2026-10-16T15:31:30.6714276Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00019,2026-10-16T15:32:30.1953090Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00020,2026-10-16T15:33:30.9954775Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00021,2026-10-16T15:34:30.6257647Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00022,2026-10-16T15:35:30.3166401Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00023,2026-10-16T15:36:30.8984330Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00024,2026-10-16T15:37:30.5849791Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00025,2026-10-16T15:38:30.1146177Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00026,2026-10-16T15:39:30.2015874Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00027,2026-10-16T15:40:30.7294457Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00028,2026-10-16T15:41:10.3386033Z,4800,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Security-Auditing,The workstation was locked.
+WS-00029,2026-10-16T16:02:44.9229475Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.
+WS-00030,2026-10-16T16:03:00.5781652Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00031,2026-10-16T16:04:00.8864168Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00032,2026-10-16T16:05:00.0878570Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00033,2026-10-16T16:06:00.2163342Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00034,2026-10-16T16:07:00.9483907Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00035,2026-10-16T16:08:00.9677251Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00036,2026-10-16T16:09:00.1525712Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00037,2026-10-16T16:10:00.2327443Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00038,2026-10-16T16:11:00.6519781Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00039,2026-10-16T16:12:00.7092642Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00040,2026-10-16T16:13:00.5354388Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00041,2026-10-16T16:14:00.6543702Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00042,2026-10-16T16:15:00.3500182Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00043,2026-10-16T16:16:00.4310531Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00044,2026-10-16T16:17:00.2765720Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00045,2026-10-16T16:18:00.4852260Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00046,2026-10-16T16:19:00.0717449Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00047,2026-10-16T16:20:00.6035549Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00048,2026-10-16T17:25:31.1599937Z,4800,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Security-Auditing,The workstation was locked.
+WS-00049,2026-10-16T18:05:12.8222153Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.
+WS-00050,2026-10-16T19:15:09.2160531Z,4800,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Security-Auditing,The workstation was locked.
+WS-00051,2026-10-16T20:30:50.6549350Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.
+WS-00052,2026-10-17T00:02:11.1560419Z,4800,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Security-Auditing,The workstation was locked.
+WS-00053,2026-10-17T00:40:22.8930971Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.
+WS-00054,2026-10-17T02:33:58.2599931Z,4800,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Security-Auditing,The workstation was locked.
+WS-00055,2026-10-17T10:00:09.7459555Z,19,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-WindowsUpdateClient,Installation Successful: Security Intelligence Update
+WS-00056,2026-10-18T04:41:10.0083091Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.
+WS-00057,2026-10-18T04:41:30.5255369Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00058,2026-10-18T04:42:30.5891383Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00059,2026-10-18T04:43:30.0373830Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00060,2026-10-18T04:44:30.5620039Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00061,2026-10-18T04:45:30.1399437Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00062,2026-10-18T04:46:30.3166780Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00063,2026-10-18T04:47:30.9534744Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00064,2026-10-18T04:48:30.3143407Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00065,2026-10-18T04:49:30.4854242Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00066,2026-10-18T04:50:30.9711003Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00067,2026-10-18T04:51:30.3472316Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00068,2026-10-18T04:52:40.3140060Z,4800,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Security-Auditing,The workstation was locked.
+WS-00069,2026-10-18T05:49:02.4319633Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.
+WS-00070,2026-10-18T05:49:30.6153914Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00071,2026-10-18T05:50:30.3592171Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00072,2026-10-18T05:51:30.8547596Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00073,2026-10-18T05:52:30.5073806Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00074,2026-10-18T05:53:30.9563337Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00075,2026-10-18T05:54:30.3774723Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00076,2026-10-18T05:55:13.0589035Z,9100,AUR-EXEC-0001,AURION\rhalvorsen,,,Outlook,MAIL_SEND subject='Re: Q4 keynote run of show' to=keynote-core@aurion-compute.example
+WS-00077,2026-10-18T05:55:30.9988504Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00078,2026-10-18T05:56:30.7896848Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00079,2026-10-18T05:57:30.1961034Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00080,2026-10-18T05:58:30.7583155Z,4800,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Security-Auditing,The workstation was locked.
+WS-00081,2026-10-18T09:15:40.3917592Z,1001,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Windows Defender,Quick scan finished. No threats found.
+WS-00082,2026-10-18T10:00:11.9145689Z,19,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-WindowsUpdateClient,Installation Successful: Security Intelligence Update
+WS-00083,2026-10-19T15:38:02.9457597Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.
+WS-00084,2026-10-19T15:38:30.8625853Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00085,2026-10-19T15:39:30.0634636Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00086,2026-10-19T15:40:30.1974844Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00087,2026-10-19T15:41:30.0879512Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00088,2026-10-19T15:42:30.1503647Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00089,2026-10-19T15:43:30.3798340Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00090,2026-10-19T15:44:30.7085250Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00091,2026-10-19T15:45:30.3629252Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00092,2026-10-19T15:46:30.7429800Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00093,2026-10-19T15:47:30.7881312Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00094,2026-10-19T15:48:30.4344123Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00095,2026-10-19T15:49:30.8367213Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00096,2026-10-19T15:50:30.0679903Z,9001,AUR-EXEC-0001,AURION\rhalvorsen,,,AurionEDR,USER_INPUT_ACTIVE (keyboard/mouse activity in last 60s)
+WS-00097,2026-10-19T15:51:15.9177908Z,4800,AUR-EXEC-0001,AURION\rhalvorsen,,,Microsoft-Windows-Security-Auditing,The workstation was locked.
+WS-00098,2026-10-19T18:45:40.4725790Z,4801,AUR-EXEC-0001,AURION\rhalvorsen,7 (Unlock),Windows Hello Face (NGC),Microsoft-Windows-Security-Auditing,The workstation was unlocked.

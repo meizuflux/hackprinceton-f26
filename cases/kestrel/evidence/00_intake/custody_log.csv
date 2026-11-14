@@ -1,0 +1,16 @@
+entry_id,item_id,description,collected_or_released_by,at_local,location,seal_no,transferred_to,transferred_at_local,purpose,acquisition_sha256
+COC-001,Q1,"Swab, cabinet keypad",CST Lee Park,2026-10-19 10:30,EBC 4-12,S-77120,SBRPD Property,2026-10-19 13:10,Storage,
+COC-002,Q1,"Swab, cabinet keypad",SBRPD Property,2026-10-19 13:10,Property room,S-77120,South Bay Regional Forensic Laboratory,2026-10-20 08:30,DNA analysis,
+COC-003,Q2,"Swab, cabinet handle",CST Lee Park,2026-10-19 10:33,EBC 4-12,S-77121,South Bay Regional Forensic Laboratory,2026-10-20 08:30,DNA analysis,
+COC-004,Q3,Wine glass A,CST Lee Park,2026-10-19 10:50,Office 4-01,S-77122,South Bay Regional Forensic Laboratory,2026-10-20 08:30,DNA analysis,
+COC-005,Q4,Wine glass B (lipstick residue),CST Lee Park,2026-10-19 10:53,Office 4-01,S-77123,South Bay Regional Forensic Laboratory,2026-10-20 08:30,DNA analysis,
+COC-006,X1,Empty wine bottle,CST Lee Park,2026-10-19 10:55,Office 4-01,S-77124,SBRPD Property,2026-10-19 13:10,Latent prints (pending),
+COC-007,K3,"Reference buccal swab, Dana Whitfield",Det. Ana Reyes,2026-10-20 09:10,Building E,S-77130,South Bay Regional Forensic Laboratory,2026-10-21 08:15,Reference,
+COC-008,K2,"Reference buccal swab, Priya Raman",Det. Sam Okoye,2026-10-20 12:05,Building E,S-77131,South Bay Regional Forensic Laboratory,2026-10-21 08:15,Reference,
+COC-009,K1,"Reference buccal swab, Richard Halvorsen",Det. Ana Reyes,2026-10-20 17:40,SBRPD HQ,S-77132,South Bay Regional Forensic Laboratory,2026-10-21 08:15,Reference,
+COC-010,D1,"Logical extraction image, Halvorsen iPhone (consent scope)",Det. Sam Okoye,2026-10-20 19:40,SBRPD Digital Forensics,,Case file,2026-10-20 20:05,Analysis; device returned to owner 19:45,33975a2d1699b3afdc3f4e602c5ceba17a2ce7d3464fa00c8fbafc2bf3f6cc2a
+COC-011,D2,"Logical extraction image, Raman Android (consent)",Det. Sam Okoye,2026-10-21 10:20,SBRPD Digital Forensics,,Case file,2026-10-21 10:40,Analysis; device returned to owner 10:25,7ee4e81b2801174eb5e5587179c721b49e3683d7a9339a3005c09e68ae1bd4e2
+COC-012,E1,"Owner export: badge, cabinet, RFID, LPR, VMS clips and status (USB)",Det. Ana Reyes,2026-10-19 11:20,Building E,S-77125,Case file,2026-10-19 13:30,Analysis,02cd48b72f6cbaae164f4440a4c723d60167dbdab7acbffcd84506c6a49a25c9
+COC-013,E2,"Owner export: workstation events, email archive items",Det. Ana Reyes,2026-10-20 10:30,Building E,,Case file,2026-10-20 10:45,Analysis,6bcfa16a464cbddc59ff8813bf1819ea06d5d6a8754dd1433dedcad1f431dada
+COC-014,E3,Carrier return: subscriber +1-408-555-0147,Det. Ana Reyes,2026-10-21 08:45,Carrier portal,,Case file,2026-10-21 08:50,Analysis,1973ed0184d06049edbaec14db8fb053de4f634e88808b348ead080e916d5792
+COC-015,E4,Carrier return: records +1-408-555-0147 (2026-07-01 to 2026-10-21),Det. Ana Reyes,2026-10-22 09:30,Carrier portal,,Case file,2026-10-22 09:40,Analysis,baecb7238ba9b095f9d16adbb3d407ee5fec6765cbe42970e1b018da08ca71b6

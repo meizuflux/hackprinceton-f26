@@ -1,0 +1,33 @@
+[0001] SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+[0002] SOUTH BAY REGIONAL POLICE DEPARTMENT - INTERVIEW TRANSCRIPT
+[0003] Case: SBRPD-26-104417
+[0004] Subject: Richard Halvorsen (interview 1)
+[0005] Date and time: 2026-10-19 15:00
+[0006] Location: Aurion Building E, conference room 4-05
+[0007] Present: Det. Ana Reyes, Det. Sam Okoye, Richard Halvorsen
+[0008] Recorded: audio and video
+
+[0009] REYES: This is a voluntary interview. You're free to leave at any time. Do you understand?
+[0010] HALVORSEN: Yes. Whatever you need.
+[0011] REYES: When did you last see the Kestrel sample ES-0007?
+[0012] HALVORSEN: Friday morning, at the keynote rehearsal in the EBC.
+[0013] REYES: Where were you on Saturday evening, October 17?
+[0014] HALVORSEN: At home. A quiet night. My wife and I watched something and I went to bed early.
+[0015] REYES: You didn't come to the office at any point on Saturday?
+[0016] HALVORSEN: No.
+[0017] REYES: Who knows the executive PIN for the cabinet?
+[0018] HALVORSEN: Me and Dana. It's changed every quarter.
+[0019] REYES: Has anyone else ever seen you enter it?
+[0020] HALVORSEN: I wouldn't think so. I'm careful.
+[0021] REYES: Where is your badge right now?
+[0022] HALVORSEN: On me. Always.
+[0023] OKOYE: The cabinet log shows your badge and the executive PIN opened the cabinet at 10:51 on Saturday night.
+[0024] HALVORSEN: That's not possible. Someone must have cloned my badge. Ask Tom about that.
+[0025] OKOYE: Who would want the sample?
+[0026] HALVORSEN: Half the industry. Internally, Priya Raman has been unhappy since the promotion round, and Marco Bellini just left for Corvid Systems. I'm not accusing anyone.
+[0027] REYES: Why were the floor 4 cameras offline on Saturday night?
+[0028] HALVORSEN: Security does maintenance. I don't schedule it.
+[0029] REYES: Has anyone outside the company been in the EBC recently?
+[0030] HALVORSEN: Customers, board members, partners. It's a briefing center.
+[0031] REYES: We'll want to talk again. Thank you.
+[0032] [Interview ended 15:32]

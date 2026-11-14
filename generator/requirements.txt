@@ -1,0 +1,5 @@
+# Pinned so JPEG, MP4 and ZIP bytes reproduce exactly. Python 3.11+.
+numpy==2.5.4
+pillow==13.0.0
+piexif==1.1.3
+imageio-ffmpeg==0.8.1

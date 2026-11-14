@@ -1,0 +1,22 @@
+time_local,actors,place,event,best_evidence_id,locator
+2026-06-11 21:00,P-02,"Silicon Futures Summit, San Jose",Shen meets Halvorsen at the summit and begins cultivating him.,EV-050,record_id=HMSG-00001
+2026-07-09 19:15,P-01;P-02,Osteria Lumen,First private dinner; relationship becomes personal over the summer.,EV-063,visitId=PV-00021
+2026-10-05 16:20,P-01,-,Halvorsen invites Shen to see 'the bird' and arranges a partner briefing.,EV-050,record_id=HMSG-00123
+2026-10-07 15:08,P-01;P-02,EBC 4-12,Halvorsen opens the cabinet with his executive PIN while Shen watches; she learns the PIN and which unit works.,EV-071,seq=40136
+2026-10-14 22:40,P-02,-,Shen says she flies home on the 23rd and asks for one more evening.,EV-050,record_id=HMSG-00142
+2026-10-15 14:55,P-01,-,"Halvorsen has Ellis arrange the floor 4 camera outage for Saturday night, for privacy.",EV-050,record_id=HMSG-00148
+2026-10-16 19:12,P-04,EBC 4-12,Raman returns ES-0007 after thermal runs.,EV-071,seq=40156
+2026-10-17 19:02,P-09,Lobby,Bellini's deactivated badge is denied; he leaves.,EV-070,event_id=BDG-000608
+2026-10-17 20:12,P-01;P-02,Osteria Lumen,Dinner. Shen brings a large tan tote.,EV-036,file
+2026-10-17 21:36,P-01;P-02,P2 elevator lobby,Halvorsen badges in; Shen follows unbadged.,EV-070,event_id=BDG-000614
+2026-10-17 22:49,P-01,Office 4-01,Halvorsen goes to his desk to answer keynote email.,EV-075,record_id=WS-00069
+2026-10-17 22:50,P-02,Executive suite to EBC,Shen takes Halvorsen's badge from the coat stand and walks to the EBC.,EV-070,event_id=BDG-000620
+2026-10-17 22:51,P-02,EBC 4-12,"First PIN attempt fails; second succeeds. She takes ES-0007, leaves ES-0003.",EV-071,seq=40162
+2026-10-17 22:53,P-02,Executive suite,She re-enters the suite with the badge and returns it to the coat stand.,EV-070,event_id=BDG-000622
+2026-10-17 23:03,P-01;P-02,P2,They leave; she carries the tote with both arms. Ortega sees them.,EV-022,t=23:03:40-23:07:20
+2026-10-17 23:20,P-01;P-02,Arbor Row Apartments,Halvorsen drops Shen at her apartment.,EV-063,visitId=PV-00250
+2026-10-18 09:26,P-02,El Camino Plaza,Shen ships ES-0007 from ShipRight declared as a camera lens assembly to a Hong Kong freight forwarder.,EV-060,record_id=0147-002015
+2026-10-18 10:05,P-02,Arbor Row Apartments,Shen calls her handler in Hong Kong.,EV-060,record_id=0147-002018
+2026-10-19 07:40,P-03,EBC 4-12,Whitfield discovers the empty slot.,EV-080,line=13
+2026-10-20 07:58,P-01,-,Halvorsen deletes the 'Vince (Supply)' thread before his second interview.,EV-052,line=11
+2026-10-23 12:00,P-02,SFO,Scheduled departure to Hong Kong (future relative to case as-of time).,EV-095,line=37

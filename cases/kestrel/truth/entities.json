@@ -1,0 +1,374 @@
+{
+  "persons": [
+    {
+      "id": "P-01",
+      "name": "Richard Halvorsen",
+      "role": "Founder and CEO",
+      "organization": "Aurion Compute, Inc.",
+      "badge_id": "BID-100001",
+      "phone": "+14085550110",
+      "vehicle_plate": "8RHV521",
+      "truth_status": "unwitting_facilitator"
+    },
+    {
+      "id": "P-02",
+      "name": "Vivian Shen",
+      "role": "Principal, Pacific Harbor Advisory (consultant)",
+      "organization": "Pacific Harbor Advisory LLC",
+      "badge_id": null,
+      "phone": "+14085550147",
+      "vehicle_plate": null,
+      "truth_status": "perpetrator"
+    },
+    {
+      "id": "P-03",
+      "name": "Dana Whitfield",
+      "role": "Executive Briefing Center (EBC) Manager",
+      "organization": "Aurion Compute, Inc.",
+      "badge_id": "BID-200118",
+      "phone": "+14085550138",
+      "vehicle_plate": "7DWH260",
+      "truth_status": "witness"
+    },
+    {
+      "id": "P-04",
+      "name": "Priya Raman",
+      "role": "Senior Staff Hardware Engineer, Thermal",
+      "organization": "Aurion Compute, Inc.",
+      "badge_id": "BID-200233",
+      "phone": "+14085550163",
+      "vehicle_plate": "7PRM334",
+      "truth_status": "cleared"
+    },
+    {
+      "id": "P-05",
+      "name": "Andrew Chen",
+      "role": "Staff Firmware Engineer",
+      "organization": "Aurion Compute, Inc.",
+      "badge_id": "BID-200291",
+      "phone": "+14085550152",
+      "vehicle_plate": "9ACH118",
+      "truth_status": "cleared"
+    },
+    {
+      "id": "P-06",
+      "name": "Tom Brandt",
+      "role": "Director of Global Security",
+      "organization": "Aurion Compute, Inc.",
+      "badge_id": "BID-100014",
+      "phone": "+14085550131",
+      "vehicle_plate": "6TBR902",
+      "truth_status": "cleared"
+    },
+    {
+      "id": "P-07",
+      "name": "Jordan Ellis",
+      "role": "Executive Assistant to the CEO",
+      "organization": "Aurion Compute, Inc.",
+      "badge_id": "BID-100022",
+      "phone": "+14085550124",
+      "vehicle_plate": null,
+      "truth_status": "witness"
+    },
+    {
+      "id": "P-08",
+      "name": "Luis Ortega",
+      "role": "Night Custodian (BrightPath Facility Services, contractor)",
+      "organization": "BrightPath Facility Services",
+      "badge_id": "BID-300417",
+      "phone": "+14085550185",
+      "vehicle_plate": "8LOR441",
+      "truth_status": "witness"
+    },
+    {
+      "id": "P-09",
+      "name": "Marco Bellini",
+      "role": "Former Senior Product Manager (resigned 2026-10-02)",
+      "organization": "Corvid Systems",
+      "badge_id": "BID-200157",
+      "phone": "+15105550176",
+      "vehicle_plate": null,
+      "truth_status": "cleared"
+    },
+    {
+      "id": "P-10",
+      "name": "Elaine Halvorsen",
+      "role": "Spouse of Richard Halvorsen",
+      "organization": null,
+      "badge_id": null,
+      "phone": "+14085550111",
+      "vehicle_plate": null,
+      "truth_status": "witness"
+    },
+    {
+      "id": "P-11",
+      "name": "Meera Iyer",
+      "role": "Friend of Priya Raman",
+      "organization": null,
+      "badge_id": null,
+      "phone": "+16505550168",
+      "vehicle_plate": null,
+      "truth_status": "uninvolved"
+    },
+    {
+      "id": "P-12",
+      "name": "Ray Delgado",
+      "role": "Patrol Officer, Aegis Patrol Services (contract guard)",
+      "organization": "Aegis Patrol Services",
+      "badge_id": "BID-900031",
+      "phone": null,
+      "vehicle_plate": null,
+      "truth_status": "uninvolved"
+    },
+    {
+      "id": "P-13",
+      "name": "Det. Ana Reyes",
+      "role": "Lead Detective, SBRPD High-Tech Theft Unit",
+      "organization": "South Bay Regional Police Department (SBRPD)",
+      "badge_id": null,
+      "phone": null,
+      "vehicle_plate": null,
+      "truth_status": "investigator"
+    },
+    {
+      "id": "P-14",
+      "name": "Det. Sam Okoye",
+      "role": "Detective, SBRPD High-Tech Theft Unit",
+      "organization": "South Bay Regional Police Department (SBRPD)",
+      "badge_id": null,
+      "phone": null,
+      "vehicle_plate": null,
+      "truth_status": "investigator"
+    },
+    {
+      "id": "P-15",
+      "name": "CST Lee Park",
+      "role": "Crime Scene Technician, SBRPD",
+      "organization": "South Bay Regional Police Department (SBRPD)",
+      "badge_id": null,
+      "phone": null,
+      "vehicle_plate": null,
+      "truth_status": "investigator"
+    },
+    {
+      "id": "P-16",
+      "name": "Karen Doyle",
+      "role": "SIU Investigator",
+      "organization": "Lattice Specialty Insurance Co.",
+      "badge_id": null,
+      "phone": null,
+      "vehicle_plate": null,
+      "truth_status": "investigator"
+    }
+  ],
+  "places": [
+    {
+      "id": "L-HQ",
+      "name": "Aurion Park Building E, 3100 Aurion Parkway, Santa Clara",
+      "lat": 37.3862,
+      "lon": -121.9785,
+      "kind": "workplace"
+    },
+    {
+      "id": "L-OSTERIA",
+      "name": "Osteria Lumen (restaurant), 1180 Franklin St, Santa Clara",
+      "lat": 37.3523,
+      "lon": -121.9548,
+      "kind": "restaurant"
+    },
+    {
+      "id": "L-MARLOWE",
+      "name": "The Marlowe Hotel bar, 200 S 2nd St, San Jose",
+      "lat": 37.3352,
+      "lon": -121.8897,
+      "kind": "hotel_bar"
+    },
+    {
+      "id": "L-H_HOME",
+      "name": "Halvorsen residence, Los Altos Hills",
+      "lat": 37.3712,
+      "lon": -122.1374,
+      "kind": "residence"
+    },
+    {
+      "id": "L-V_APT",
+      "name": "Arbor Row Apartments, 455 Arbor Row, Sunnyvale",
+      "lat": 37.3729,
+      "lon": -122.028,
+      "kind": "residence"
+    },
+    {
+      "id": "L-PLAZA",
+      "name": "El Camino Plaza, Sunnyvale (ShipRight pack-and-ship, Bean Theory Coffee, CarePlus Pharmacy)",
+      "lat": 37.353,
+      "lon": -122.009,
+      "kind": "strip_mall"
+    },
+    {
+      "id": "L-PD",
+      "name": "SBRPD Headquarters, Santa Clara",
+      "lat": 37.3541,
+      "lon": -121.9362,
+      "kind": "police"
+    },
+    {
+      "id": "L-SF_FIDI",
+      "name": "Financial District, San Francisco",
+      "lat": 37.7897,
+      "lon": -122.4,
+      "kind": "business_district"
+    },
+    {
+      "id": "L-SJ_DT",
+      "name": "Downtown San Jose",
+      "lat": 37.3338,
+      "lon": -121.89,
+      "kind": "business_district"
+    },
+    {
+      "id": "L-PALO_ALTO",
+      "name": "University Ave, Palo Alto",
+      "lat": 37.4448,
+      "lon": -122.161,
+      "kind": "business_district"
+    },
+    {
+      "id": "L-SANTANA",
+      "name": "Santana Row, San Jose",
+      "lat": 37.321,
+      "lon": -121.948,
+      "kind": "shopping"
+    },
+    {
+      "id": "L-R_HOME",
+      "name": "Raman residence, Mountain View",
+      "lat": 37.3961,
+      "lon": -122.0928,
+      "kind": "residence"
+    },
+    {
+      "id": "L-TAHOE",
+      "name": "Vacation rental, South Lake Tahoe",
+      "lat": 38.9332,
+      "lon": -119.9844,
+      "kind": "residence_temp"
+    },
+    {
+      "id": "L-C_HOME",
+      "name": "Chen residence, San Jose",
+      "lat": 37.3022,
+      "lon": -121.8636,
+      "kind": "residence"
+    },
+    {
+      "id": "L-GOLF",
+      "name": "Foothill Oaks Golf Club, Los Altos Hills",
+      "lat": 37.36,
+      "lon": -122.11,
+      "kind": "recreation"
+    },
+    {
+      "id": "L-GROCERY",
+      "name": "Los Altos grocery",
+      "lat": 37.3795,
+      "lon": -122.1145,
+      "kind": "shopping"
+    },
+    {
+      "id": "L-SARATOGA",
+      "name": "Residence of Elaine Halvorsen's parents, Saratoga",
+      "lat": 37.2638,
+      "lon": -122.023,
+      "kind": "residence"
+    },
+    {
+      "id": "L-SFO",
+      "name": "San Francisco International Airport",
+      "lat": 37.6213,
+      "lon": -122.379,
+      "kind": "airport"
+    },
+    {
+      "id": "L-LUNCH1",
+      "name": "Franklin Street lunch spots, Santa Clara",
+      "lat": 37.3511,
+      "lon": -121.953,
+      "kind": "restaurant"
+    },
+    {
+      "id": "L-LUNCH2",
+      "name": "Mission College Blvd cafes, Santa Clara",
+      "lat": 37.389,
+      "lon": -121.984,
+      "kind": "restaurant"
+    },
+    {
+      "id": "L-SAC",
+      "name": "Sacramento (US-50)",
+      "lat": 38.5816,
+      "lon": -121.4944,
+      "kind": "route"
+    },
+    {
+      "id": "L-PLACERVILLE",
+      "name": "Placerville (US-50)",
+      "lat": 38.7296,
+      "lon": -120.7985,
+      "kind": "route"
+    }
+  ],
+  "items": [
+    {
+      "id": "ES-0007",
+      "description": "AX-9 'Kestrel' engineering sample, functional silicon (serial AX9-ES-0007-K)",
+      "stolen": true
+    },
+    {
+      "id": "ES-0003",
+      "description": "AX-9 'Kestrel' thermal-mechanical sample, non-functional",
+      "stolen": false
+    },
+    {
+      "id": "DK-0211",
+      "description": "Demo cable kit",
+      "stolen": false
+    },
+    {
+      "id": "RS-0042",
+      "description": "PCIe riser set",
+      "stolen": false
+    },
+    {
+      "id": "DS-0019",
+      "description": "Demo NVMe SSD",
+      "stolen": false
+    }
+  ],
+  "aliases": [
+    {
+      "alias": "Vince (Supply)",
+      "resolves_to": "P-02",
+      "evidence": "I-05"
+    },
+    {
+      "alias": "UF-1 (unknown female DNA profile)",
+      "resolves_to": "P-02",
+      "evidence": "truth only"
+    },
+    {
+      "alias": "V. Shen",
+      "resolves_to": "P-02",
+      "evidence": "F-23, F-24"
+    },
+    {
+      "alias": "the bird",
+      "resolves_to": "AX-9 Kestrel",
+      "evidence": "F-36"
+    }
+  ],
+  "protected_attributes": [
+    "visitor_log.id_issuing_country",
+    "nationality",
+    "ethnicity"
+  ]
+}

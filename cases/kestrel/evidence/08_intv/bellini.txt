@@ -1,0 +1,16 @@
+[0001] SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+[0002] SOUTH BAY REGIONAL POLICE DEPARTMENT - INTERVIEW TRANSCRIPT
+[0003] Case: SBRPD-26-104417
+[0004] Subject: Marco Bellini (telephone)
+[0005] Date and time: 2026-10-20 10:00
+[0006] Location: Telephone
+[0007] Present: Det. Sam Okoye, Marco Bellini
+[0008] Recorded: audio and video
+
+[0009] OKOYE: Your old badge was used at the Building E lobby at 7:02 pm on Saturday.
+[0010] BELLINI: That was me. I forgot it had been deactivated. I left a monitor arm and a plant in my old cube. I tried the door twice, then texted a friend on the team who told me to email facilities. I went home.
+[0011] OKOYE: Where did you go after that?
+[0012] BELLINI: Dinner with my family in Fremont, around 8.
+[0013] OKOYE: You work for Corvid Systems now.
+[0014] BELLINI: Yes, on networking products. I never worked on Kestrel hardware and I would never risk that.
+[0015] [Interview ended 10:12]

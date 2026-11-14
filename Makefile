@@ -1,5 +1,8 @@
 .DEFAULT_GOAL := help
-.PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format
+.PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
+	data-install data-generate data-verify
+
+PYTHON ?= python3
 
 help:
 	@echo "make frontend-install  Install locked dependencies"
@@ -8,6 +11,9 @@ help:
 	@echo "make frontend-test     Run contract tests"
 	@echo "make frontend-preview  Preview the production build"
 	@echo "make frontend-format   Format source files"
+	@echo "make data-install      Install pinned case-generator dependencies (PYTHON=python3)"
+	@echo "make data-generate     Regenerate the synthetic Kestrel case in cases/kestrel/"
+	@echo "make data-verify       Rebuild the case in a temp dir and check every file hash"
 
 frontend-install:
 	cd frontend && bun install --frozen-lockfile
@@ -26,3 +32,12 @@ frontend-preview:
 
 frontend-format:
 	cd frontend && bun run --bun format
+
+data-install:
+	$(PYTHON) -m pip install -r generator/requirements.txt
+
+data-generate:
+	$(PYTHON) generator/generate.py
+
+data-verify:
+	$(PYTHON) generator/generate.py --verify

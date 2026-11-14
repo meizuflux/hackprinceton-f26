@@ -1,0 +1,19 @@
+SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+SOUTH BAY REGIONAL POLICE DEPARTMENT - WRITTEN STATEMENT
+Case: SBRPD-26-104417
+Statement of: Dana Whitfield, EBC Manager, Aurion Compute
+Taken by: Det. Ana Reyes
+Date and time: 2026-10-19 11:30
+
+1. I manage the Executive Briefing Center (EBC), room 4-12 in Building E. Secure cabinet SC-EBC-01 holds demo hardware, including the AX-9 "Kestrel" engineering samples.
+2. There are two Kestrel units in the cabinet. ES-0007 is the only functional unit and the one we demo. ES-0003 is a thermal-mechanical sample that does not power on. From the outside they look almost the same.
+3. Removing hardware takes two people: me plus an approved engineer. Mr. Halvorsen and I also have an executive PIN that lets either of us open the cabinet alone with our badge. The PIN is changed every quarter.
+4. On Friday 10/16 at about 1:05 pm Priya Raman and I signed ES-0007 out for thermal runs. Returns only need one person. I left at about 6 pm. The system shows Priya returned it at 7:12 pm.
+5. The executive-floor crew wipes the EBC glass and the cabinet handle on Friday evenings. They do not clean keypads. Floor 4 is not cleaned on weekends.
+6. On Monday 10/19 I arrived at about 7:30 and went to the EBC to prepare for keynote rehearsal. At about 7:40 I saw through the glass door that the ES-0007 slot was empty. I did not open the cabinet. I texted Mr. Halvorsen and called Tom Brandt.
+7. I then checked the security alerts mailbox and saw an automatic inventory alert from midnight Sunday saying ES-0007 was missing. Nobody watches that mailbox on weekends.
+8. On Wednesday 10/7 Jordan asked me to prepare the EBC for a partner briefing at 2:30. Mr. Halvorsen told me I was not needed and that he would do the walkthrough himself. As I was leaving the floor at about 2:35 I saw him walking toward the EBC with a woman in a cream-colored jacket. I did not see what they did inside.
+9. Mr. Halvorsen often leaves his badge on its lanyard on the coat stand in his office. I have mentioned it to him before.
+10. I do not know who took the sample.
+
+I have read this statement and it is true to the best of my knowledge. Signed: D. Whitfield

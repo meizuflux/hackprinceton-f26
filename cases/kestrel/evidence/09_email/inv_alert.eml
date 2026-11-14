@@ -1,0 +1,15 @@
+From: Cabinet Inventory <inventory-noreply@aurion-compute.example>
+To: secops-alerts@aurion-compute.example
+Date: Sun, 18 Oct 2026 00:00:09 -0700
+Subject: INV-ALERT-2210 SC-EBC-01: ES-0007 not detected
+Message-ID: <20261018000009.inv2210@aurion-compute.example>
+MIME-Version: 1.0
+Content-Type: text/plain; charset="utf-8"
+X-Synthetic: fictional training data
+X-Mailbox-First-Read: 2026-10-19T07:52:31-07:00 by dwhitfield
+
+INV-ALERT-2210
+Cabinet: SC-EBC-01 (EBC 4-12)
+Item: ES-0007 (AX-9 'Kestrel' engineering sample, functional)
+Condition: not detected in 2 consecutive scans (2026-10-17 23:00, 2026-10-18 00:00). Last detected 2026-10-17 22:00.
+Custody state: IN_CABINET (not checked out)
