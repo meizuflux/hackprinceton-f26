@@ -28,6 +28,15 @@
 - The root `Makefile` provides `frontend-install`, `frontend-dev`, `frontend-build`, `frontend-test`, `frontend-preview`, and `frontend-format`. Run Make from the repository root; recipes enter `frontend/` automatically. Do not add a nested frontend Makefile. `compose.yaml` at the root builds only the frontend, serving the production bundle through nginx on `127.0.0.1:5173`; rebuild the image after source changes.
 - Use Bun 1.4.4 for frontend dependencies and script execution. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Use `bun run --bun test` to run the Vitest suite (not the separate `bun test` runner). Docker uses the same pinned Bun build image.
 
+## Case data and generator
+
+- Generated case data under `cases/` is the authoritative data for backend work. Frontend fixtures (`frontend/src/api/fixtures.ts`) are disposable mocks; never use them as a backend data source or reconcile backend data to them.
+- `generator/` deterministically builds `cases/kestrel/` (Python 3.11+, pinned deps in `generator/requirements.txt`). Never hand-edit files under `cases/`; change the generator, run `make data-generate`, and confirm with `make data-verify` (byte-for-byte hash check against `BUILD_INFO.json`). The root `Makefile` also provides `data-install`, `data-generate` and `data-verify`; set `PYTHON=python` where needed.
+- `cases/kestrel/evidence/` and `kestrel_case_upload.zip` are pipeline inputs. `cases/kestrel/truth/` is the answer key and labels: use it only for evaluation and training, never as pipeline input or agent context.
+- All people, companies, numbers (555-01xx), plates and domains (`.example`) are fictional. Do not add real people or organizations to case data.
+- Protected attributes (for example `id_issuing_country`, nationality) must never be model features. The case includes a deliberate bias trap (RH-03).
+- Cite evidence as `evidence_id` plus locator (for example `EV-071 seq=40162`, `EV-090 line=13`); `truth/key_locators.json` lists the named locators.
+
 ## Specification change approval
 
 - Before any future modification to root `SPEC.md`, always present the proposed changes and ask both the user and team members for approval. Wait for their explicit approval before editing; silence is not approval.
