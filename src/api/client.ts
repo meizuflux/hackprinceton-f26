@@ -12,6 +12,9 @@ export const api: CaseApi = {
     if (!file.name.toLowerCase().endsWith('.zip')) {
       throw new Error('Choose a .zip archive.');
     }
+    if (file.size === 0) {
+      throw new Error('The ZIP archive is empty.');
+    }
     if (file.size > MAX_UPLOAD_BYTES) {
       throw new Error('ZIP archives must be 100 MB or smaller.');
     }
@@ -28,7 +31,12 @@ export const api: CaseApi = {
       return { status: 'ready', progress: 100, message: 'Demo case ready. The uploaded archive was not parsed.' };
     }
     const progress = Math.min(95, Math.floor((elapsed / MOCK_PROCESSING_MS) * 100));
-    return { status: 'processing', progress, message: 'Simulating ingestion progress; ZIP contents are not read.' };
+    const message = elapsed < 1_700
+      ? 'Mock: Parsing artifacts… (simulated; ZIP contents are not read)'
+      : elapsed < 3_400
+        ? 'Mock: Building graph… (simulated; ZIP contents are not read)'
+        : 'Mock: Scoring gaps… (simulated; ZIP contents are not read)';
+    return { status: 'processing', progress, message };
   },
 
   async getCase() {

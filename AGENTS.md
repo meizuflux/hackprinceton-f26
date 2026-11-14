@@ -9,3 +9,11 @@
 - Record durable implementation decisions here as work proceeds.
 - Commit incremental changes with `git commit -S -m "message"`.
 - Do not imply that mock ingestion parses ZIP files or performs real analysis. Swap the API adapter when the Python backend is available.
+
+## Implementation decisions
+
+- API seam: `CaseApi` in `src/api/types.ts`; `src/api/client.ts` owns mock jobs. UI loads the case through TanStack Query and never imports fixtures directly.
+- Mock uploads never read ZIP contents. Keep this limitation visible beside upload controls. Fixture hashes and confidence scores are illustrative, not computed.
+- Luna subagents are requested for delegated work. Fetch remote refs frequently and make one signed commit per feature.
+- Board uses React Flow custom pinned cards on a cork surface inside a dark workspace. Relationships and ranked analysis open the shared source inspector.
+- Validate API fixture links and mock upload state transitions with `npm test`; use `npm run build` for TypeScript and the production bundle.
