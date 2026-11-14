@@ -4,7 +4,7 @@ React + Vite evidence board. All case data and ingestion responses are temporary
 
 ## Run locally
 
-Requires Node.js 24 LTS and npm. From the repository root:
+Requires Bun 1.4.4. From the repository root:
 
 ```sh
 cd frontend
@@ -14,7 +14,7 @@ make dev
 
 Open [localhost:5173](http://localhost:5173) and click **Explore demo case**. You can also choose a ZIP to try the simulated ingestion flow.
 
-Without Make, use `npm ci` and `npm run dev` inside `frontend/`.
+Without Make, use `bun install --frozen-lockfile` and `bun run --bun dev` inside `frontend/`.
 
 ## Run with Docker
 
@@ -29,6 +29,8 @@ Open [localhost:5173](http://localhost:5173). After source changes, rebuild and 
 ```sh
 docker compose down
 ```
+
+Commit `bun.lock` when changing dependencies. Use `bun add <package>` or `bun add -d <package>` inside `frontend/`. The Docker build uses the same pinned Bun version and frozen lockfile.
 
 ## Useful commands
 

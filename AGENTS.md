@@ -16,12 +16,13 @@
 - Mock uploads never read ZIP contents. Keep this limitation visible beside upload controls. Fixture hashes and confidence scores are illustrative, not computed.
 - Luna subagents are requested for delegated work. Fetch remote refs frequently and make one signed commit per feature.
 - Board uses React Flow custom pinned cards on a cork surface inside a dark workspace. Relationships and ranked analysis open the shared source inspector.
-- Validate API fixture links and mock upload state transitions from `frontend/` with `npm test`; use `npm run build` for TypeScript and the production bundle.
+- Validate API fixture links and mock upload state transitions from `frontend/` with `bun run --bun test`; use `bun run --bun build` for TypeScript and the production bundle.
 - Browser-verified demo path: synthetic ZIP selection → staged mock progress → board; gap and insight inspection; original source expansion; edge inspection; audit trail. Upload modal traps keyboard focus and supports Escape when idle/ready; inspector supports Escape.
-- Run `npm run format` from `frontend/` after changes. No real source files or computed hashes are bundled; source excerpts live only in disposable fixtures.
+- Run `bun run --bun format` from `frontend/` after changes. No real source files or computed hashes are bundled; source excerpts live only in disposable fixtures.
 
 ## Repository layout
 
 - Keep `AGENTS.md` at the repository root. All frontend application files, dependencies, build outputs, and frontend documentation live in `frontend/`.
-- Run Node/npm commands from `frontend/`. Root-level orchestration may reference that directory.
+- Run Bun commands from `frontend/`. Root-level orchestration may reference that directory.
 - `frontend/Makefile` provides local install/dev/build/test/preview/format commands. `compose.yaml` at the root builds only the frontend, serving the production bundle through nginx on `127.0.0.1:5173`; rebuild the image after source changes.
+- Use Bun 1.4.4 for frontend dependencies and script execution. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Use `bun run --bun test` to run the Vitest suite (not the separate `bun test` runner). Docker uses the same pinned Bun build image.

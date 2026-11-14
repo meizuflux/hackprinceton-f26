@@ -10,19 +10,19 @@ help:
 	@echo "make format   Format source files"
 
 install:
-	npm ci
+	bun install --frozen-lockfile
 
 dev:
-	npm run dev -- --host 127.0.0.1 --port 5173 --strictPort
+	bun run --bun dev --host 127.0.0.1 --port 5173 --strictPort
 
 build:
-	npm run build
+	bun run --bun build
 
 test:
-	npm test
+	bun run --bun test
 
 preview:
-	npm run preview -- --host 127.0.0.1
+	bun run --bun preview --host 127.0.0.1
 
 format:
-	npm run format
+	bun run --bun format
