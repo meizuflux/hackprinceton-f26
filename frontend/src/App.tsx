@@ -12,7 +12,6 @@ import {
   type Edge,
 } from "@xyflow/react";
 import {
-  Activity,
   ArrowRight,
   ArrowUpRight,
   Check,
@@ -40,6 +39,11 @@ import type { CaseData } from "./api/types";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { Inspector, type Selection } from "./components/Inspector";
 import { casePath, useRouter } from "./routing";
+import {
+  Landing,
+  ProjectManager,
+  type SessionProject,
+} from "./onboarding/Onboarding";
 const nodeTypes = { evidence: EvidenceNode };
 type Tab = "gaps" | "insights" | "suggestions";
 function Board({ data }: { data: CaseData }) {
@@ -184,7 +188,6 @@ function Board({ data }: { data: CaseData }) {
       </div>
       <div className="workspace-shell">
         <div className="workspace-summary">
-          <span className="demo-tag">Synthetic demo</span>
           <span>{data.subtitle}</span>
           <span className="workspace-summary-spacer" />
           <span>{data.sources.length} artifacts</span>
@@ -630,7 +633,12 @@ export default function App() {
   const { route, navigate } = useRouter();
   const queryClient = useQueryClient();
   const [openingCase, setOpeningCase] = useState(false);
-  const [uploadOpen, setUploadOpen] = useState(false);
+  const uploadOpen = route.kind === "new-project";
+  const [projectName, setProjectName] = useState("");
+  const [projects, setProjects] = useState<SessionProject[]>([]);
+  function setUploadOpen(open: boolean) {
+    navigate(open ? "/projects/new" : "/projects");
+  }
   const [file, setFile] = useState<File | null>(null);
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -641,7 +649,10 @@ export default function App() {
   const caseQuery = useQuery({
     queryKey: caseQueryKey,
     queryFn: () => api.getCase(),
-    enabled: route.kind === "case",
+    enabled:
+      route.kind === "case" ||
+      route.kind === "projects" ||
+      route.kind === "new-project",
   });
   const statusQuery = useQuery({
     queryKey: ["upload", jobId],
@@ -650,6 +661,15 @@ export default function App() {
     refetchInterval: (q) => (q.state.data?.status === "ready" ? false : 650),
   });
   const ready = statusQuery.data?.status === "ready";
+  useEffect(() => {
+    if (route.kind !== "case" || caseQuery.data?.id !== route.caseId) return;
+    const data = caseQuery.data;
+    setProjects((current) =>
+      current.some((project) => project.caseId === data.id)
+        ? current
+        : [...current, { caseId: data.id, name: data.title }],
+    );
+  }, [route, caseQuery.data]);
   useEffect(() => {
     if (!uploadOpen) return;
     const previous = document.activeElement as HTMLElement | null;
@@ -660,7 +680,7 @@ export default function App() {
           'button:not(:disabled), input:not([hidden]):not(:disabled), [tabindex="0"]',
         ) ?? [],
       );
-    focusable()[0]?.focus();
+    (focusable()[0] ?? dialog)?.focus();
     const handleKey = (event: KeyboardEvent) => {
       if (
         event.key === "Escape" &&
@@ -672,6 +692,11 @@ export default function App() {
       }
       if (event.key === "Tab") {
         const items = focusable();
+        if (items.length === 0) {
+          event.preventDefault();
+          dialog?.focus();
+          return;
+        }
         const first = items[0];
         const last = items.at(-1);
         if (event.shiftKey && document.activeElement === first) {
@@ -703,7 +728,8 @@ export default function App() {
     }
   }
   function closeUpload() {
-    setUploadOpen(false);
+    if (uploadOpen) navigate("/projects", { replace: true });
+    setProjectName("");
     setJobId(null);
     setUploading(false);
     setFile(null);
@@ -717,9 +743,13 @@ export default function App() {
         queryKey: caseQueryKey,
         queryFn: () => api.getCase(),
       });
+      setProjects((current) => [
+        { caseId: data.id, name: projectName.trim() || data.title },
+        ...current.filter((p) => p.caseId !== data.id),
+      ]);
+      if (uploadOpen) closeUpload();
       if (route.kind !== "case" || route.caseId !== data.id)
         navigate(casePath(data.id));
-      if (uploadOpen) closeUpload();
     } catch (e) {
       setError(
         e instanceof Error ? e.message : "Could not open the case. Try again.",
@@ -728,210 +758,135 @@ export default function App() {
       setOpeningCase(false);
     }
   }
+  if (route.kind === "welcome") return <Landing navigate={navigate} />;
+  const projectRoute =
+    route.kind === "projects" || route.kind === "new-project";
   return (
-    <div className="app-shell">
-      <nav className="rail" aria-label="Main navigation">
-        <a
-          className="brand-mark"
-          href="#"
-          aria-label="Compstat home"
-          onClick={(e) => {
-            e.preventDefault();
-            navigate("/");
-          }}
-        >
-          <Fingerprint size={26} />
-        </a>
-        <div className="rail-links">
-          <button
-            className={route.kind === "case" ? "active" : ""}
-            aria-label="Evidence workspace"
-            title="Evidence workspace"
-            onClick={() => void openCase()}
-          >
-            <Layers size={21} />
-            <span>Board</span>
-          </button>
-          <button
-            aria-label="Upload case"
-            title="Upload case"
-            onClick={() => setUploadOpen(true)}
-          >
-            <FolderOpen size={21} />
-            <span>New case</span>
-          </button>
-        </div>
-        <div className="rail-bottom">
-          <span className="rail-version">v.01</span>
-          <span className="rail-local">
-            Local
-            <br />
-            demo
-          </span>
-        </div>
-      </nav>
-      <main>
-        <header className="app-header">
-          <div className="wordmark">
-            compstat<span> / </span>
-            <small>Clarity from complexity.</small>
-          </div>
-          <div className="header-actions">
-            <span className="environment">
-              <span /> DEMO ENVIRONMENT
-            </span>
-            <button
-              className="button button-primary button-small"
-              onClick={() => setUploadOpen(true)}
+    <>
+      {projectRoute ? (
+        <ProjectManager
+          data={caseQuery.data}
+          projects={projects}
+          navigate={navigate}
+          onDemo={() => void openCase()}
+          opening={openingCase}
+          error={error}
+        />
+      ) : (
+        <div className="app-shell">
+          <nav className="rail" aria-label="Main navigation">
+            <a
+              className="brand-mark"
+              href="#"
+              aria-label="Compstat home"
+              onClick={(e) => {
+                e.preventDefault();
+                navigate("/");
+              }}
             >
-              <Plus size={15} /> New case
-            </button>
-          </div>
-        </header>
-        {route.kind === "not-found" ? (
-          <div className="center-state">
-            <h2>Page not found</h2>
-            <button
-              className="button button-primary"
-              onClick={() => navigate("/")}
-            >
-              Go home
-            </button>
-          </div>
-        ) : route.kind === "case" &&
-          caseQuery.data &&
-          caseQuery.data.id !== route.caseId ? (
-          <div className="center-state">
-            <h2>Case not found</h2>
-            <button
-              className="button button-primary"
-              onClick={() => navigate("/")}
-            >
-              Go home
-            </button>
-          </div>
-        ) : route.kind === "welcome" ? (
-          <div className="welcome">
-            <div className="welcome-copy">
-              <h1>
-                The bigger picture.
-                <br />
-                <em>Every little detail.</em>
-              </h1>
-              <p>
-                Bring scattered evidence into focus. Uncover connections, see
-                what’s missing, and follow every insight back to its source.
-              </p>
-              <div className="welcome-actions">
+              <Fingerprint size={26} />
+            </a>
+            <div className="rail-links">
+              <button
+                className={route.kind === "case" ? "active" : ""}
+                aria-label="Project manager"
+                title="Project manager"
+                onClick={() => navigate("/projects")}
+              >
+                <Layers size={21} />
+                <span>Projects</span>
+              </button>
+              <button
+                aria-label="Upload case"
+                title="Upload case"
+                onClick={() => setUploadOpen(true)}
+              >
+                <FolderOpen size={21} />
+                <span>New case</span>
+              </button>
+            </div>
+            <div className="rail-bottom">
+              <span className="rail-version">v.01</span>
+              <span className="rail-local">
+                Local
+              </span>
+            </div>
+          </nav>
+          <main>
+            <header className="app-header">
+              <div className="wordmark">
+                compstat<span> / </span>
+                <small>Clarity from complexity.</small>
+              </div>
+              <div className="header-actions">
                 <button
-                  className="button button-primary"
-                  onClick={() => void openCase()}
-                  disabled={openingCase}
+                  className="button button-secondary button-small"
+                  onClick={() => navigate("/projects")}
                 >
-                  {openingCase ? "Opening demo case…" : "Explore demo case"}{" "}
-                  <ArrowRight size={16} />
+                  Projects
                 </button>
                 <button
-                  className="button button-secondary"
+                  className="button button-primary button-small"
                   onClick={() => setUploadOpen(true)}
                 >
-                  <Upload size={16} /> Try a ZIP
+                  <Plus size={15} /> New case
                 </button>
               </div>
-              {error && (
-                <p className="error-message" role="alert">
-                  {error}
-                </p>
-              )}
-              <div className="welcome-trust">
-                <ShieldCheck size={15} />
-                <span>Synthetic case. Every lead linked to its sources.</span>
+            </header>
+            {route.kind === "not-found" ? (
+              <div className="center-state">
+                <h2>Page not found</h2>
+                <button
+                  className="button button-primary"
+                  onClick={() => navigate("/")}
+                >
+                  Go home
+                </button>
               </div>
-            </div>
-            <div className="welcome-board">
-              <div className="welcome-board-label">
-                <span /> FICTIONAL CASE PREVIEW
+            ) : route.kind === "case" &&
+              caseQuery.data &&
+              caseQuery.data.id !== route.caseId ? (
+              <div className="center-state">
+                <h2>Case not found</h2>
+                <button
+                  className="button button-primary"
+                  onClick={() => navigate("/")}
+                >
+                  Go home
+                </button>
               </div>
-              <div className="preview-thread thread-a" />
-              <div className="preview-thread thread-b" />
-              <div className="preview-card preview-person">
-                <span className="pushpin" />
-                <div className="preview-avatar">
-                  <Fingerprint size={55} strokeWidth={0.8} />
-                </div>
-                <h3>Alex Morgan</h3>
-                <p>Inventory lead</p>
-                <span className="mini-source">
-                  <ShieldCheck size={12} /> 2 linked sources
-                </span>
+            ) : caseQuery.isPending ? (
+              <div className="center-state">
+                <LoaderCircle className="spin" />
+                <h2>Opening evidence workspace…</h2>
               </div>
-              <div className="preview-card preview-note">
-                <span className="pushpin" />
-                <h3>
-                  What happened
-                  <br />
-                  from 20:31–20:50?
-                </h3>
-                <p>A 19-minute gap in camera coverage.</p>
-                <div className="preview-gap">
-                  EVIDENCE GAP <ArrowUpRight size={13} />
-                </div>
+            ) : caseQuery.isError ? (
+              <div className="center-state">
+                <h2>Couldn’t load the case</h2>
+                <button
+                  className="button button-primary"
+                  onClick={() => caseQuery.refetch()}
+                >
+                  Try again
+                </button>
               </div>
-              <div className="preview-card preview-source">
-                <span className="pushpin" />
-                <FileArchive size={24} />
-                <h3>CAM-4E-notes.txt</h3>
-                <p>Original source · export note</p>
-                <div className="preview-excerpt">
-                  “Export has no frames from 20:31 to 20:50.”
-                </div>
-              </div>
-              <div className="welcome-board-footer">
-                <LinkLabel /> One board. A clearer way forward.
-              </div>
-            </div>
-            <div className="welcome-bottom">
+            ) : (
+              <Board data={caseQuery.data} />
+            )}
+            <footer className="app-footer">
               <span>
-                <GitBranch size={16} /> Connect the evidence
+                <Fingerprint size={12} /> COMPSTAT{" "}
+                <span className="dot-separator">/</span> A clearer chain of
+                evidence.
               </span>
               <span>
-                <Search size={16} /> Find the gaps
+                Hackathon prototype <span className="dot-separator">·</span>{" "}
+                Synthetic data only
               </span>
-              <span>
-                <Target size={16} /> Know what’s next
-              </span>
-            </div>
-          </div>
-        ) : caseQuery.isPending ? (
-          <div className="center-state">
-            <LoaderCircle className="spin" />
-            <h2>Opening evidence workspace…</h2>
-          </div>
-        ) : caseQuery.isError ? (
-          <div className="center-state">
-            <h2>Couldn’t load the case</h2>
-            <button
-              className="button button-primary"
-              onClick={() => caseQuery.refetch()}
-            >
-              Try again
-            </button>
-          </div>
-        ) : (
-          <Board data={caseQuery.data} />
-        )}
-        <footer className="app-footer">
-          <span>
-            <Fingerprint size={12} /> COMPSTAT{" "}
-            <span className="dot-separator">/</span> A clearer chain of
-            evidence.
-          </span>
-          <span>
-            Hackathon prototype <span className="dot-separator">·</span>{" "}
-            Synthetic data only
-          </span>
-        </footer>
-      </main>
+            </footer>
+          </main>
+        </div>
+      )}
       {uploadOpen && (
         <div
           className="modal-backdrop"
@@ -946,6 +901,7 @@ export default function App() {
         >
           <section
             className="upload-modal"
+            tabIndex={-1}
             role="dialog"
             aria-modal="true"
             aria-labelledby="upload-title"
@@ -963,8 +919,18 @@ export default function App() {
             <div className="upload-icon">
               <Upload size={24} />
             </div>
-            <h2 id="upload-title">Try the demo upload</h2>
-            <p>Select a ZIP to walk through simulated processing.</p>
+            <h2 id="upload-title">Add a new project</h2>
+            <p>Name your project, then choose how to get started.</p>
+            <label className="project-name-field">
+              Project name <span>(optional)</span>
+              <input
+                maxLength={80}
+                placeholder="e.g. Inventory review"
+                value={projectName}
+                disabled={uploading}
+                onChange={(e) => setProjectName(e.target.value)}
+              />
+            </label>
             <div
               className={`dropzone ${dragging ? "dragging" : ""}`}
               onDragOver={(e) => {
@@ -1010,8 +976,8 @@ export default function App() {
             <div className="mock-notice">
               <CircleHelp size={16} />
               <p>
-                Demo mode: ZIP contents are not read or uploaded. Processing and
-                results use a temporary fictional case.
+                ZIP contents are not read or uploaded. Processing and results
+                use a temporary fictional case.
               </p>
             </div>
             {error && (
@@ -1070,14 +1036,11 @@ export default function App() {
               }
               onClick={() => void openCase()}
             >
-              No files yet? Explore the synthetic demo
+              Try demo case files →
             </button>
           </section>
         </div>
       )}
-    </div>
+    </>
   );
-}
-function LinkLabel() {
-  return <Activity size={14} />;
 }

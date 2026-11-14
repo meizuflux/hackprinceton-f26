@@ -10,6 +10,16 @@ describe("application routes", () => {
     });
   });
 
+  it("supports project manager and new-project deep links", () => {
+    for (const path of ["/projects", "/projects/"]) {
+      expect(parseRoute(path)).toEqual({ kind: "projects" });
+    }
+    for (const path of ["/projects/new", "/projects/new/"]) {
+      expect(parseRoute(path)).toEqual({ kind: "new-project" });
+    }
+    expect(parseRoute("/projects/unknown")).toEqual({ kind: "not-found" });
+  });
+
   it("decodes URL-safe case IDs and accepts a trailing slash", () => {
     expect(parseRoute("/cases/case%20one/")).toEqual({
       kind: "case",
