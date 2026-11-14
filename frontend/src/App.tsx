@@ -3,6 +3,9 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow,
   Controls,
+  MarkerType,
+  applyNodeChanges,
+  type NodeChange,
   useNodesState,
   useEdgesState,
   type Node,
@@ -30,7 +33,16 @@ import { api } from "./api/client";
 import type { CaseData } from "./api/types";
 import { CanvasMinimap } from "./components/CanvasMinimap";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
+import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
+import {
+  arrangePins,
+  settlePinMoves,
+  threadHandles,
+  PIN_WIDTH,
+  PIN_HEIGHT,
+} from "./components/board-layout";
 import { Inspector, type Selection } from "./components/Inspector";
+import { relationshipKind } from "./components/relationships";
 import { casePath, useRouter } from "./routing";
 import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
 import { CaseWorkspace } from "./components/CaseWorkspace";
@@ -40,14 +52,8 @@ import {
   type SessionProject,
 } from "./onboarding/Onboarding";
 const nodeTypes = { evidence: EvidenceNode };
+const edgeTypes = { thread: ThreadEdge };
 type Tab = "gaps" | "insights" | "suggestions";
-type RelationshipKind = "observed" | "claim" | "inference";
-
-function relationshipKind(type: string): RelationshipKind {
-  if (type === "time_overlap") return "inference";
-  if (["claim", "describes", "reported_near"].includes(type)) return "claim";
-  return "observed";
-}
 function Board({
   data,
   projectName,
@@ -109,43 +115,65 @@ function Board({
   }, [returnMode]);
   const initialNodes: Node<PinData>[] = useMemo(
     () =>
-      data.nodes.map((n) => ({
-        id: n.id,
-        type: "evidence",
-        ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
-        position: { x: 160 + n.position.x * 1.45, y: n.position.y * 2.15 },
-        data: {
-          ...n,
-          onInspect: () => inspect("node", n.id),
-          gapScore: data.gaps.find((g) => g.id === n.gapId)?.score,
-        },
-      })),
+      arrangePins(
+        data.nodes.map((n) => ({
+          id: n.id,
+          type: "evidence",
+          ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
+          position: { x: 100 + n.position.x, y: n.position.y * 1.2 },
+          width: PIN_WIDTH,
+          height: PIN_HEIGHT,
+          data: {
+            ...n,
+            onInspect: () => inspect("node", n.id),
+            onInspectGap: n.gapId ? () => inspect("gap", n.gapId!) : undefined,
+          },
+        })),
+      ),
     [data, inspect],
   );
-  const initialEdges: Edge[] = useMemo(
+  const initialEdges: Edge<ThreadData>[] = useMemo(
     () =>
       data.edges.map((e) => ({
         id: e.id,
         source: e.source,
         target: e.target,
-        label: e.label,
-        ariaLabel: `${e.label}. Inspect relationship and sources`,
-        type: "default",
-        style: {
-          stroke:
-            relationshipKind(e.type) === "observed" ? "#b86350" : "#bd985a",
-          strokeWidth: 1.5,
-          strokeDasharray:
-            relationshipKind(e.type) === "observed" ? undefined : "5 5",
+        data: {
+          kind: relationshipKind(e.type),
+          label: e.label,
+          onInspect: () => inspect("edge", e.id),
         },
-        labelStyle: { fill: "#f4e8cd", fontSize: 12 },
-        labelBgStyle: { fill: "#444039", fillOpacity: 0.95 },
-        labelBgPadding: [7, 4] as [number, number],
-        labelBgBorderRadius: 3,
+        ariaLabel: `${e.label}. Inspect relationship and sources`,
+        type: "thread",
+        markerEnd: {
+          type: MarkerType.ArrowClosed,
+          color: "#a1372f",
+          width: 12,
+          height: 12,
+        },
+        style: {
+          stroke: "#a1372f",
+          strokeWidth: 3,
+          strokeLinecap: "round",
+          strokeDasharray:
+            relationshipKind(e.type) === "observed" ? undefined : "8 7",
+        },
       })),
     [data],
   );
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
+  const [nodes, setNodes] = useNodesState(initialNodes);
+  const onNodesChange = useCallback(
+    (changes: NodeChange<Node<PinData>>[]) => {
+      setNodes((current) => {
+        const next = applyNodeChanges(changes, current);
+        const settledIds = changes.flatMap((change) =>
+          change.type === "position" && !change.dragging ? [change.id] : [],
+        );
+        return settledIds.length ? settlePinMoves(next, settledIds) : next;
+      });
+    },
+    [setNodes],
+  );
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
   const matchingNodes = nodes.filter((n) =>
     `${n.data.label} ${n.data.summary}`
@@ -162,8 +190,26 @@ function Board({
       ...n.data,
       active: selection?.kind === "node" && selection.id === n.id,
       onInspect: () => inspect("node", n.id),
+      onInspectGap: n.data.gapId
+        ? () => inspect("gap", n.data.gapId!)
+        : undefined,
     },
   }));
+  const nodesById = new Map(nodes.map((node) => [node.id, node]));
+  const visibleEdges = edges.map((edge) => {
+    const source = nodesById.get(edge.source);
+    const target = nodesById.get(edge.target);
+    return {
+      ...edge,
+      ...(source && target
+        ? threadHandles(source.position, target.position)
+        : {}),
+      selected: selection?.kind === "edge" && selection.id === edge.id,
+      data: edge.data
+        ? { ...edge.data, onInspect: () => inspect("edge", edge.id) }
+        : undefined,
+    };
+  });
   return (
     <>
       <div className="workspace">
@@ -307,10 +353,11 @@ function Board({
             ) : (
               <ReactFlow
                 nodes={visibleNodes}
-                edges={edges}
+                edges={visibleEdges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onNodeClick={(_, n) => inspect("node", n.id)}
                 onEdgeClick={(_, e) => inspect("edge", e.id)}
                 onPaneClick={() => {
@@ -318,13 +365,18 @@ function Board({
                 }}
                 fitView
                 fitViewOptions={{
-                  padding: { top: "110px", bottom: "60px", x: "50px" },
+                  padding: {
+                    top: "120px",
+                    bottom: "150px",
+                    left: "90px",
+                    right: "45px",
+                  },
                 }}
                 panOnScroll
                 panOnScrollSpeed={1}
                 zoomOnScroll={false}
                 zoomOnPinch
-                minZoom={0.3}
+                minZoom={0.15}
                 maxZoom={1.8}
                 nodesConnectable={false}
                 deleteKeyCode={null}
@@ -334,7 +386,12 @@ function Board({
                   position="bottom-right"
                   showInteractive={false}
                   fitViewOptions={{
-                    padding: { top: "110px", bottom: "60px", x: "50px" },
+                    padding: {
+                      top: "120px",
+                      bottom: "150px",
+                      left: "90px",
+                      right: "45px",
+                    },
                   }}
                 />
                 <CanvasMinimap />
@@ -355,7 +412,7 @@ function Board({
                 </span>
                 <span>
                   <i className="legend-line dashed" />
-                  To verify
+                  Claim / inference
                 </span>
                 <span>
                   <i className="legend-gap" />

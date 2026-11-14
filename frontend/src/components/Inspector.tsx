@@ -1,6 +1,7 @@
 import { ArrowLeft, ChevronDown, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { CaseData } from "../api/types";
+import { relationshipLabel } from "./relationships";
 
 export type Selection = {
   kind: "node" | "edge" | "gap" | "insight" | "suggestion" | "source";
@@ -82,8 +83,11 @@ export function Inspector({
     );
   const title = "label" in item ? item.label : item.title;
   const score = "score" in item ? item.score : undefined;
-  const description =
-    "summary" in item
+  const edge =
+    selection.kind === "edge" ? (item as CaseData["edges"][number]) : undefined;
+  const description = edge
+    ? `${data.nodes.find((entry) => entry.id === edge.source)?.label ?? edge.source} → ${edge.label} → ${data.nodes.find((entry) => entry.id === edge.target)?.label ?? edge.target}`
+    : "summary" in item
       ? item.summary
       : "description" in item
         ? item.description
@@ -147,16 +151,13 @@ export function Inspector({
                   : selection.kind === "node"
                     ? "Evidence record"
                     : selection.kind === "edge"
-                      ? "Relationship"
+                      ? relationshipLabel(edge!.type)
                       : "Source excerpt"}
           </span>
           {score !== undefined && (
             <span className="detail-score">
               Illustrative score · {Math.round(score * 100)}%
             </span>
-          )}
-          {selection.kind === "edge" && "type" in item && (
-            <span className="kind-badge">{item.type}</span>
           )}
         </div>
         <p className="inspector-description">{description}</p>

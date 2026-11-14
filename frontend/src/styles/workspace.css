@@ -23,8 +23,9 @@
   --minimap-height: 148px;
   --zoom-gap: 10px;
   height: 100%;
-  background: #66583f url("../assets/cork.webp") repeat;
-  background-size: 630px 630px;
+  background: #eee8de url("../assets/paper.webp") repeat;
+  background-size: 768px 768px;
+  background-blend-mode: soft-light;
 }
 .canvas-wrap .react-flow__pane {
   cursor: grab;
@@ -248,11 +249,11 @@
   cursor: grabbing;
 }
 .board-minimap-map line {
-  stroke: #b86350;
+  stroke: #a84e40;
   stroke-width: 1;
 }
 .board-minimap-map line.is-inferred {
-  stroke: #bd985a;
+  stroke: #a84e40;
   stroke-dasharray: 3 2;
 }
 .board-minimap-map rect {
@@ -262,8 +263,8 @@
   fill: #ce9a53;
 }
 .board-minimap-map rect.board-minimap-view {
-  fill: #7d8cff55;
-  stroke: #6d7cf0;
+  fill: #77876533;
+  stroke: #697855;
   stroke-width: 1.5;
   pointer-events: none;
 }
@@ -276,8 +277,8 @@
   display: inline-flex;
   align-items: center;
   border-radius: 8px;
-  background: #e7e4f4;
-  color: #3d4258;
+  background: #e8ecdf;
+  color: #3f4b36;
   font-size: 12px;
   font-variant-numeric: tabular-nums;
   pointer-events: none;
@@ -318,12 +319,12 @@
 .legend-line {
   width: 22px;
   height: 2px;
-  background: #b86350;
+  background: #a84e40;
 }
 .legend-line.dashed {
   background: repeating-linear-gradient(
     90deg,
-    #bd985a 0 5px,
+    #a84e40 0 5px,
     transparent 5px 9px
   );
 }
@@ -498,7 +499,7 @@
     left: 68px;
   }
   .evidence-list {
-    inset: 176px 12px 12px;
+    inset: 220px 12px 12px;
     padding: 18px 12px;
   }
   .evidence-list > button {

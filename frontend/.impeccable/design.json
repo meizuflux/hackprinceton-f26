@@ -45,7 +45,8 @@
       "display": { "displayName": "Display", "purpose": "Welcome-page lead." },
       "headline": { "displayName": "Headline", "purpose": "Case and section headings." },
       "body": { "displayName": "Body", "purpose": "Default interface reading text." },
-      "label": { "displayName": "Label Mono", "purpose": "Compact metadata and eyebrow labels." }
+      "label": { "displayName": "Label Mono", "purpose": "Compact metadata and eyebrow labels." },
+      "evidence": { "displayName": "Evidence handwriting", "purpose": "Locally bundled Excalifont for upright evidence-card titles; summaries and metadata use DM Sans." }
     },
     "shadows": [
       { "name": "card-rest", "value": "1px 4px 8px #181b1740", "purpose": "Subtle lift under paper evidence cards." },
@@ -86,9 +87,9 @@
     {
       "name": "Evidence Pin",
       "kind": "card",
-      "description": "Paper record card displayed on the cork board.",
+      "description": "Compact paper record card with locally bundled Excalifont, a subtly uneven outline, and a direct linked-question action. 248 × 224px; two-line titles and summaries, full text in source inspection.",
       "html": "<article class=\"ds-evidence-pin\"><span class=\"ds-pin\"></span><small>EVENT · 14:32</small><h3>Riverside meeting</h3><p>Source-linked evidence summary for review.</p><footer>2 sources <button>Inspect ↗</button></footer></article>",
-      "css": ".ds-evidence-pin { position: relative; width: 185px; padding: 15px 12px 0; border: 1px solid #ede8d6; border-radius: 2px; background: #e8e4d5; color: #3b3b30; box-shadow: 1px 4px 8px #181b1740; } .ds-evidence-pin .ds-pin { position: absolute; top: -5px; left: 50%; width: 9px; height: 9px; border-radius: 50%; background: #a34735; transform: translateX(-50%); } .ds-evidence-pin small { color: #5f624f; font: 400 10px \"DM Sans\", sans-serif; text-transform: uppercase; } .ds-evidence-pin h3 { margin: 9px 0 4px; font: 600 17px/1.2 \"DM Sans\", sans-serif; } .ds-evidence-pin p { margin: 10px 0; color: #4c4d3d; font: 400 13px/1.5 \"Newsreader\", Georgia, serif; } .ds-evidence-pin footer { display: flex; justify-content: space-between; padding: 8px 0; border-top: 1px solid #88876c44; color: #50573e; font: 400 10px \"DM Sans\", sans-serif; } .ds-evidence-pin button { border: 0; background: transparent; color: inherit; font: inherit; cursor: pointer; } .ds-evidence-pin button:focus-visible { outline: 2px solid #697b58; outline-offset: 2px; }"
+      "css": ".ds-evidence-pin { position: relative; width: 248px; height: 224px; padding: 16px 16px 0; border-radius: 4px 6px 3px 5px; background: #faf8f1; color: #383c31; box-shadow: 0 3px 8px #4e443b1a; } .ds-evidence-pin h3 { font: 400 20px/1.2 Excalifont, \"DM Sans\", sans-serif; } .ds-evidence-pin p { font: 400 14px/1.4 \"DM Sans\", sans-serif; }"
     },
     {
       "name": "Source Disclosure",
@@ -100,14 +101,15 @@
   ],
   "narrative": {
     "northStar": "The Evidence Pinboard",
-    "overview": "Mapletrace pairs a dark moss workspace with a tactile cork board and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.\n\nTypography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.",
+    "overview": "Mapletrace pairs a dark moss workspace with a faint warm paper canvas and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.\n\nTypography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.",
     "keyCharacteristics": [
-      "Dark moss workspace with a cork evidence surface.",
+      "Dark moss workspace with a faint warm paper evidence surface.",
       "Paper-toned pinned cards with restrained accent colors.",
       "Sources and uncertainty are visible parts of the review flow."
     ],
     "rules": [
-      { "name": "The Evidence-State Rule", "body": "Use sage for interaction and amber for questions; keep observed records legible on paper-toned cards.", "section": "colors" }
+      { "name": "The Evidence-State Rule", "body": "Use sage for interaction and amber for questions; keep observed records legible on paper-toned cards.", "section": "colors" },
+      {"name": "Legible handwriting and threads", "body": "Keep evidence-card text upright, with handwriting limited to titles. Keep at least 40px between settled cards. Smooth 3px red threads attach to facing edges against faint paper. Keep connection labels quiet and unboxed. Claims and inferences remain dashed and explicitly labeled.", "section": "components"}
     ],
     "dos": [
       "Do keep the main demo action visually prominent and controls readable.",

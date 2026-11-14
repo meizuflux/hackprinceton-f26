@@ -1,5 +1,6 @@
 import { useRef } from "react";
 import { useReactFlow, useStore, type Edge, type Node } from "@xyflow/react";
+import { relationshipKind } from "./relationships";
 
 const MAP_WIDTH = 240;
 const MAP_HEIGHT = 148;
@@ -249,12 +250,9 @@ function MinimapEdge({
   const y2 =
     frame.offsetY +
     (target.position.y + targetSize.height / 2 - frame.bounds.y) * frame.scale;
-  const inferred = [
-    "claim",
-    "describes",
-    "reported_near",
-    "time_overlap",
-  ].includes(edge.type ?? "");
+  const inferred = edge.data?.kind
+    ? edge.data.kind !== "observed"
+    : relationshipKind(edge.type ?? "") !== "observed";
   return (
     <line
       x1={x1}
