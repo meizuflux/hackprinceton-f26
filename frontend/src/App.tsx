@@ -331,6 +331,7 @@ function Board({
                 proOptions={{ hideAttribution: true }}
               >
                 <Controls
+                  position="bottom-right"
                   showInteractive={false}
                   fitViewOptions={{
                     padding: { top: "110px", bottom: "60px", x: "50px" },
@@ -347,22 +348,20 @@ function Board({
               </div>
             )}
             {boardView === "graph" && (
-              <>
-                <div className="board-legend">
-                  <span>
-                    <i className="legend-line" />
-                    Observed link
-                  </span>
-                  <span>
-                    <i className="legend-line dashed" />
-                    To verify
-                  </span>
-                  <span>
-                    <i className="legend-gap" />
-                    Evidence gap
-                  </span>
-                </div>
-              </>
+              <div className="board-legend">
+                <span>
+                  <i className="legend-line" />
+                  Observed link
+                </span>
+                <span>
+                  <i className="legend-line dashed" />
+                  To verify
+                </span>
+                <span>
+                  <i className="legend-gap" />
+                  Evidence gap
+                </span>
+              </div>
             )}
           </div>
         </div>
@@ -754,15 +753,11 @@ export default function App() {
         />
       ) : (
         <div className="app-shell">
-          {(route.kind !== "case" ||
-            !caseQuery.data ||
-            caseQuery.data.id !== route.caseId) && (
-            <WorkspaceNavigation
-              navigate={navigate}
-              projects={projects}
-              activeCaseId={route.kind === "case" ? route.caseId : undefined}
-            />
-          )}
+          <WorkspaceNavigation
+            navigate={navigate}
+            projects={projects}
+            activeCaseId={route.kind === "case" ? route.caseId : undefined}
+          />
           <main className="workspace-main">
             {route.kind === "not-found" ? (
               <div className="center-state">

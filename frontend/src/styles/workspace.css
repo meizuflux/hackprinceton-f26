@@ -18,6 +18,10 @@
   overflow: hidden;
 }
 .canvas-wrap {
+  --board-inset: 16px;
+  --minimap-width: 240px;
+  --minimap-height: 148px;
+  --zoom-gap: 10px;
   height: 100%;
   background: #66583f url("../assets/cork.webp") repeat;
   background-size: 630px 630px;
@@ -197,8 +201,12 @@
   background: #30382a;
 }
 .react-flow__controls {
-  left: 16px !important;
-  bottom: 16px !important;
+  left: auto !important;
+  right: calc(
+    var(--board-inset) + var(--minimap-width) + var(--zoom-gap)
+  ) !important;
+  bottom: var(--chrome-bottom, var(--board-inset)) !important;
+  margin: 0 !important;
   border: 1px solid #48513f;
   border-radius: var(--radius);
   overflow: hidden;
@@ -220,13 +228,13 @@
 .board-minimap {
   position: absolute;
   z-index: 5;
-  right: 16px;
-  bottom: 16px;
-  width: 240px;
+  right: var(--board-inset);
+  bottom: var(--chrome-bottom, var(--board-inset));
+  width: var(--minimap-width);
 }
 .board-minimap-map {
   width: 100%;
-  height: 148px;
+  height: var(--minimap-height);
   display: block;
   overflow: hidden;
   border: 1px solid #d9d3c2;
@@ -276,36 +284,54 @@
 }
 .board-legend {
   position: absolute;
-  bottom: 16px;
-  left: 68px;
+  z-index: 5;
+  bottom: var(--board-inset);
+  left: var(--board-inset);
+  max-width: calc(
+    100% - var(--board-inset) - var(--minimap-width) - 40px - var(--zoom-gap) -
+      28px
+  );
   padding: 9px 12px;
   background: var(--surface);
   border: 1px solid #424b3d;
   border-radius: var(--radius);
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: 16px;
+  gap: 8px 16px;
   color: var(--text);
-  font-size: 11px;
+  font-size: 12px;
+  box-shadow: var(--shadow);
   pointer-events: none;
 }
 .board-legend > span {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 7px;
+  white-space: nowrap;
+}
+.legend-line,
+.legend-gap {
+  display: block;
+  flex-shrink: 0;
 }
 .legend-line {
-  width: 16px;
-  border-top: 2px solid #cf8a71;
+  width: 22px;
+  height: 2px;
+  background: #b86350;
 }
 .legend-line.dashed {
-  border-top-style: dashed;
-  border-color: var(--amber);
+  background: repeating-linear-gradient(
+    90deg,
+    #bd985a 0 5px,
+    transparent 5px 9px
+  );
 }
 .legend-gap {
-  width: 7px;
-  height: 7px;
-  border: 1px solid var(--amber);
+  width: 9px;
+  height: 9px;
+  border: 1.5px solid var(--amber);
+  border-radius: 1px;
 }
 .search-feedback {
   position: absolute;
@@ -452,26 +478,20 @@
     flex: 1;
     justify-content: center;
   }
+  .canvas-wrap {
+    --board-inset: 12px;
+    --minimap-width: 188px;
+    --minimap-height: 116px;
+    --zoom-gap: 8px;
+    --chrome-bottom: 54px;
+  }
   .board-legend {
-    left: 60px;
-    bottom: 12px;
     right: 12px;
-    gap: 10px;
+    max-width: none;
+    gap: 8px 10px;
     padding: 8px;
-    font-size: 10px;
+    font-size: 11px;
     justify-content: center;
-  }
-  .board-minimap {
-    right: 12px;
-    bottom: 54px;
-    width: 188px;
-  }
-  .board-minimap-map {
-    height: 116px;
-  }
-  .react-flow__controls {
-    bottom: 12px !important;
-    left: 12px !important;
   }
   .search-feedback {
     top: 170px;
