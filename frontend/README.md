@@ -25,7 +25,7 @@ Requires Docker with Compose and a running Docker daemon. Stop any local Vite se
 docker compose up --build -d
 ```
 
-Open [localhost:5173](http://localhost:5173). After source changes, rebuild and restart with `docker compose up --build -d`. Stop the container with:
+Open [localhost:5173](http://localhost:5173). If using Docker to serve updated source changes, rebuild and restart with `docker compose up --build -d`. Docker is optional and is not needed for routine frontend development. Stop the container with:
 
 ```sh
 docker compose down
