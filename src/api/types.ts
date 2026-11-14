@@ -1,7 +1,7 @@
 /** Shared wire types for the investigation board API. */
 export type CitationId = string;
 
-export type NodeType = 'person' | 'location' | 'device' | 'event' | 'statement';
+export type NodeType = "person" | "location" | "device" | "event" | "statement";
 
 export interface EvidenceNode {
   id: string;
@@ -84,8 +84,10 @@ export interface CaseData {
   audit: AuditRecord[];
 }
 
-export type IngestionStatus = 'processing' | 'ready';
-export interface UploadResult { jobId: string }
+export type IngestionStatus = "processing" | "ready";
+export interface UploadResult {
+  jobId: string;
+}
 export interface IngestionProgress {
   status: IngestionStatus;
   progress: number;
