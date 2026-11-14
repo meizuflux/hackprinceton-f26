@@ -12,10 +12,15 @@
 
 ## Implementation decisions
 
-- API seam: `CaseApi` in `src/api/types.ts`; `src/api/client.ts` owns mock jobs. UI loads the case through TanStack Query and never imports fixtures directly.
+- API seam: `CaseApi` in `frontend/src/api/types.ts`; `frontend/src/api/client.ts` owns mock jobs. UI loads the case through TanStack Query and never imports fixtures directly.
 - Mock uploads never read ZIP contents. Keep this limitation visible beside upload controls. Fixture hashes and confidence scores are illustrative, not computed.
 - Luna subagents are requested for delegated work. Fetch remote refs frequently and make one signed commit per feature.
 - Board uses React Flow custom pinned cards on a cork surface inside a dark workspace. Relationships and ranked analysis open the shared source inspector.
-- Validate API fixture links and mock upload state transitions with `npm test`; use `npm run build` for TypeScript and the production bundle.
+- Validate API fixture links and mock upload state transitions from `frontend/` with `npm test`; use `npm run build` for TypeScript and the production bundle.
 - Browser-verified demo path: synthetic ZIP selection → staged mock progress → board; gap and insight inspection; original source expansion; edge inspection; audit trail. Upload modal traps keyboard focus and supports Escape when idle/ready; inspector supports Escape.
-- Run `npm run format` after changes. No real source files or computed hashes are bundled; source excerpts live only in disposable fixtures.
+- Run `npm run format` from `frontend/` after changes. No real source files or computed hashes are bundled; source excerpts live only in disposable fixtures.
+
+## Repository layout
+
+- Keep `AGENTS.md` at the repository root. All frontend application files, dependencies, build outputs, and frontend documentation live in `frontend/`.
+- Run Node/npm commands from `frontend/`. Root-level orchestration may reference that directory.
