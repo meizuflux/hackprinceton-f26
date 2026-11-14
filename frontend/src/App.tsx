@@ -753,11 +753,15 @@ export default function App() {
         />
       ) : (
         <div className="app-shell">
-          <WorkspaceNavigation
-            navigate={navigate}
-            projects={projects}
-            activeCaseId={route.kind === "case" ? route.caseId : undefined}
-          />
+          {(route.kind !== "case" ||
+            !caseQuery.data ||
+            caseQuery.data.id !== route.caseId) && (
+            <WorkspaceNavigation
+              navigate={navigate}
+              projects={projects}
+              activeCaseId={route.kind === "case" ? route.caseId : undefined}
+            />
+          )}
           <main className="workspace-main">
             {route.kind === "not-found" ? (
               <div className="center-state">
