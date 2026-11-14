@@ -1,9 +1,9 @@
-import { ChevronDown, X } from "lucide-react";
-import { useEffect } from "react";
+import { ArrowLeft, ChevronDown, X } from "lucide-react";
+import { useEffect, useRef } from "react";
 import type { CaseData } from "../api/types";
 
 export type Selection = {
-  kind: "node" | "edge" | "gap" | "insight" | "suggestion";
+  kind: "node" | "edge" | "gap" | "insight" | "suggestion" | "source";
   id: string;
   sourceId?: string;
 };
@@ -13,6 +13,7 @@ type InspectorProps = {
   data: CaseData;
   onClose: () => void;
   onSelect: (selection: Selection) => void;
+  backLabel?: string;
 };
 
 export function Inspector({
@@ -20,14 +21,24 @@ export function Inspector({
   data,
   onClose,
   onSelect,
+  backLabel = "Back to review",
 }: InspectorProps) {
+  const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
+    if (selection) panelRef.current?.focus();
+  }, [selection?.id, selection?.kind]);
+  useEffect(() => {
+    if (!selection) return;
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
+      if (
+        event.key === "Escape" &&
+        !document.querySelector('[aria-modal="true"]')
+      )
+        onClose();
     };
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, [onClose]);
+  }, [onClose, !!selection]);
 
   if (!selection) return null;
 
@@ -43,6 +54,17 @@ export function Inspector({
         return data.insights.find((entry) => entry.id === selection.id);
       case "suggestion":
         return data.suggestions.find((entry) => entry.id === selection.id);
+      case "source": {
+        const source = data.sources.find((entry) => entry.id === selection.id);
+        return source
+          ? {
+              ...source,
+              title: source.path,
+              description: source.kind,
+              citations: [source.id],
+            }
+          : undefined;
+      }
     }
   })();
   if (!item) return null;
@@ -88,10 +110,17 @@ export function Inspector({
   };
 
   return (
-    <aside className="inspector" aria-label={`${selection.kind} details`}>
+    <aside
+      className="inspector"
+      ref={panelRef}
+      tabIndex={-1}
+      aria-label={`${selection.kind} details`}
+    >
       <header className="inspector-head">
         <div>
-          <p className="eyebrow">Evidence record</p>
+          <button className="text-button inspector-back" onClick={onClose}>
+            <ArrowLeft size={14} /> {backLabel}
+          </button>
           <h2>{title}</h2>
         </div>
         <button
@@ -107,11 +136,21 @@ export function Inspector({
       <div className="inspector-body">
         <div className="inspector-tags">
           <span className={`kind-badge kind-${selection.kind}`}>
-            {selection.kind}
+            {selection.kind === "gap"
+              ? "Question to verify"
+              : selection.kind === "insight"
+                ? "Inference"
+                : selection.kind === "suggestion"
+                  ? "Suggested next step"
+                  : selection.kind === "node"
+                    ? "Evidence record"
+                    : selection.kind === "edge"
+                      ? "Relationship"
+                      : "Source excerpt"}
           </span>
           {score !== undefined && (
             <span className="detail-score">
-              Score {Math.round(score * 100)}%
+              Illustrative score · {Math.round(score * 100)}%
             </span>
           )}
           {selection.kind === "edge" && "type" in item && (
@@ -119,6 +158,51 @@ export function Inspector({
           )}
         </div>
         <p className="inspector-description">{description}</p>
+
+        <section className="inspector-section sources-section">
+          <h3>
+            Original sources <span>({sources.length})</span>
+          </h3>
+          {sources.length ? (
+            sources.map((source) => (
+              <details
+                className="source-item"
+                key={source.id}
+                open={sources[0]?.id === source.id}
+              >
+                <summary>
+                  <span>
+                    <strong>{source.path}</strong>
+                    <small>{source.kind}</small>
+                  </span>
+                  <ChevronDown size={16} aria-hidden="true" />
+                </summary>
+                <div className="source-meta">
+                  <p>
+                    <strong>Recorded:</strong> {source.timestamp}
+                  </p>
+                  <p>
+                    <strong>Placeholder hash:</strong>{" "}
+                    <code>{source.hash}</code>
+                  </p>
+                  <blockquote>{source.excerpt}</blockquote>
+                  {Object.keys(source.metadata).length > 0 && (
+                    <dl>
+                      {Object.entries(source.metadata).map(([key, value]) => (
+                        <div key={key}>
+                          <dt>{key}</dt>
+                          <dd>{value}</dd>
+                        </div>
+                      ))}
+                    </dl>
+                  )}
+                </div>
+              </details>
+            ))
+          ) : (
+            <p className="muted">No source citations attached.</p>
+          )}
+        </section>
 
         {gap && (
           <section className="inspector-section">
@@ -196,57 +280,13 @@ export function Inspector({
             )}
           </section>
         )}
-
-        <section className="inspector-section sources-section">
-          <h3>
-            Original sources <span>({sources.length})</span>
-          </h3>
-          {sources.length ? (
-            sources.map((source) => (
-              <details
-                className="source-item"
-                key={source.id}
-                open={sources[0]?.id === source.id}
-              >
-                <summary>
-                  <span>
-                    <strong>{source.path}</strong>
-                    <small>{source.kind}</small>
-                  </span>
-                  <ChevronDown size={16} aria-hidden="true" />
-                </summary>
-                <div className="source-meta">
-                  <p>
-                    <strong>Recorded:</strong> {source.timestamp}
-                  </p>
-                  <p>
-                    <strong>Hash:</strong> <code>{source.hash}</code>
-                  </p>
-                  <blockquote>{source.excerpt}</blockquote>
-                  {Object.keys(source.metadata).length > 0 && (
-                    <dl>
-                      {Object.entries(source.metadata).map(([key, value]) => (
-                        <div key={key}>
-                          <dt>{key}</dt>
-                          <dd>{value}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  )}
-                </div>
-              </details>
-            ))
-          ) : (
-            <p className="muted">No source citations attached.</p>
-          )}
-        </section>
       </div>
 
       <footer className="inspector-footer">
         <strong>Fictional synthetic demo</strong>
         <span>
-          Sources show observed evidence. Scores and gap descriptions are
-          inferences; a gap is not proof.
+          Source excerpts are fictional. Scores are illustrative. Inferences
+          require verification; a gap is not proof.
         </span>
       </footer>
     </aside>

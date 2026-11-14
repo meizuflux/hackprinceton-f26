@@ -13,6 +13,8 @@ make frontend-dev
 
 Open [localhost:5173](http://localhost:5173) and click **Explore demo case**. You can also choose a ZIP to try the simulated ingestion flow.
 
+The welcome page is at `/`, and an opened case uses `/cases/:caseId`. Browser back and forward and direct case links are supported; the mock adapter currently serves only its fictional case. The production nginx configuration falls back to the app for these routes.
+
 Without Make, run `bun install --frozen-lockfile` and `bun run --bun dev` from `frontend/`.
 
 ## Run with Docker
@@ -23,7 +25,7 @@ Requires Docker with Compose and a running Docker daemon. Stop any local Vite se
 docker compose up --build -d
 ```
 
-Open [localhost:5173](http://localhost:5173). After source changes, rebuild and restart with `docker compose up --build -d`. Stop the container with:
+Open [localhost:5173](http://localhost:5173). If using Docker to serve updated source changes, rebuild and restart with `docker compose up --build -d`. Docker is optional and is not needed for routine frontend development. Stop the container with:
 
 ```sh
 docker compose down
