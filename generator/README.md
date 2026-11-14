@@ -9,22 +9,26 @@ phone numbers (the reserved 555-01xx range), plates, addresses and `.example` em
 
 ## Run
 
-Requires Python 3.11+. From the repository root:
+Requires Python 3.12+ (the pinned NumPy does not support 3.11). From the repository root:
 
 ```sh
-make data-install     # pip install -r generator/requirements.txt
+make data-install     # uv sync --locked --script generator/generate.py
 make data-generate    # rebuild cases/kestrel
 make data-verify      # rebuild in a temp dir and compare every file hash with cases/kestrel/BUILD_INFO.json
 ```
 
-Without Make: `python generator/generate.py`, `python generator/generate.py --verify`.
+Requires [uv](https://docs.astral.sh/uv/). Dependencies are the PEP 723 block at the top of
+`generator/generate.py`, not a requirements file. `make data-install` installs from the committed script lock.
+After changing those pins, regenerate the lock with `uv lock --script generator/generate.py` and commit it.
+
+Without Make: `uv run --locked --script generator/generate.py`, and the same command with `--verify`.
 
 **Answer key.** The repository contains no answer key, so the model has to work the case out. To score a
 pipeline run, `make data-truth` (or `--truth-out DIR`) writes the solution, facts, insights, gaps, record labels
 and media annotations to the git-ignored `.truth/kestrel/`. Never commit it or feed it, or this `generator/`
 source (which encodes the solution), to the model.
 
-Training variants: `python generator/generate.py --seed variant-7 --out /tmp/kestrel-variant-7`. A different
+Training variants: `uv run --locked --script generator/generate.py --seed variant-7 --out /tmp/kestrel-variant-7`. A different
 seed changes the background noise (crowd badge traffic, spam, duplicates, misreads, schedules, DNA alleles)
 while the scripted case events and their key tags stay the same.
 
@@ -48,12 +52,12 @@ while the scripted case events and their key tags stay the same.
 | `kestrel/common.py` | Seeded RNG streams, time helpers, file writer (stable bytes, long Windows paths), label registry |
 | `kestrel/cast.py` | People, places, items, meeting dates and the ground-truth timeline anchors |
 | `kestrel/catalog.py` | One entry per evidence file: provenance, time basis, sensitivity, Admiralty grade |
-| `kestrel/logs.py` | Badge, LPR, cabinet, RFID, visitors, guard tours, workstation, calendar, reference tables |
+| `kestrel/logs/` | Access logs (`access.py`) and facility logs (`facility.py`); shared tables in `common.py` |
 | `kestrel/messages.py` | Phone message extractions |
 | `kestrel/location.py` | Movement schedules, cell-site model, carrier records, location history |
 | `kestrel/dna.py` | STR profiles and lab report |
 | `kestrel/media.py` | Photos, CCTV clips, VMS tables, annotations |
-| `kestrel/texts.py` | Reports, statements, interviews, emails |
+| `kestrel/texts/` | Reports, statements, interviews, and emails, one module each |
 | `kestrel/truth.py` | Answer key: facts, insights, gaps, questions, red herrings, entities, timeline, labels |
 | `kestrel/build.py` | Orchestration, manifest, ZIP, README, `BUILD_INFO.json`, `--verify` |
 
