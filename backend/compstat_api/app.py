@@ -193,6 +193,16 @@ def health():
 @app.post("/upload")
 async def upload(background: BackgroundTasks, file: UploadFile = File(...), case_name: Optional[str] = Form(None),
                  timezone_name: Optional[str] = Form(None, alias="timezone"), llm: bool = Form(False)):
+    # the /docs form pre-fills optional fields with the placeholder "string"; treat that as empty
+    case_name = None if (case_name or "").strip() in ("", "string") else case_name
+    timezone_name = None if (timezone_name or "").strip() in ("", "string") else timezone_name.strip()
+    if timezone_name:
+        from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
+        try:
+            ZoneInfo(timezone_name)
+        except (ZoneInfoNotFoundError, ValueError):
+            raise ApiError(400, "bad_timezone", f"unknown time zone {timezone_name!r}; use an IANA name such as "
+                                                "America/Los_Angeles, or leave it empty")
     case_id = (re.sub(r"[^a-z0-9]+", "-", (case_name or Path(file.filename or "case").stem).lower()).strip("-")[:40] or "case")
     case_id = f"{case_id}-{uuid.uuid4().hex[:6]}"
     case_dir = _cases() / case_id
