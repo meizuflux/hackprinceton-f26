@@ -48,11 +48,12 @@ Each job lives in `data/jobs/<job_id>/`: `original/` (read-only), `events.parque
 
 ## 3. Workstreams
 
-Each workstream can be built in parallel against the Kestrel data. Acceptance criteria use `cases/kestrel/truth/`.
+Each workstream can be built in parallel against the Kestrel data. The repo holds no answer key; acceptance
+criteria use the local one from `make data-truth` (`.truth/kestrel/`, git-ignored, never model input).
 
 ### WS0 Data and evaluation (generator done; scorer next)
 - Done: deterministic generator, 56 evidence files, labels, `make data-verify`.
-- Next: `eval/score.py` compares a pipeline run with `truth/`:
+- Next: `eval/score.py` compares a pipeline run with the local answer key:
   - facts recovered with the correct locator
   - insights matched (supporting-fact overlap; optionally an LLM judge)
   - gaps found, and how well the artifact ranking matches `artifact_value.json`
@@ -141,9 +142,9 @@ agent = create_deep_agent(
   1. For each key event and each person of interest, generate who / when / where / how questions.
   2. Answer each with tools.
   3. If a question cannot be answered, record a gap: the question, why it matters, affected claims, missing
-     evidence, recommended artifact types, and a concrete example request (see `truth/gaps.json`).
+     evidence, recommended artifact types, and a concrete example request.
   4. Rank artifacts by the gaps they close, weighted by priority and deadline
-     (`truth/artifact_value.json` documents the formula).
+     (for example: priority x 1.0 for a full fix or 0.5 for a partial one, x 1.25 if the gap has a deadline).
 - Guardrails:
   - `record_insight` rejects any insight without at least one resolvable locator.
   - Insights never cite protected attributes.
@@ -189,13 +190,13 @@ agent = create_deep_agent(
 | 0-6 | WS1 ingest and parsers, WS2 time normalisation; in parallel WS0 scorer and WS4 graph schema |
 | 6-14 | WS3 co-location, anomaly and contradiction rules; WS5 agent skeleton with tools over events |
 | 14-22 | WS5 gaps and artifact ranking; WS6 audit; WS7 API; frontend adapter |
-| 22-30 | Score against `truth/`, fix misses, tune prompts; deployment |
+| 22-30 | Score against the local answer key, fix misses, tune prompts; deployment |
 | 30-36 | Demo rehearsal and backup recording |
 
 ## 6. Risks
 
 - **Invented citations:** the verifier subagent plus resolvable-locator checks in `record_insight`.
-- **Overfitting to Kestrel:** test on seed variants, and keep `truth/` out of prompts and code paths.
+- **Overfitting to Kestrel:** test on seed variants, and keep the answer key and `generator/` out of prompts and code paths.
 - **Bias:** protected attributes stripped; RH-03 is a regression test.
 - **Time:** video vision models are optional. The VMS analytics CSV already gives person counts.
 - **Privacy:** real evidence needs retention, access-control and provider-policy decisions (open in SPEC).

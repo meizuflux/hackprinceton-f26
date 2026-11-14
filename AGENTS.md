@@ -37,10 +37,10 @@
 
 - Generated case data under `cases/` is the authoritative data for backend work. Frontend fixtures (`frontend/src/api/fixtures.ts`) are disposable mocks; never use them as a backend data source or reconcile backend data to them.
 - `generator/` deterministically builds `cases/kestrel/` (Python 3.11+, pinned deps in `generator/requirements.txt`). Never hand-edit files under `cases/`; change the generator, run `make data-generate`, and confirm with `make data-verify` (byte-for-byte hash check against `BUILD_INFO.json`). The root `Makefile` also provides `data-install`, `data-generate` and `data-verify`; set `PYTHON=python` where needed.
-- `cases/kestrel/evidence/` and `kestrel_case_upload.zip` are pipeline inputs. `cases/kestrel/truth/` is the answer key and labels: use it only for evaluation and training, never as pipeline input or agent context.
+- `cases/kestrel/evidence/` and `kestrel_case_upload.zip` are the pipeline inputs. The repository holds no answer key: the model must work the case out from the evidence. `make data-truth` writes one to the git-ignored `.truth/kestrel/` for scoring only. Never commit it, and never give it or the `generator/` source (which encodes the solution) to the model.
 - All people, companies, numbers (555-01xx), plates and domains (`.example`) are fictional. Do not add real people or organizations to case data.
 - Protected attributes (for example `id_issuing_country`, nationality) must never be model features. The case includes a deliberate bias trap (RH-03).
-- Cite evidence as `evidence_id` plus locator (for example `EV-071 seq=40162`, `EV-090 line=13`); `truth/key_locators.json` lists the named locators.
+- Cite evidence as `evidence_id` plus locator (for example `EV-071 seq=40162`, `EV-090 line=15`).
 
 ## Specification change approval
 

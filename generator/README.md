@@ -19,6 +19,11 @@ make data-verify      # rebuild in a temp dir and compare every file hash with c
 
 Without Make: `python generator/generate.py`, `python generator/generate.py --verify`.
 
+**Answer key.** The repository contains no answer key, so the model has to work the case out. To score a
+pipeline run, `make data-truth` (or `--truth-out DIR`) writes the solution, facts, insights, gaps, record labels
+and media annotations to the git-ignored `.truth/kestrel/`. Never commit it or feed it, or this `generator/`
+source (which encodes the solution), to the model.
+
 Training variants: `python generator/generate.py --seed variant-7 --out /tmp/kestrel-variant-7`. A different
 seed changes the background noise (crowd badge traffic, spam, duplicates, misreads, schedules, DNA alleles)
 while the scripted case events and their key tags stay the same.
@@ -28,8 +33,8 @@ while the scripted case events and their key tags stay the same.
 | Modality | Files | Notes |
 | --- | --- | --- |
 | Biological | STR allele table + lab report | 20 CODIS core loci + Amelogenin; mixtures; the report's inclusions and exclusions are asserted against the alleles at build time |
-| Video | 4 H.264 MP4 CCTV clips + VMS export index + VMS analytics | Rendered scenes with burned-in timestamps; per-frame boxes and identities in `truth/video_tracks.jsonl` |
-| Photos | 11 JPEGs | Real EXIF `DateTimeOriginal`, `OffsetTime`, GPS, make/model; object boxes in `truth/photo_annotations.json` |
+| Video | 4 H.264 MP4 CCTV clips + VMS export index + VMS analytics | Rendered scenes with burned-in timestamps; per-frame boxes and identities in the answer key |
+| Photos | 11 JPEGs | Real EXIF `DateTimeOriginal`, `OffsetTime`, GPS, make/model; object boxes in the answer key |
 | Messages | 2 phone extractions (CSV) | Includes recovered deleted messages, spam, automated notifications, sync duplicates |
 | Location | 2 carrier record sets, 1 location-history export, garage plate reads | Cell-site coarse location, precise visits, OCR misreads |
 | Access and system logs | Badge, cabinet audit (JSONL), RFID, visitors, guard tours, workstation, calendar (ICS), reference tables | Mixed time formats; one reader with clock drift |

@@ -1,6 +1,6 @@
 .DEFAULT_GOAL := help
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
-	data-install data-generate data-verify
+	data-install data-generate data-verify data-truth
 
 PYTHON ?= python3
 
@@ -14,6 +14,7 @@ help:
 	@echo "make data-install      Install pinned case-generator dependencies (PYTHON=python3)"
 	@echo "make data-generate     Regenerate the synthetic Kestrel case in cases/kestrel/"
 	@echo "make data-verify       Rebuild the case in a temp dir and check every file hash"
+	@echo "make data-truth        Write the answer key to .truth/kestrel/ (git-ignored; scoring only)"
 
 frontend-install:
 	cd frontend && bun install --frozen-lockfile
@@ -41,3 +42,6 @@ data-generate:
 
 data-verify:
 	$(PYTHON) generator/generate.py --verify
+
+data-truth:
+	$(PYTHON) generator/generate.py --truth-out .truth/kestrel

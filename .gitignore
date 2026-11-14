@@ -24,6 +24,10 @@ __pycache__/
 venv/
 .pytest_cache/
 
+# Case answer keys: generated locally for scoring only, never committed (the model must work the case out)
+.truth/
+cases/*/truth/
+
 # Machine-specific agent settings
 .claude/settings.local.json
 .impeccable/config.local.json
