@@ -19,6 +19,7 @@ export type PinData = {
   gapId?: string;
   gapScore?: number;
   active?: boolean;
+  onInspect: () => void;
 };
 const icons = {
   person: UserRound,
@@ -79,7 +80,13 @@ export function EvidenceNode({ data }: NodeProps<Node<PinData>>) {
           <Link2 size={11} />
           {data.citations.length} source{data.citations.length === 1 ? "" : "s"}
         </span>
-        <span>INSPECT ↗</span>
+        <button
+          className="nodrag nopan pin-inspect"
+          onClick={data.onInspect}
+          aria-label={`Inspect ${data.label} and sources`}
+        >
+          Inspect <ArrowUpRight size={12} />
+        </button>
       </div>
       <Handle type="source" position={Position.Bottom} />
     </div>

@@ -17,6 +17,8 @@
 - Mock uploads never read ZIP contents. Keep this limitation visible beside upload controls. Fixture hashes and confidence scores are illustrative, not computed.
 - Luna subagents are requested for delegated work. Fetch remote refs frequently and make one signed commit per feature.
 - Board uses React Flow custom pinned cards on a cork surface inside a dark workspace. Relationships and ranked analysis open the shared source inspector.
+- Frontend design preserves the dark/cork identity. The source inspector occupies the review dock, with source excerpts first; below 900px it stacks under the board. Keep search available at every width. The list view exposes evidence and relationships through standard buttons, and illustrative scores are labeled beside their values. Design tokens live in `frontend/DESIGN.md`; baseline findings live in `frontend/EVALUATION.md`.
+- The case board is the primary canvas. Analysis, source inspection, and audit share a collapsible review dock; opening it must preserve the graph viewport and the analysis context. The welcome page uses `/` and case workspaces use `/cases/:caseId`; validate case IDs against the API result, and keep browser history and direct-load fallback working.
 - Validate API fixture links and mock upload state transitions from `frontend/` with `bun run --bun test`; use `bun run --bun build` for TypeScript and the production bundle.
 - Browser-verified demo path: synthetic ZIP selection → staged mock progress → board; gap and insight inspection; original source expansion; edge inspection; audit trail. Upload modal traps keyboard focus and supports Escape when idle/ready; inspector supports Escape.
 - Run `bun run --bun format` from `frontend/` after changes. No real source files or computed hashes are bundled; source excerpts live only in disposable fixtures.
@@ -25,7 +27,7 @@
 
 - Keep `AGENTS.md` at the repository root. All frontend application files, dependencies, build outputs, and frontend documentation live in `frontend/`.
 - Run Bun commands from `frontend/`. Root-level orchestration may reference that directory.
-- The root `Makefile` provides `frontend-install`, `frontend-dev`, `frontend-build`, `frontend-test`, `frontend-preview`, and `frontend-format`. Run Make from the repository root; recipes enter `frontend/` automatically. Do not add a nested frontend Makefile. `compose.yaml` at the root builds only the frontend, serving the production bundle through nginx on `127.0.0.1:5173`; rebuild the image after source changes.
+- The root `Makefile` provides `frontend-install`, `frontend-dev`, `frontend-build`, `frontend-test`, `frontend-preview`, and `frontend-format`. Run Make from the repository root; recipes enter `frontend/` automatically. Do not add a nested frontend Makefile. Docker and the root `compose.yaml` are optional for server deployment; do not start Docker, run Compose, or rebuild container images for routine frontend work unless the user explicitly requests it.
 - Use Bun 1.4.4 for frontend dependencies and script execution. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Use `bun run --bun test` to run the Vitest suite (not the separate `bun test` runner). Docker uses the same pinned Bun build image.
 
 ## Case data and generator
