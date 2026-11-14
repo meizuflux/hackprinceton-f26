@@ -43,26 +43,9 @@ export function EvidenceNode({ data }: NodeProps<Node<PinData>>) {
         </span>
         <ArrowUpRight size={13} />
       </div>
-      {data.type === "location" && (
-        <div className="map-preview">
-          <span className="map-road road-one" />
-          <span className="map-road road-two" />
-          <span className="map-road road-three" />
-          <MapPin size={27} />
-          <span className="map-label">RIVERFRONT DISTRICT</span>
-        </div>
-      )}
-      {data.type === "person" && (
-        <div className="person-mark">
-          <Icon size={32} strokeWidth={1} />
-          <span>ENTITY RECORD</span>
-        </div>
-      )}
       <h3>{data.label}</h3>
       <p className="pin-subtitle">{data.subtitle}</p>
-      {data.type !== "person" && data.type !== "location" && (
-        <p className="pin-summary">{data.summary}</p>
-      )}
+      <p className="pin-summary">{data.summary}</p>
       {data.time && (
         <div className="pin-time">
           <CalendarClock size={11} />
@@ -71,8 +54,7 @@ export function EvidenceNode({ data }: NodeProps<Node<PinData>>) {
       )}
       {data.gapId && (
         <div className="pin-gap">
-          <AlertTriangle size={11} /> Evidence gap{" "}
-          <strong>{Math.round((data.gapScore ?? 0) * 100)}</strong>
+          <AlertTriangle size={11} /> Open question
         </div>
       )}
       <div className="pin-footer">

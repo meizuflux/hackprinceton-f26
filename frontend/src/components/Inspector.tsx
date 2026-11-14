@@ -178,6 +178,7 @@ export function Inspector({
                   <ChevronDown size={16} aria-hidden="true" />
                 </summary>
                 <div className="source-meta">
+                  <blockquote>{source.excerpt}</blockquote>
                   <p>
                     <strong>Recorded:</strong> {source.timestamp}
                   </p>
@@ -185,7 +186,6 @@ export function Inspector({
                     <strong>Placeholder hash:</strong>{" "}
                     <code>{source.hash}</code>
                   </p>
-                  <blockquote>{source.excerpt}</blockquote>
                   {Object.keys(source.metadata).length > 0 && (
                     <dl>
                       {Object.entries(source.metadata).map(([key, value]) => (

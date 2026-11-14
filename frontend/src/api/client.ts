@@ -1,7 +1,6 @@
 import { demoCase } from "./fixtures";
 import type { CaseApi, IngestionProgress, UploadResult } from "./types";
 
-const MAX_UPLOAD_BYTES = 100 * 1024 * 1024;
 const MOCK_PROCESSING_MS = 5_000;
 const jobs = new Map<string, number>();
 let nextJob = 1;
@@ -14,9 +13,6 @@ export const api: CaseApi = {
     }
     if (file.size === 0) {
       throw new Error("The ZIP archive is empty.");
-    }
-    if (file.size > MAX_UPLOAD_BYTES) {
-      throw new Error("ZIP archives must be 100 MB or smaller.");
     }
     const jobId = `demo-job-${nextJob++}`;
     jobs.set(jobId, Date.now());

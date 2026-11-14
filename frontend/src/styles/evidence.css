@@ -1,0 +1,128 @@
+.react-flow__node {
+  width: 210px;
+}
+.evidence-pin {
+  position: relative;
+  padding: 18px 14px 0;
+  background: var(--paper);
+  border: 1px solid #eee9dc;
+  border-radius: 2px;
+  box-shadow: 1px 5px 12px #201b1948;
+  color: #383c31;
+}
+.evidence-pin.active {
+  outline: 3px solid var(--amber);
+  outline-offset: 3px;
+}
+.evidence-pin.statement {
+  background: #e7e2bd;
+}
+.evidence-pin.event {
+  background: #e9dfcc;
+}
+.evidence-pin.device {
+  background: #d9dfd2;
+}
+.pushpin {
+  position: absolute;
+  top: -5px;
+  left: calc(50% - 4px);
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #b2634a;
+  box-shadow: 0 2px 3px #30241488;
+}
+.person .pushpin {
+  background: #637c71;
+}
+.pin-type,
+.pin-type > span,
+.pin-footer,
+.pin-footer > span,
+.pin-time,
+.pin-gap,
+.pin-inspect {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.pin-type {
+  justify-content: space-between;
+  text-transform: uppercase;
+  font-size: 11px;
+  color: #5b604f;
+  margin-bottom: 10px;
+}
+.evidence-pin h3 {
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+.pin-subtitle {
+  color: #595e4e;
+  font-size: 12px;
+  margin-top: 5px;
+}
+.pin-summary {
+  font:
+    15px/1.45 "Newsreader",
+    Georgia,
+    serif;
+  color: #454a3d;
+  margin-top: 12px;
+}
+.pin-time {
+  margin-top: 10px;
+  font-size: 11px;
+  color: #59513b;
+}
+.pin-gap {
+  background: #bd8c2d16;
+  color: #69461b;
+  border: 1px solid #ae884255;
+  border-radius: 3px;
+  padding: 5px;
+  font-size: 11px;
+  margin-top: 10px;
+}
+.pin-footer {
+  justify-content: space-between;
+  border-top: 1px solid #88876c44;
+  margin-top: 14px;
+  padding: 7px 0;
+  color: #50573e;
+  font-size: 11px;
+}
+.pin-inspect {
+  background: transparent;
+  color: #36452b;
+  font-size: 13px;
+  min-height: 32px;
+  padding: 6px 4px;
+}
+.pin-inspect:hover {
+  background: #bdc6a875;
+}
+.pin-inspect:focus-visible {
+  outline-color: #4e6038;
+  outline-offset: 1px;
+}
+.react-flow__handle {
+  background: #96876d;
+  width: 5px;
+  height: 5px;
+  border: 0;
+  opacity: 0;
+}
+.react-flow__edge {
+  cursor: pointer;
+}
+.react-flow__edge:hover path {
+  stroke: #f4c480 !important;
+  stroke-width: 3 !important;
+}
+.dimmed-node {
+  opacity: 0.16 !important;
+}

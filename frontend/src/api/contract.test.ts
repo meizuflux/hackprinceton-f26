@@ -67,10 +67,10 @@ describe("mock upload adapter", () => {
     ).rejects.toThrow("empty");
   });
 
-  it("rejects archives larger than 100 MB", async () => {
+  it("accepts large archives without reading their contents", async () => {
     await expect(
       api.createUpload(fileWithSize("large.zip", 100 * 1024 * 1024 + 1)),
-    ).rejects.toThrow("100 MB");
+    ).resolves.toHaveProperty("jobId");
   });
 
   it("simulates progressive work and completes after five seconds without reading the archive", async () => {
