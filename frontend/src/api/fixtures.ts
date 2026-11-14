@@ -271,7 +271,7 @@ export const demoCase: CaseData = {
       metadata: {
         author: "Northline Loss Prevention",
         page: "1",
-        status: "Fictional demo record",
+        status: "Fictional record",
       },
     },
     {
@@ -285,7 +285,7 @@ export const demoCase: CaseData = {
       metadata: {
         system: "Badge reader BR-4E",
         credential: "1842",
-        status: "Fictional demo record",
+        status: "Fictional record",
       },
     },
     {
@@ -299,7 +299,7 @@ export const demoCase: CaseData = {
       metadata: {
         camera: "CAM-4E",
         interval: "20:31–20:50",
-        status: "Fictional demo record",
+        status: "Fictional record",
       },
     },
     {
@@ -325,7 +325,7 @@ export const demoCase: CaseData = {
         "Alex Morgan said the east cage was secured after the 20:00 count; no second count sheet was attached.",
       metadata: {
         interviewer: "Northline Loss Prevention",
-        status: "Fictional demo record",
+        status: "Fictional record",
       },
     },
   ],
@@ -333,7 +333,7 @@ export const demoCase: CaseData = {
     {
       id: "A1",
       time: "2026-11-14T09:00:00-05:00",
-      title: "Demo case loaded",
+      title: "Case loaded",
       description: "Loaded the fictional Northline Warehouse 4 case fixture.",
       citations: [],
     },

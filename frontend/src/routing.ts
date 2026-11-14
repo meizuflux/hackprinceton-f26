@@ -2,12 +2,16 @@ import { useCallback, useEffect, useState } from "react";
 
 export type AppRoute =
   | { kind: "welcome" }
+  | { kind: "projects" }
+  | { kind: "new-project" }
   | { kind: "case"; caseId: string }
   | { kind: "not-found" };
 
 /** Parse only the routes supported by the prototype. Case existence is checked against CaseApi data. */
 export function parseRoute(pathname: string): AppRoute {
   if (pathname === "/") return { kind: "welcome" };
+  if (/^\/projects\/?$/.test(pathname)) return { kind: "projects" };
+  if (/^\/projects\/new\/?$/.test(pathname)) return { kind: "new-project" };
 
   const match = /^\/cases\/([^/]+)\/?$/.exec(pathname);
   if (!match) return { kind: "not-found" };
