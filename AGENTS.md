@@ -12,7 +12,7 @@
 
 ## Implementation decisions
 
-- Impeccable product context lives in `frontend/PRODUCT.md`; app-specific settings live in `frontend/.impeccable/`. Future landing pages use the confirmed code-first workflow. Keep the root skill installation and `AGENTS.md` at the repository root.
+- The single canonical product spec and Impeccable product context live in root `SPEC.md`; do not create a second `PRODUCT.md`; app-specific settings live in `frontend/.impeccable/`. Future landing pages use the confirmed code-first workflow. Keep the root skill installation and `AGENTS.md` at the repository root.
 - API seam: `CaseApi` in `frontend/src/api/types.ts`; `frontend/src/api/client.ts` owns mock jobs. UI loads the case through TanStack Query and never imports fixtures directly.
 - Mock uploads never read ZIP contents. Keep this limitation visible beside upload controls. Fixture hashes and confidence scores are illustrative, not computed.
 - Luna subagents are requested for delegated work. Fetch remote refs frequently and make one signed commit per feature.
@@ -27,3 +27,9 @@
 - Run Bun commands from `frontend/`. Root-level orchestration may reference that directory.
 - `frontend/Makefile` provides local install/dev/build/test/preview/format commands. `compose.yaml` at the root builds only the frontend, serving the production bundle through nginx on `127.0.0.1:5173`; rebuild the image after source changes.
 - Use Bun 1.4.4 for frontend dependencies and script execution. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Use `bun run --bun test` to run the Vitest suite (not the separate `bun test` runner). Docker uses the same pinned Bun build image.
+
+## Specification change approval
+
+- Before any future modification to root `SPEC.md`, always present the proposed changes and ask both the user and team members for approval. Wait for their explicit approval before editing; silence is not approval.
+- If team members cannot be reached through an explicitly authorized channel, ask the user to obtain their approval. Do not contact anyone without authorization or assume team consent.
+- This rule governs changes to `SPEC.md`; routine implementation work and other documentation can proceed within the user's authorized scope.
