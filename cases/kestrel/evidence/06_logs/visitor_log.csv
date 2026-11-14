@@ -1,0 +1,33 @@
+visit_id,date,sign_in,sign_out,visitor_name,company,host,purpose,building,id_type,id_issuing_country,visitor_badge,escort_required,photo_ref,nda_signed
+VIS-1001-0001,2026-10-01,10:24,11:11,Rosa Mehta,Stellar Substrates Pte Ltd,Dana Whitfield,Interview,E,Driver license,US,V-746,Y,VIS-1001-0001.jpg,Y
+VIS-1001-0002,2026-10-01,12:14,13:00,Sebastian Schmidt,Stellar Substrates Pte Ltd,Richard Halvorsen,Interview,E,Passport,KR,V-184,Y,VIS-1001-0002.jpg,Y
+VIS-1002-0003,2026-10-02,14:45,17:30,Yara Martin,Quartz Leaf AI,Andrew Chen,Partner meeting,E,Passport,IN,V-938,Y,VIS-1002-0003.jpg,Y
+VIS-1002-0004,2026-10-02,15:18,18:02,Leo Fujita,Quartz Leaf AI,Priya Raman,Customer briefing,E,Passport,US,V-189,Y,VIS-1002-0004.jpg,N
+VIS-1002-0005,2026-10-02,15:34,16:55,Hiro Hassan,Lumen Datacenters,Andrew Chen,Vendor demo,E,Passport,GB,V-566,Y,VIS-1002-0005.jpg,Y
+VIS-1002-0006,2026-10-02,15:52,18:09,Maya Flores,Fernhill Audit Partners,Priya Raman,Partner meeting,E,Driver license,US,V-769,Y,VIS-1002-0006.jpg,Y
+VIS-1005-0007,2026-10-05,11:00,12:57,Omar Rossi,Atlas Logistics,Richard Halvorsen,Audit fieldwork,E,Passport,MX,V-379,Y,VIS-1005-0007.jpg,N
+VIS-1005-0008,2026-10-05,13:31,16:17,Mohammed Rossi,Pearl River Substrate Co.,Dana Whitfield,Vendor demo,E,Passport,IN,V-501,Y,VIS-1005-0008.jpg,Y
+VIS-1006-0009,2026-10-06,11:15,12:05,Ben Yamamoto,Vantage Recruiting,Dana Whitfield,Vendor demo,E,Passport,IN,V-425,Y,VIS-1006-0009.jpg,N
+VIS-1007-0010,2026-10-07,11:54,12:32,Noah Andersen,Ridgeline Semiconductor Test,Priya Raman,Interview,E,Passport,GB,V-366,Y,VIS-1007-0010.jpg,Y
+VIS-1007-0011,2026-10-07,13:29,15:28,Hannah Flores,Fernhill Audit Partners,Richard Halvorsen,Legal meeting,E,Passport,HK,V-862,Y,VIS-1007-0011.jpg,N
+VIS-1007-0012,2026-10-07,14:21,16:05,Vivian Shen,Pacific Harbor Advisory LLC,Richard Halvorsen,Partner briefing + EBC walkthrough,E,Passport,HK,V-442,Y,VIS-1007-0012.jpg,Y
+VIS-1008-0013,2026-10-08,11:40,14:13,Sebastian Martin,Cobalt Thermal Inc.,Jordan Ellis,Facilities contractor,E,Passport,DE,V-640,Y,VIS-1008-0013.jpg,Y
+VIS-1008-0014,2026-10-08,12:18,14:05,Tariq Sato,Stellar Substrates Pte Ltd,Tom Brandt,Legal meeting,E,Passport,GB,V-722,Y,VIS-1008-0014.jpg,N
+VIS-1009-0015,2026-10-09,11:54,12:57,Amara Cohen,Polaris Power Systems,Priya Raman,Legal meeting,E,Passport,CA,V-856,Y,VIS-1009-0015.jpg,Y
+VIS-1012-0016,2026-10-12,09:05,10:58,Nina Brooks,Quartz Leaf AI,Andrew Chen,Audit fieldwork,E,Passport,CN,V-959,Y,VIS-1012-0016.jpg,Y
+VIS-1012-0017,2026-10-12,10:16,13:10,Emeka Campbell,Lumen Datacenters,Andrew Chen,Customer briefing,E,Passport,BR,V-612,Y,VIS-1012-0017.jpg,N
+VIS-1012-0018,2026-10-12,15:53,18:19,Deepa Kapoor,Atlas Logistics,Dana Whitfield,Partner meeting,E,Passport,IL,V-583,Y,VIS-1012-0018.jpg,Y
+VIS-1013-0019,2026-10-13,08:40,11:33,Yusuf Singh,Halcyon Capital,Tom Brandt,Interview,E,Passport,TW,V-380,Y,VIS-1013-0019.jpg,Y
+VIS-1013-0020,2026-10-13,12:28,15:10,Ryan Hughes,Polaris Power Systems,Andrew Chen,Facilities contractor,E,Passport,GB,V-549,Y,VIS-1013-0020.jpg,Y
+VIS-1013-0021,2026-10-13,14:56,16:35,Fatima Baker,Cobalt Thermal Inc.,Richard Halvorsen,Supplier quality review,E,Passport,CN,V-392,Y,VIS-1013-0021.jpg,Y
+VIS-1013-0022,2026-10-13,15:47,17:22,Laila Sanchez,Lumen Datacenters,Andrew Chen,Audit fieldwork,E,Passport,GB,V-921,Y,VIS-1013-0022.jpg,Y
+VIS-1014-0023,2026-10-14,09:53,12:17,Adebayo Becker,Atlas Logistics,Richard Halvorsen,Audit fieldwork,E,Driver license,US,V-132,Y,VIS-1014-0023.jpg,Y
+VIS-1014-0024,2026-10-14,12:24,14:45,Nadia Kim,Tessellate Labs,Richard Halvorsen,Investor meeting,E,Passport,IN,V-904,Y,VIS-1014-0024.jpg,Y
+VIS-1014-0025,2026-10-14,13:13,15:57,Jasmine Baker,Tessellate Labs,Andrew Chen,Vendor demo,E,Passport,CA,V-947,Y,VIS-1014-0025.jpg,Y
+VIS-1014-0026,2026-10-14,15:35,16:33,Ines Silva,Cobalt Thermal Inc.,Priya Raman,Legal meeting,E,Driver license,US,V-493,Y,VIS-1014-0026.jpg,Y
+VIS-1015-0027,2026-10-15,13:56,15:31,Arjun Singh,Kaori Precision,Andrew Chen,Partner meeting,E,Passport,KR,V-494,Y,VIS-1015-0027.jpg,Y
+VIS-1016-0028,2026-10-16,10:51,12:59,Rahul Singh,Orbis Packaging GmbH,Tom Brandt,Customer briefing,E,Passport,TW,V-502,Y,VIS-1016-0028.jpg,Y
+VIS-1019-0029,2026-10-19,11:10,11:50,Abigail Costa,Pearl River Substrate Co.,Richard Halvorsen,Customer briefing,E,Passport,HK,V-843,Y,VIS-1019-0029.jpg,Y
+VIS-1019-0030,2026-10-19,14:52,15:51,Lucas Tan,Quartz Leaf AI,Richard Halvorsen,Partner meeting,E,Passport,IL,V-126,Y,VIS-1019-0030.jpg,Y
+VIS-1019-0031,2026-10-19,15:28,18:07,Wei Williams,Halcyon Capital,Jordan Ellis,Audit fieldwork,E,Passport,IL,V-771,Y,VIS-1019-0031.jpg,Y
+VIS-1019-0032,2026-10-19,15:33,17:58,Julia Brooks,Quartz Leaf AI,Richard Halvorsen,Supplier quality review,E,Passport,FR,V-881,Y,VIS-1019-0032.jpg,N

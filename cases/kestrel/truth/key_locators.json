@@ -1,0 +1,1387 @@
+{
+  "BADGE_1016_WHITFIELD_EBC": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000389",
+    "note": ""
+  },
+  "BADGE_1016_RAMAN_EBC_SIGNOUT": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000390",
+    "note": ""
+  },
+  "BADGE_1016_RAMAN_LAB": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000410",
+    "note": ""
+  },
+  "BADGE_1016_RAMAN_EBC_DEPOSIT": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000585",
+    "note": ""
+  },
+  "BADGE_CHEN_SAT_IN": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000601",
+    "note": ""
+  },
+  "BADGE_CHEN_SAT_LAB": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000602",
+    "note": ""
+  },
+  "BADGE_CHEN_SAT_OUT": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000605",
+    "note": "Andrew Chen leaving (per CCTV/LPR)"
+  },
+  "BADGE_ORTEGA_SAT_IN": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000606",
+    "note": ""
+  },
+  "BADGE_BELLINI_DENIED_1": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000608",
+    "note": ""
+  },
+  "BADGE_BELLINI_DENIED_2": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000609",
+    "note": ""
+  },
+  "BADGE_H_P2_ENTRY": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000614",
+    "note": ""
+  },
+  "BADGE_P2_HELD_OPEN": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000615",
+    "note": ""
+  },
+  "BADGE_P2_CLOSED": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000616",
+    "note": ""
+  },
+  "BADGE_H_SUITE_ENTRY": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000617",
+    "note": ""
+  },
+  "BADGE_ORTEGA_F3_2240": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000618",
+    "note": ""
+  },
+  "BADGE_SUITE_REX_2250": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000619",
+    "note": ""
+  },
+  "BADGE_EBC_H_BADGE_2250": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000620",
+    "note": "Badge BID-100001 used; holder was at workstation per EV-075"
+  },
+  "BADGE_EBC_REX_2252": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000621",
+    "note": ""
+  },
+  "BADGE_SUITE_H_BADGE_2253": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000622",
+    "note": "Suite entry with BID-100001 while holder already inside suite"
+  },
+  "BADGE_SUITE_REX_2301": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000623",
+    "note": ""
+  },
+  "BADGE_SVC_REX_2302": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000624",
+    "note": "Luis Ortega to P2 (per CCTV)"
+  },
+  "BADGE_P2_REX_2303": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000625",
+    "note": ""
+  },
+  "BADGE_ORTEGA_P2_REENTRY": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000626",
+    "note": ""
+  },
+  "BADGE_ORTEGA_SUN_OUT": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000629",
+    "note": ""
+  },
+  "BADGE_WHITFIELD_MON_IN": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000648",
+    "note": ""
+  },
+  "BADGE_WHITFIELD_MON_EBC": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000659",
+    "note": ""
+  },
+  "BADGE_BRANDT_MON_EBC": {
+    "evidence_id": "EV-070",
+    "locator": "event_id=BDG-000742",
+    "note": ""
+  },
+  "LPR_H_FRI_IN": {
+    "evidence_id": "EV-064",
+    "locator": "read_id=LPR-00022",
+    "note": ""
+  },
+  "LPR_RAMAN_FRI_OUT": {
+    "evidence_id": "EV-064",
+    "locator": "read_id=LPR-00163",
+    "note": ""
+  },
+  "LPR_CHEN_SAT_IN": {
+    "evidence_id": "EV-064",
+    "locator": "read_id=LPR-00169",
+    "note": ""
+  },
+  "LPR_CHEN_SAT_OUT": {
+    "evidence_id": "EV-064",
+    "locator": "read_id=LPR-00170",
+    "note": ""
+  },
+  "LPR_ORTEGA_SAT_IN": {
+    "evidence_id": "EV-064",
+    "locator": "read_id=LPR-00171",
+    "note": ""
+  },
+  "LPR_H_IN_2135": {
+    "evidence_id": "EV-064",
+    "locator": "read_id=LPR-00172",
+    "note": ""
+  },
+  "LPR_H_OUT_2307": {
+    "evidence_id": "EV-064",
+    "locator": "read_id=LPR-00173",
+    "note": ""
+  },
+  "LPR_ORTEGA_SUN_OUT": {
+    "evidence_id": "EV-064",
+    "locator": "read_id=LPR-00174",
+    "note": ""
+  },
+  "CAB_1007_EXEC_OPEN": {
+    "evidence_id": "EV-071",
+    "locator": "seq=40136",
+    "note": "During partner briefing / EBC walkthrough for V. Shen"
+  },
+  "CAB_1016_SIGNOUT": {
+    "evidence_id": "EV-071",
+    "locator": "seq=40151",
+    "note": "ES-0007 signed out for thermal validation"
+  },
+  "CAB_1016_DEPOSIT": {
+    "evidence_id": "EV-071",
+    "locator": "seq=40156",
+    "note": "ES-0007 returned"
+  },
+  "CAB_1017_PIN_FAIL": {
+    "evidence_id": "EV-071",
+    "locator": "seq=40161",
+    "note": "Theft opening"
+  },
+  "CAB_1017_EXEC_OPEN": {
+    "evidence_id": "EV-071",
+    "locator": "seq=40162",
+    "note": "Theft opening"
+  },
+  "CAB_1017_DOOR_OPEN": {
+    "evidence_id": "EV-071",
+    "locator": "seq=40164",
+    "note": "Theft opening"
+  },
+  "CAB_1017_DOOR_CLOSE": {
+    "evidence_id": "EV-071",
+    "locator": "seq=40165",
+    "note": "Theft opening"
+  },
+  "CAB_1019_CSU_OPEN": {
+    "evidence_id": "EV-071",
+    "locator": "seq=40167",
+    "note": "Opened for CSU after swabbing"
+  },
+  "RFID_1016_2000_PRESENT": {
+    "evidence_id": "EV-072",
+    "locator": "scan_id=RF-00101",
+    "note": ""
+  },
+  "RFID_1017_2200_PRESENT": {
+    "evidence_id": "EV-072",
+    "locator": "scan_id=RF-00231",
+    "note": ""
+  },
+  "RFID_1017_2300_ABSENT": {
+    "evidence_id": "EV-072",
+    "locator": "scan_id=RF-00236",
+    "note": ""
+  },
+  "RFID_1018_0000_ALERT": {
+    "evidence_id": "EV-072",
+    "locator": "scan_id=RF-00241",
+    "note": ""
+  },
+  "VISITOR_SHEN_1007": {
+    "evidence_id": "EV-073",
+    "locator": "visit_id=VIS-1007-0012",
+    "note": ""
+  },
+  "GUARD_2005_EBC": {
+    "evidence_id": "EV-074",
+    "locator": "scan_id=GT-0024",
+    "note": ""
+  },
+  "GUARD_0010_P2": {
+    "evidence_id": "EV-074",
+    "locator": "scan_id=GT-0026",
+    "note": ""
+  },
+  "GUARD_0010_EBC": {
+    "evidence_id": "EV-074",
+    "locator": "scan_id=GT-0030",
+    "note": ""
+  },
+  "WS_UNLOCK_2141": {
+    "evidence_id": "EV-075",
+    "locator": "record_id=WS-00056",
+    "note": ""
+  },
+  "WS_LOCK_2152": {
+    "evidence_id": "EV-075",
+    "locator": "record_id=WS-00068",
+    "note": ""
+  },
+  "WS_UNLOCK_2249": {
+    "evidence_id": "EV-075",
+    "locator": "record_id=WS-00069",
+    "note": ""
+  },
+  "WS_ACTIVE_2249": {
+    "evidence_id": "EV-075",
+    "locator": "record_id=WS-00070",
+    "note": ""
+  },
+  "WS_MAIL_2255": {
+    "evidence_id": "EV-075",
+    "locator": "record_id=WS-00076",
+    "note": ""
+  },
+  "WS_LOCK_2258": {
+    "evidence_id": "EV-075",
+    "locator": "record_id=WS-00080",
+    "note": ""
+  },
+  "CAL_DINNER_0709": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0017@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_DINNER_0723": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0045@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_DINNER_0806": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0073@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_DINNER_0820": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0100@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_DINNER_0903": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0120@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_DINNER_0917": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0144@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_DINNER_1001": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0171@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_1007_BRIEFING": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0181@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_DINNER_1007": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0183@aurion-compute.example",
+    "note": ""
+  },
+  "CAL_1017_BOARDPREP": {
+    "evidence_id": "EV-076",
+    "locator": "uid=KESTREL-CAL-0201@aurion-compute.example",
+    "note": ""
+  },
+  "REF_LAB_SKEW": {
+    "evidence_id": "EV-077",
+    "locator": "id=E-2-LAB-A",
+    "note": ""
+  },
+  "REF_ELEVATOR_LOGS": {
+    "evidence_id": "EV-077",
+    "locator": "id=ELEV-E-1..4",
+    "note": ""
+  },
+  "REF_WIFI_LOGS": {
+    "evidence_id": "EV-077",
+    "locator": "id=AP-E4-01..06",
+    "note": ""
+  },
+  "REF_EBC_CAM_RETENTION": {
+    "evidence_id": "EV-077",
+    "locator": "id=CAM-E-F4-02",
+    "note": ""
+  },
+  "REF_WORKSTATION": {
+    "evidence_id": "EV-077",
+    "locator": "id=AUR-EXEC-0001",
+    "note": ""
+  },
+  "REF_CABINET_RULES": {
+    "evidence_id": "EV-077",
+    "locator": "id=SC-EBC-01",
+    "note": ""
+  },
+  "REF_RFID_ALERTING": {
+    "evidence_id": "EV-077",
+    "locator": "id=RF-SC-EBC-01",
+    "note": ""
+  },
+  "ACL_EXEC_OVERRIDE_HOLDERS": {
+    "evidence_id": "EV-078",
+    "locator": "badge_id=BID-100001;BID-200118",
+    "note": ""
+  },
+  "MSG_V_FIRST": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00001",
+    "note": ""
+  },
+  "MSG_V_LONG_ENGAGEMENT": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00003",
+    "note": ""
+  },
+  "MSG_V_OSTERIA_0709": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00012",
+    "note": ""
+  },
+  "MSG_V_RIDE_0723": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00029",
+    "note": ""
+  },
+  "MSG_E_COVER_0820": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00066",
+    "note": ""
+  },
+  "MSG_V_SUPPLY_COVER": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00067",
+    "note": ""
+  },
+  "MSG_V_BIRD": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00099",
+    "note": ""
+  },
+  "MSG_V_TOUR_INVITE": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00123",
+    "note": ""
+  },
+  "MSG_J_BRIEFING_REQ": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00126",
+    "note": ""
+  },
+  "MSG_J_NO_DANA": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00128",
+    "note": ""
+  },
+  "MSG_V_TOUR_THANKS": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00129",
+    "note": ""
+  },
+  "MSG_V_FLY_HOME": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00142",
+    "note": ""
+  },
+  "MSG_V_ONE_MORE": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00144",
+    "note": ""
+  },
+  "MSG_V_SAT_PLAN": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00145",
+    "note": ""
+  },
+  "MSG_J_CAMERA_REQ": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00148",
+    "note": ""
+  },
+  "MSG_J_CHG_DONE": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00151",
+    "note": ""
+  },
+  "MSG_E_BOARDPREP": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00153",
+    "note": ""
+  },
+  "MSG_V_ARRIVING_1017": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00154",
+    "note": ""
+  },
+  "MSG_E_RUNNING_LONG": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00155",
+    "note": ""
+  },
+  "MSG_V_AFTER_1017": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00156",
+    "note": ""
+  },
+  "MSG_E_HOME_IN_5": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00158",
+    "note": ""
+  },
+  "MSG_V_THANK_EVERYTHING": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00159",
+    "note": ""
+  },
+  "MSG_D_URGENT": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00161",
+    "note": ""
+  },
+  "MSG_T_MISSING": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00163",
+    "note": ""
+  },
+  "MSG_V_SOMETHING_HAPPENED": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00166",
+    "note": ""
+  },
+  "MSG_V_SAW_ANYONE": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00169",
+    "note": ""
+  },
+  "MSG_V_JUST_US": {
+    "evidence_id": "EV-050",
+    "locator": "record_id=HMSG-00170",
+    "note": ""
+  },
+  "MSG_R_PASSED_OVER": {
+    "evidence_id": "EV-051",
+    "locator": "record_id=RMSG-00010",
+    "note": ""
+  },
+  "MSG_R_TAHOE_PLAN": {
+    "evidence_id": "EV-051",
+    "locator": "record_id=RMSG-00013",
+    "note": ""
+  },
+  "MSG_R_SIGNOUT": {
+    "evidence_id": "EV-051",
+    "locator": "record_id=RMSG-00015",
+    "note": ""
+  },
+  "MSG_R_DEPOSIT": {
+    "evidence_id": "EV-051",
+    "locator": "record_id=RMSG-00019",
+    "note": ""
+  },
+  "MSG_R_REGRET": {
+    "evidence_id": "EV-051",
+    "locator": "record_id=RMSG-00021",
+    "note": ""
+  },
+  "MSG_R_LAKE": {
+    "evidence_id": "EV-051",
+    "locator": "record_id=RMSG-00025",
+    "note": ""
+  },
+  "MSG_R_TAHOE_2248": {
+    "evidence_id": "EV-051",
+    "locator": "record_id=RMSG-00027",
+    "note": ""
+  },
+  "MSG_R_BIRD_GONE": {
+    "evidence_id": "EV-051",
+    "locator": "record_id=RMSG-00034",
+    "note": ""
+  },
+  "CDR_0147_MEET_0709": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-000163",
+    "note": "truth venue: OSTERIA"
+  },
+  "CDR_0147_MEET_0723": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-000419",
+    "note": "truth venue: OSTERIA"
+  },
+  "CDR_0147_MEET_0806": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-000667",
+    "note": "truth venue: MARLOWE"
+  },
+  "CDR_0147_MEET_0820": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-000925",
+    "note": "truth venue: MARLOWE"
+  },
+  "CDR_0147_MEET_0903": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-001182",
+    "note": "truth venue: MARLOWE"
+  },
+  "CDR_0147_MEET_0917": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-001443",
+    "note": "truth venue: OSTERIA"
+  },
+  "CDR_0147_MEET_1001": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-001694",
+    "note": "truth venue: MARLOWE"
+  },
+  "CDR_0147_HQ_1007_A": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-001799",
+    "note": ""
+  },
+  "CDR_0147_HQ_1007_B": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-001803",
+    "note": ""
+  },
+  "CDR_0147_OSTERIA_1017": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-001991",
+    "note": ""
+  },
+  "CDR_0147_HQ_1017_FIRST": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-001996",
+    "note": ""
+  },
+  "CDR_0147_HQ_1017_2221": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002002",
+    "note": ""
+  },
+  "CDR_0147_HQ_1017_2252": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002005",
+    "note": ""
+  },
+  "CDR_0147_HQ_1017_LAST": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002008",
+    "note": ""
+  },
+  "CDR_0147_APT_1017_2323": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002009",
+    "note": ""
+  },
+  "CDR_0147_PLAZA_1": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002015",
+    "note": ""
+  },
+  "CDR_0147_PLAZA_2": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002016",
+    "note": ""
+  },
+  "CDR_0147_PLAZA_3": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002017",
+    "note": ""
+  },
+  "CDR_0147_HK_CALL": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002018",
+    "note": "International call; full number masked by carrier pending international request"
+  },
+  "CDR_0147_PD_1021": {
+    "evidence_id": "EV-060",
+    "locator": "record_id=0147-002083",
+    "note": ""
+  },
+  "CDR_0163_FRI_HQ_1905": {
+    "evidence_id": "EV-062",
+    "locator": "record_id=0163-000049",
+    "note": "exculpatory context: still at HQ before deposit"
+  },
+  "CDR_0163_TAHOE_ARRIVE": {
+    "evidence_id": "EV-062",
+    "locator": "record_id=0163-000059",
+    "note": "exculpatory: Raman at South Lake Tahoe"
+  },
+  "CDR_0163_TAHOE_2247": {
+    "evidence_id": "EV-062",
+    "locator": "record_id=0163-000070",
+    "note": "exculpatory: Raman at South Lake Tahoe during theft window"
+  },
+  "CDR_0163_TAHOE_2312": {
+    "evidence_id": "EV-062",
+    "locator": "record_id=0163-000071",
+    "note": "exculpatory: Raman at South Lake Tahoe during theft window"
+  },
+  "CDR_0163_HOME_SUN": {
+    "evidence_id": "EV-062",
+    "locator": "record_id=0163-000085",
+    "note": ""
+  },
+  "TL_H_MEET_0709": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00021",
+    "note": ""
+  },
+  "TL_H_MEET_0723": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00053",
+    "note": ""
+  },
+  "TL_H_VAPT_0723": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00054",
+    "note": ""
+  },
+  "TL_H_MEET_0806": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00082",
+    "note": ""
+  },
+  "TL_H_MEET_0820": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00109",
+    "note": ""
+  },
+  "TL_H_VAPT_0820": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00110",
+    "note": ""
+  },
+  "TL_H_MEET_0903": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00139",
+    "note": ""
+  },
+  "TL_H_MEET_0917": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00173",
+    "note": ""
+  },
+  "TL_H_VAPT_0917": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00174",
+    "note": ""
+  },
+  "TL_H_MEET_1001": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00211",
+    "note": ""
+  },
+  "TL_H_HQ_1007": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00226",
+    "note": ""
+  },
+  "TL_H_MEET_1007": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00227",
+    "note": ""
+  },
+  "TL_H_VAPT_1007": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00228",
+    "note": ""
+  },
+  "TL_H_OSTERIA_1017": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00248",
+    "note": ""
+  },
+  "TL_H_HQ_1017": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00249",
+    "note": ""
+  },
+  "TL_H_VAPT_1017": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00250",
+    "note": ""
+  },
+  "TL_H_HOME_1017": {
+    "evidence_id": "EV-063",
+    "locator": "visitId=PV-00251",
+    "note": ""
+  },
+  "DNA_PROFILE_Q1": {
+    "evidence_id": "EV-011",
+    "locator": "sample_id=Q1",
+    "note": ""
+  },
+  "DNA_PROFILE_Q2": {
+    "evidence_id": "EV-011",
+    "locator": "sample_id=Q2",
+    "note": ""
+  },
+  "DNA_PROFILE_Q3": {
+    "evidence_id": "EV-011",
+    "locator": "sample_id=Q3",
+    "note": ""
+  },
+  "DNA_PROFILE_Q4": {
+    "evidence_id": "EV-011",
+    "locator": "sample_id=Q4",
+    "note": ""
+  },
+  "DNA_PROFILE_K1": {
+    "evidence_id": "EV-011",
+    "locator": "sample_id=K1",
+    "note": ""
+  },
+  "DNA_PROFILE_K2": {
+    "evidence_id": "EV-011",
+    "locator": "sample_id=K2",
+    "note": ""
+  },
+  "DNA_PROFILE_K3": {
+    "evidence_id": "EV-011",
+    "locator": "sample_id=K3",
+    "note": ""
+  },
+  "DNA_Q4_UF1": {
+    "evidence_id": "EV-010",
+    "locator": "line=24",
+    "note": ""
+  },
+  "DNA_UF1_EXCLUSIONS": {
+    "evidence_id": "EV-010",
+    "locator": "line=25",
+    "note": ""
+  },
+  "DNA_CODIS_NOHIT": {
+    "evidence_id": "EV-010",
+    "locator": "line=26",
+    "note": ""
+  },
+  "DNA_Q3_K1": {
+    "evidence_id": "EV-010",
+    "locator": "line=28",
+    "note": ""
+  },
+  "DNA_Q2_UF1_MAJOR": {
+    "evidence_id": "EV-010",
+    "locator": "line=30",
+    "note": ""
+  },
+  "DNA_Q2_K2_MINOR": {
+    "evidence_id": "EV-010",
+    "locator": "line=32",
+    "note": ""
+  },
+  "DNA_Q2_K1_EXCLUDED": {
+    "evidence_id": "EV-010",
+    "locator": "line=33",
+    "note": ""
+  },
+  "DNA_Q1_MIXTURE": {
+    "evidence_id": "EV-010",
+    "locator": "line=36",
+    "note": ""
+  },
+  "DNA_CLEANING_NOTE": {
+    "evidence_id": "EV-010",
+    "locator": "line=42",
+    "note": ""
+  },
+  "DNA_NO_OTHER_REFERENCES": {
+    "evidence_id": "EV-010",
+    "locator": "line=44",
+    "note": ""
+  },
+  "IR_EXEC_OVERRIDE_REPORTED": {
+    "evidence_id": "EV-001",
+    "locator": "line=23",
+    "note": ""
+  },
+  "IR_CAMERA_OUTAGE": {
+    "evidence_id": "EV-001",
+    "locator": "line=24",
+    "note": ""
+  },
+  "IR_GLASSES": {
+    "evidence_id": "EV-001",
+    "locator": "line=28",
+    "note": ""
+  },
+  "IR_CLEANING": {
+    "evidence_id": "EV-001",
+    "locator": "line=30",
+    "note": ""
+  },
+  "IR_OWNER_POI": {
+    "evidence_id": "EV-001",
+    "locator": "line=35",
+    "note": ""
+  },
+  "FNOL_OFFICER_CREDENTIAL": {
+    "evidence_id": "EV-002",
+    "locator": "line=19",
+    "note": ""
+  },
+  "FNOL_CAMERA": {
+    "evidence_id": "EV-002",
+    "locator": "line=20",
+    "note": ""
+  },
+  "FNOL_COVERAGE_Q": {
+    "evidence_id": "EV-002",
+    "locator": "line=25",
+    "note": ""
+  },
+  "FNOL_EXCLUSIONS": {
+    "evidence_id": "EV-002",
+    "locator": "line=27",
+    "note": ""
+  },
+  "FNOL_PROCEDURES": {
+    "evidence_id": "EV-002",
+    "locator": "line=28",
+    "note": ""
+  },
+  "COC_GLASSES_COLLECTED": {
+    "evidence_id": "EV-003",
+    "locator": "entry_id=COC-004",
+    "note": ""
+  },
+  "EXTRACT_SCOPE_H": {
+    "evidence_id": "EV-052",
+    "locator": "line=8",
+    "note": ""
+  },
+  "EXTRACT_DELETION": {
+    "evidence_id": "EV-052",
+    "locator": "line=11",
+    "note": ""
+  },
+  "EXTRACT_PHOTOS": {
+    "evidence_id": "EV-052",
+    "locator": "line=13",
+    "note": ""
+  },
+  "EXTRACT_NO_SHEN_DEVICE": {
+    "evidence_id": "EV-052",
+    "locator": "line=21",
+    "note": ""
+  },
+  "SUB_0147_COMPANY": {
+    "evidence_id": "EV-061",
+    "locator": "line=6",
+    "note": ""
+  },
+  "SUB_0147_USER": {
+    "evidence_id": "EV-061",
+    "locator": "line=8",
+    "note": ""
+  },
+  "STMT_W_TWO_UNITS": {
+    "evidence_id": "EV-080",
+    "locator": "line=9",
+    "note": ""
+  },
+  "STMT_W_EXEC_PIN": {
+    "evidence_id": "EV-080",
+    "locator": "line=10",
+    "note": ""
+  },
+  "STMT_W_CLEANING": {
+    "evidence_id": "EV-080",
+    "locator": "line=12",
+    "note": ""
+  },
+  "STMT_W_DISCOVERY": {
+    "evidence_id": "EV-080",
+    "locator": "line=13",
+    "note": ""
+  },
+  "STMT_W_ALERT_UNREAD": {
+    "evidence_id": "EV-080",
+    "locator": "line=14",
+    "note": ""
+  },
+  "STMT_W_1007_TOUR": {
+    "evidence_id": "EV-080",
+    "locator": "line=15",
+    "note": ""
+  },
+  "STMT_W_BADGE_HABIT": {
+    "evidence_id": "EV-080",
+    "locator": "line=16",
+    "note": ""
+  },
+  "STMT_B_CHG": {
+    "evidence_id": "EV-081",
+    "locator": "line=9",
+    "note": ""
+  },
+  "STMT_B_UNUSUAL": {
+    "evidence_id": "EV-081",
+    "locator": "line=10",
+    "note": ""
+  },
+  "STMT_B_PIN_FAIL": {
+    "evidence_id": "EV-081",
+    "locator": "line=12",
+    "note": ""
+  },
+  "STMT_B_RFID": {
+    "evidence_id": "EV-081",
+    "locator": "line=13",
+    "note": ""
+  },
+  "STMT_B_EXPORTS": {
+    "evidence_id": "EV-081",
+    "locator": "line=14",
+    "note": ""
+  },
+  "STMT_B_RETENTION": {
+    "evidence_id": "EV-081",
+    "locator": "line=15",
+    "note": ""
+  },
+  "STMT_O_NO_F4": {
+    "evidence_id": "EV-082",
+    "locator": "line=8",
+    "note": ""
+  },
+  "STMT_O_TIME_ESTIMATE": {
+    "evidence_id": "EV-082",
+    "locator": "line=10",
+    "note": ""
+  },
+  "STMT_O_SIGHTING": {
+    "evidence_id": "EV-082",
+    "locator": "line=11",
+    "note": ""
+  },
+  "STMT_O_BAG": {
+    "evidence_id": "EV-082",
+    "locator": "line=12",
+    "note": ""
+  },
+  "STMT_O_NO_FACES": {
+    "evidence_id": "EV-082",
+    "locator": "line=13",
+    "note": ""
+  },
+  "STMT_E_BRIEFING": {
+    "evidence_id": "EV-083",
+    "locator": "line=9",
+    "note": ""
+  },
+  "STMT_E_CAMERA": {
+    "evidence_id": "EV-083",
+    "locator": "line=10",
+    "note": ""
+  },
+  "STMT_E_NO_BOARD": {
+    "evidence_id": "EV-083",
+    "locator": "line=11",
+    "note": ""
+  },
+  "STMT_E_DINNERS": {
+    "evidence_id": "EV-083",
+    "locator": "line=12",
+    "note": ""
+  },
+  "STMT_R_DEPOSIT": {
+    "evidence_id": "EV-084",
+    "locator": "line=9",
+    "note": ""
+  },
+  "STMT_R_TAHOE": {
+    "evidence_id": "EV-084",
+    "locator": "line=10",
+    "note": ""
+  },
+  "STMT_R_DISAPPOINTED": {
+    "evidence_id": "EV-084",
+    "locator": "line=11",
+    "note": ""
+  },
+  "STMT_EH_TIMES": {
+    "evidence_id": "EV-085",
+    "locator": "line=9",
+    "note": ""
+  },
+  "STMT_EH_DINNERS": {
+    "evidence_id": "EV-085",
+    "locator": "line=10",
+    "note": ""
+  },
+  "INT_H1_HOME_CLAIM": {
+    "evidence_id": "EV-090",
+    "locator": "line=15",
+    "note": ""
+  },
+  "INT_H1_NO_OFFICE": {
+    "evidence_id": "EV-090",
+    "locator": "line=17",
+    "note": ""
+  },
+  "INT_H1_PIN_CAREFUL": {
+    "evidence_id": "EV-090",
+    "locator": "line=21",
+    "note": ""
+  },
+  "INT_H1_BADGE_ALWAYS": {
+    "evidence_id": "EV-090",
+    "locator": "line=23",
+    "note": ""
+  },
+  "INT_H1_CLONED": {
+    "evidence_id": "EV-090",
+    "locator": "line=25",
+    "note": ""
+  },
+  "INT_H1_POINTS_TO_OTHERS": {
+    "evidence_id": "EV-090",
+    "locator": "line=27",
+    "note": ""
+  },
+  "INT_H1_CAMERA_DEFLECT": {
+    "evidence_id": "EV-090",
+    "locator": "line=29",
+    "note": ""
+  },
+  "INT_H2_ADMITS_OFFICE": {
+    "evidence_id": "EV-091",
+    "locator": "line=12",
+    "note": ""
+  },
+  "INT_H2_WORKED": {
+    "evidence_id": "EV-091",
+    "locator": "line=14",
+    "note": ""
+  },
+  "INT_H2_ALONE": {
+    "evidence_id": "EV-091",
+    "locator": "line=16",
+    "note": ""
+  },
+  "INT_H2_DOOR_EXPLAIN": {
+    "evidence_id": "EV-091",
+    "locator": "line=18",
+    "note": ""
+  },
+  "INT_H2_GLASSES": {
+    "evidence_id": "EV-091",
+    "locator": "line=20",
+    "note": ""
+  },
+  "INT_H2_AT_DESK": {
+    "evidence_id": "EV-091",
+    "locator": "line=24",
+    "note": ""
+  },
+  "INT_H2_BADGE_COAT": {
+    "evidence_id": "EV-091",
+    "locator": "line=26",
+    "note": ""
+  },
+  "INT_H2_CAMERAS_PRIVACY": {
+    "evidence_id": "EV-091",
+    "locator": "line=29",
+    "note": ""
+  },
+  "INT_H2_NO_CONFIRM": {
+    "evidence_id": "EV-091",
+    "locator": "line=31",
+    "note": ""
+  },
+  "INT_H2_CONSENT": {
+    "evidence_id": "EV-091",
+    "locator": "line=33",
+    "note": ""
+  },
+  "INT_R_ALIBI": {
+    "evidence_id": "EV-092",
+    "locator": "line=15",
+    "note": ""
+  },
+  "INT_R_BIRD_COMMON": {
+    "evidence_id": "EV-092",
+    "locator": "line=17",
+    "note": ""
+  },
+  "INT_C_NO_ACCESS": {
+    "evidence_id": "EV-093",
+    "locator": "line=13",
+    "note": ""
+  },
+  "INT_C_TRAVEL": {
+    "evidence_id": "EV-093",
+    "locator": "line=15",
+    "note": ""
+  },
+  "INT_MB_EXPLAINS": {
+    "evidence_id": "EV-094",
+    "locator": "line=11",
+    "note": ""
+  },
+  "INT_MB_ALIBI": {
+    "evidence_id": "EV-094",
+    "locator": "line=13",
+    "note": ""
+  },
+  "INT_S_COVER": {
+    "evidence_id": "EV-095",
+    "locator": "line=13",
+    "note": ""
+  },
+  "INT_S_ADDRESS": {
+    "evidence_id": "EV-095",
+    "locator": "line=15",
+    "note": ""
+  },
+  "INT_S_BUSINESS_ONLY": {
+    "evidence_id": "EV-095",
+    "locator": "line=17",
+    "note": ""
+  },
+  "INT_S_MESSAGES": {
+    "evidence_id": "EV-095",
+    "locator": "line=19",
+    "note": ""
+  },
+  "INT_S_VISIT_ONCE": {
+    "evidence_id": "EV-095",
+    "locator": "line=21",
+    "note": ""
+  },
+  "INT_S_NO_CABINET_MEMORY": {
+    "evidence_id": "EV-095",
+    "locator": "line=23",
+    "note": ""
+  },
+  "INT_S_ALIBI_CLAIM": {
+    "evidence_id": "EV-095",
+    "locator": "line=25",
+    "note": ""
+  },
+  "INT_S_DENIES_SAT": {
+    "evidence_id": "EV-095",
+    "locator": "line=27",
+    "note": ""
+  },
+  "INT_S_SUNDAY_ERRANDS": {
+    "evidence_id": "EV-095",
+    "locator": "line=29",
+    "note": ""
+  },
+  "INT_S_NO_SHIPPING": {
+    "evidence_id": "EV-095",
+    "locator": "line=31",
+    "note": ""
+  },
+  "INT_S_DECLINES_DNA": {
+    "evidence_id": "EV-095",
+    "locator": "line=33",
+    "note": ""
+  },
+  "INT_S_DECLINES_PHONE": {
+    "evidence_id": "EV-095",
+    "locator": "line=35",
+    "note": ""
+  },
+  "INT_S_DEPARTURE": {
+    "evidence_id": "EV-095",
+    "locator": "line=37",
+    "note": ""
+  },
+  "EMAIL_ELLIS_REQUEST": {
+    "evidence_id": "EV-100",
+    "locator": "line=12",
+    "note": ""
+  },
+  "EMAIL_BRANDT_CHG": {
+    "evidence_id": "EV-101",
+    "locator": "line=11",
+    "note": ""
+  },
+  "EMAIL_BRANDT_LOGGING": {
+    "evidence_id": "EV-101",
+    "locator": "line=12",
+    "note": ""
+  },
+  "EMAIL_INV_ALERT": {
+    "evidence_id": "EV-102",
+    "locator": "line=14",
+    "note": ""
+  },
+  "EMAIL_H_2255": {
+    "evidence_id": "EV-103",
+    "locator": "line=12",
+    "note": ""
+  },
+  "EMAIL_CHEN_TRAVEL": {
+    "evidence_id": "EV-104",
+    "locator": "line=12",
+    "note": ""
+  },
+  "PHOTO_RESTAURANT_1017": {
+    "evidence_id": "EV-036",
+    "locator": "file",
+    "note": "EXIF 2026-10-17 20:58:12 -07:00, GPS Osteria Lumen"
+  },
+  "PHOTO_WHITEBOARD_BIRD": {
+    "evidence_id": "EV-038",
+    "locator": "file",
+    "note": "'the bird' is internal slang for Kestrel; ES-0007 is the working unit"
+  },
+  "PHOTO_VISITOR_1007": {
+    "evidence_id": "EV-040",
+    "locator": "file",
+    "note": "visit VIS-1007-0012"
+  },
+  "PHOTO_WASTEBASKET": {
+    "evidence_id": "EV-032",
+    "locator": "file",
+    "note": "two wine glasses and a bottle in office 4-01 wastebasket"
+  },
+  "PHOTO_GLASSES": {
+    "evidence_id": "EV-033",
+    "locator": "file",
+    "note": "Q4 has lipstick residue on the rim"
+  },
+  "PHOTO_BADGE_COATSTAND": {
+    "evidence_id": "EV-034",
+    "locator": "file",
+    "note": "badge on lanyard hanging on office coat stand"
+  },
+  "PHOTO_EMPTY_SLOT": {
+    "evidence_id": "EV-030",
+    "locator": "file",
+    "note": "ES-0007 slot empty; ES-0003 still present"
+  },
+  "VIDEO_LOBBY_BELLINI": {
+    "evidence_id": "EV-020",
+    "locator": "t=19:02:05-19:03:50",
+    "note": ""
+  },
+  "VIDEO_P2_ARRIVAL_TWO": {
+    "evidence_id": "EV-021",
+    "locator": "t=21:36:10-21:36:52",
+    "note": "two occupants exit the gray sedan; passenger carries a large tote"
+  },
+  "VIDEO_P2_DEPART_TWO": {
+    "evidence_id": "EV-022",
+    "locator": "t=23:03:40-23:07:20",
+    "note": "two people leave the elevator lobby; tote carried with both arms"
+  },
+  "VIDEO_P2_CUSTODIAN": {
+    "evidence_id": "EV-022",
+    "locator": "t=23:02:30-23:06:05",
+    "note": ""
+  },
+  "VIDEO_F4_OUTAGE": {
+    "evidence_id": "EV-023",
+    "locator": "t=21:00:00",
+    "note": "video loss begins"
+  },
+  "VMS_F4_01_OUTAGE": {
+    "evidence_id": "EV-024",
+    "locator": "record_id=VX-005",
+    "note": ""
+  },
+  "VMS_F4_02_OUTAGE": {
+    "evidence_id": "EV-024",
+    "locator": "record_id=VX-006",
+    "note": ""
+  },
+  "VMS_EBC_1007_AVAILABLE": {
+    "evidence_id": "EV-024",
+    "locator": "record_id=VX-009",
+    "note": ""
+  },
+  "VA_LOBBY_1902": {
+    "evidence_id": "EV-025",
+    "locator": "event_id=VA-00060",
+    "note": ""
+  },
+  "VA_P2_2135_VEHICLE": {
+    "evidence_id": "EV-025",
+    "locator": "event_id=VA-00062",
+    "note": ""
+  },
+  "VA_P2_2136_TWO_PERSONS": {
+    "evidence_id": "EV-025",
+    "locator": "event_id=VA-00063",
+    "note": ""
+  },
+  "VA_P2_2136_DOOR_TWO": {
+    "evidence_id": "EV-025",
+    "locator": "event_id=VA-00064",
+    "note": ""
+  },
+  "VA_P2_2302_CUSTODIAN": {
+    "evidence_id": "EV-025",
+    "locator": "event_id=VA-00066",
+    "note": ""
+  },
+  "VA_P2_2303_TWO_PERSONS": {
+    "evidence_id": "EV-025",
+    "locator": "event_id=VA-00067",
+    "note": ""
+  },
+  "VA_P2_2307_VEHICLE_EXIT": {
+    "evidence_id": "EV-025",
+    "locator": "event_id=VA-00069",
+    "note": ""
+  }
+}

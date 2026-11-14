@@ -1,0 +1,12 @@
+SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+SUBSCRIBER INFORMATION RESPONSE (synthetic carrier)
+Legal process:     Subpoena SBRPD-SP-26-0870, served 2026-10-20 20:15, response 2026-10-21 08:45
+Target number:     +1-408-555-0147
+Account type:      Postpaid business line
+Subscriber:        Pacific Harbor Advisory LLC
+Billing address:   1 Market Plaza, Suite 3700, San Francisco, CA 94105 (virtual office)
+Authorized user:   V. Shen
+Account opened:    2026-05-28
+Device:            Apple iPhone (IMEI withheld pending separate process)
+Plan features:     International calling add-on (Asia-Pacific); international roaming enabled
+Payment:           Corporate card ending 2093

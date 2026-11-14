@@ -1,0 +1,7 @@
+badge_id,name,role,may_sign_out,may_deposit,exec_override,added,notes
+BID-100001,Richard Halvorsen,CEO,N,N,Y,2025-02-01,Executive override PIN
+BID-200118,Dana Whitfield,EBC Manager,Y,Y,Y,2025-02-01,Executive override PIN; second authorizer for removals
+BID-200233,Priya Raman,Hardware Engineer (thermal),Y,Y,N,2026-03-15,Removal requires second authorizer
+BID-200402,Kofi Mensah,Hardware Engineer (signal integrity),Y,Y,N,2026-04-02,Removal requires second authorizer
+BID-200517,Sara Lindqvist,Validation Engineer,Y,Y,N,2026-05-20,Removal requires second authorizer
+BID-100014,Tom Brandt,Director of Global Security,N,N,N,2025-02-01,Emergency open only with EBC Manager present

@@ -1,0 +1,37 @@
+SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+SOUTH BAY REGIONAL POLICE DEPARTMENT
+INCIDENT REPORT
+
+Case number:       SBRPD-26-104417
+Offense:           Grand theft / theft of trade secrets (under investigation)
+Reported:          2026-10-19 09:10 by Tom Brandt, Director of Global Security, Aurion Compute, Inc.
+Location:          Aurion Park, Building E, 3100 Aurion Parkway, Santa Clara, CA 95054
+                   Executive Briefing Center (EBC), room 4-12
+Occurred between:  2026-10-16 19:12 (last confirmed return) and 2026-10-19 07:40 (discovery)
+Reporting officer: Det. Ana Reyes #2217
+Assisting:         Det. Sam Okoye #2380; CST Lee Park #3105
+
+PROPERTY
+  1. AX-9 "Kestrel" GPU engineering sample, asset ES-0007, serial AX9-ES-0007-K. Unreleased product.
+     Owner valuation: $380,000 replacement build cost. Owner describes intellectual-property exposure as critical.
+
+NARRATIVE
+On 2026-10-19 at about 0945 hours I responded to Building E with Det. Okoye and CST Park.
+EBC manager Dana Whitfield reported that at about 0740 hours she saw through the glass door of secure cabinet
+SC-EBC-01 that the foam slot for ES-0007 was empty. She did not open the cabinet.
+Brandt reported that the cabinet audit log shows an executive-override opening on Saturday 2026-10-17 at
+2251 hours using credential BID-100001, which is assigned to the CEO, Richard Halvorsen.
+Brandt also reported that the floor 4 cameras were offline Saturday 2100-2330 under a scheduled maintenance change.
+The building is unstaffed after 1800 on weekends. A contract guard patrols on a four-hour tour.
+CST Park photographed the scene and swabbed the cabinet keypad (Q1) and handle (Q2) before the cabinet was opened
+at 1041 hours with the EBC manager's credential. Two wine glasses and an empty wine bottle were found in the
+wastebasket of office 4-01 (CEO office). The glasses were collected (Q3, Q4).
+Per Whitfield, the executive floor is cleaned on weekday evenings only; office 4-01 was last cleaned Friday
+2026-10-16 in the evening.
+The owner provided exports of badge access, cabinet audit, RFID inventory, camera clips and status, and garage
+plate-reader records.
+Halvorsen was in meetings and will be interviewed at 1500 today.
+Persons of interest named by the owner's staff: Priya Raman (signed the sample out on Friday) and Marco Bellini
+(former employee, now with a competitor).
+
+DISPOSITION: Open. Assigned to the High-Tech Theft Unit.

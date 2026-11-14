@@ -1,0 +1,30 @@
+SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+LATTICE SPECIALTY INSURANCE CO.
+FIRST NOTICE OF LOSS AND SPECIAL INVESTIGATIONS UNIT (SIU) REFERRAL
+
+Claim number:      LSI-CC-26-009812
+Policy:            Commercial Crime CC-2026-118842, policy period 2026-02-01 to 2027-02-01
+Insured:           Aurion Compute, Inc.
+Coverage parts:    Employee Theft; Premises Theft (Inside the Premises); Computer Fraud
+Date of loss:      2026-10-17 (per insured)
+Reported:          2026-10-20 08:40 by Aurion Compute Risk Management
+SIU investigator:  Karen Doyle
+
+AMOUNT CLAIMED (PRELIMINARY): $1,150,000
+  Replacement engineering sample build and expedite       $380,000
+  Incident response and forensic costs                    $270,000
+  Launch event rescheduling costs                         $500,000
+
+REASONS FOR SIU REFERRAL
+  1. The cabinet was opened with an executive officer's credential and executive PIN.
+  2. The camera outage during the loss window was requested by the officer's office.
+  3. Single high-value item of unreleased technology; possible trade-secret exposure.
+
+COVERAGE QUESTIONS FOR INVESTIGATION
+  a. Was the loss caused by an employee or officer, alone or in collusion (Employee Theft), or by a third party
+     (Premises Theft)?
+  b. Exclusions to review: loss caused by an officer of the insured with knowledge; loss of trade secrets or other
+     intangible value beyond scheduled amounts.
+  c. Did the insured follow its own security procedures (dual authorization, alert monitoring)?
+
+Liaison with SBRPD (Det. Ana Reyes) established 2026-10-20 11:15. Reserve set pending investigation.

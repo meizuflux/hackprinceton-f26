@@ -1,0 +1,22 @@
+[0001] SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+[0002] SOUTH BAY REGIONAL POLICE DEPARTMENT - INTERVIEW TRANSCRIPT
+[0003] Case: SBRPD-26-104417
+[0004] Subject: Priya Raman
+[0005] Date and time: 2026-10-20 11:00
+[0006] Location: Aurion Building E, conference room 2-07
+[0007] Present: Det. Sam Okoye, Priya Raman
+[0008] Recorded: audio and video
+
+[0009] OKOYE: Walk me through Friday.
+[0010] RAMAN: Dana and I signed out ES-0007 at 1:05 for thermal runs in Lab 2A. I deposited it at 7:12.
+[0011] OKOYE: Was anyone with you when you returned it?
+[0012] RAMAN: No. Returns only need one person.
+[0013] OKOYE: We have texts where you wrote that they would regret it.
+[0014] RAMAN: I was angry about the promotion. I meant they'd regret not crediting my thermal work. I was in Tahoe all weekend. My friends and my phone will tell you that.
+[0015] OKOYE: Did you tell anyone outside work about the Kestrel samples?
+[0016] RAMAN: My friend knows I call it "the bird". Everyone on the team calls it that.
+[0017] OKOYE: Who knows the executive PIN?
+[0018] RAMAN: Not me. Dana and Richard.
+[0019] OKOYE: Will you give a DNA reference sample?
+[0020] RAMAN: Yes.
+[0021] [Interview ended 11:24]

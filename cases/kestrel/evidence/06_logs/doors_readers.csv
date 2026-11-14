@@ -1,0 +1,22 @@
+id,kind,name,floor,room,zone,notes
+E-L1-LOBBY-N,badge_reader,Lobby north entrance,L1,Lobby,perimeter,
+E-L1-DOCK,badge_reader,Loading dock door,L1,Dock,perimeter,
+E-P2-ELEV,badge_reader,P2 garage elevator lobby door,P2,P2 elevator lobby,perimeter,Door-held alarm threshold 15 s
+E-P2-SVC,badge_reader,P2 service corridor door,P2,Service corridor,perimeter,Custodial and deliveries
+E-2-EAST,badge_reader,Floor 2 east office door,2,2 East,interior,
+E-2-LAB-A,badge_reader,Lab 2A hardware validation,2,Lab 2A,restricted,"Reader clock drift +00:02:47 observed 2026-10-12, ticket FAC-2210 open (logged times are late)"
+E-3-EAST,badge_reader,Floor 3 east office door,3,3 East,interior,
+E-3-WEST,badge_reader,Floor 3 west office door,3,3 West,interior,
+E-4-SUITE,badge_reader,Executive suite entrance (offices 4-01 to 4-06),4,Executive suite,restricted,Office 4-01 (CEO) is inside the suite
+E-4-12-EBC,badge_reader,"Executive Briefing Center, room 4-12",4,EBC 4-12,restricted,Houses secure cabinet SC-EBC-01; about 40 m from office 4-01
+CAM-E-L1-01,camera,Lobby camera facing north entrance,L1,Lobby,,
+CAM-E-P2-02,camera,"Garage P2 camera covering elevator lobby door, service door and rows B-C",P2,Garage P2,,Low light; faces not resolvable at distance
+CAM-E-F4-01,camera,Floor 4 corridor camera (suite entrance to EBC),4,Corridor 4,,Offline 2026-10-17 21:00-23:30 under change CHG-4471 (NVR firmware)
+CAM-E-F4-02,camera,EBC interior camera,4,EBC 4-12,,Offline 2026-10-17 21:00-23:30 under change CHG-4471; footage retention 30 days
+SC-EBC-01,cabinet,Secure demo cabinet with keypad and badge reader,4,EBC 4-12,,Dual authorization for removal; executive override allows single badge + executive PIN
+RF-SC-EBC-01,rfid_reader,Cabinet RFID inventory reader (hourly scans),4,EBC 4-12,,Alerts after 2 consecutive absences of an item not checked out; alerts mail secops-alerts (weekday monitoring)
+AUR-EXEC-0001,workstation,CEO desktop workstation (Windows Hello face sign-in),4,Office 4-01,,Wired; no remote-desktop access enabled
+ELEV-E-1..4,elevator,Passenger elevators P2-L1-2-3-4,all,Core,,"Not on access control after hours; car call and door logs kept by LiftCore controller, retained 30 days, not exported"
+AP-E4-01..06,wifi_ap,Floor 4 Wi-Fi access points (corp and guest SSIDs),4,Floor 4,,"WLAN controller association logs retained 14 days, not exported"
+E-4-CP1,guard_checkpoint,"Guard checkpoint, floor 4 corridor",4,Corridor 4,,
+E-4-CP2,guard_checkpoint,"Guard checkpoint, EBC exterior door",4,Corridor 4,,

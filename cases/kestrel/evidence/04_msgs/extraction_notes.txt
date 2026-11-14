@@ -1,0 +1,21 @@
+SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+SBRPD DIGITAL FORENSICS - EXTRACTION NOTES
+Case: SBRPD-26-104417     Examiner: Det. Sam Okoye
+
+DEVICE D1
+  Apple iPhone 16 Pro, owner Richard Halvorsen, number +1-408-555-0110.
+  Consent (2026-10-20 17:30, with counsel): messages and attachments 2026-06-01 to 2026-10-20; camera roll
+  2026-08-01 to 2026-10-20; location history export. Email, notes and other apps excluded.
+  Method: logical extraction plus database parsing; deleted message records recovered from database free pages.
+  Thread T01, contact saved as "Vince (Supply)", number +1-408-555-0147: 48 records, all marked deleted on
+  the device on 2026-10-20 at 07:58:20 PDT (morning of the second interview). 3 message bodies unrecoverable.
+  Camera roll: 212 items in scope. Four items exported to the case file after relevance review (IMG_4402,
+  IMG_4433, IMG_4458, IMG_4471); the remainder were reviewed and not exported.
+
+DEVICE D2
+  Samsung Galaxy, owner Priya Raman, number +1-408-555-0163.
+  Consent (2026-10-21 09:20): messages 2026-10-01 to 2026-10-21; carrier location records 2026-10-14 to 2026-10-20.
+
+NOT EXAMINED
+  No device associated with +1-408-555-0147 (subscriber Pacific Harbor Advisory LLC) has been examined.
+  The user declined consent on 2026-10-21.

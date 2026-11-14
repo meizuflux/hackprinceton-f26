@@ -1,0 +1,14 @@
+SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+SOUTH BAY REGIONAL POLICE DEPARTMENT - WRITTEN STATEMENT
+Case: SBRPD-26-104417
+Statement of: Priya Raman, Senior Staff Hardware Engineer, Aurion Compute
+Taken by: Det. Ana Reyes
+Date and time: 2026-10-19 16:00
+
+1. I lead thermal validation for AX-9 and I am on the cabinet access list for sign-out with a second authorizer.
+2. On Friday 10/16 at about 1:05 pm I signed out ES-0007 with Dana Whitfield and ran thermal validation in Lab 2A. I returned it at 7:12 pm. It was in its slot when I closed the cabinet door.
+3. On Saturday 10/17 I left home at about 6:40 am for South Lake Tahoe with three friends. I came back on Sunday evening at about 7.
+4. I was disappointed about a promotion decision last week and I said some things to a friend in text messages. I would never take the sample.
+5. I consent to my phone being examined and to giving a DNA sample.
+
+I have read this statement and it is true to the best of my knowledge. Signed: P. Raman

@@ -1,0 +1,46 @@
+SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+SOUTH BAY REGIONAL FORENSIC LABORATORY - FORENSIC BIOLOGY UNIT
+LABORATORY REPORT
+
+Lab case:        LAB-26-3318
+Agency case:     SBRPD-26-104417
+Requested by:    Det. Sam Okoye, SBRPD High-Tech Theft Unit
+Report date:     2026-10-22 15:05 PDT
+Analyst:         R. Castellanos, DNA Analyst II (technical review: J. Moreau)
+Method:          Quantification; PCR amplification of 20 CODIS core STR loci plus Amelogenin;
+                 capillary electrophoresis; probabilistic genotyping for mixtures.
+Allele calls:    see attached table str_profiles.csv
+
+ITEMS RECEIVED (2026-10-20 08:30, sealed, seals intact)
+  Q1  Swab, keypad of cabinet SC-EBC-01 (EBC 4-12)
+  Q2  Swab, handle of cabinet SC-EBC-01 glass door
+  Q3  Swab, rim of wine glass A (office 4-01 wastebasket)
+  Q4  Swab, rim of wine glass B with lipstick residue (office 4-01 wastebasket)
+  K1  Reference buccal swab, Richard Halvorsen (received 2026-10-21)
+  K2  Reference buccal swab, Priya Raman (received 2026-10-21)
+  K3  Reference buccal swab, Dana Whitfield (received 2026-10-21)
+
+RESULTS AND CONCLUSIONS
+1. Q4 (wine glass B) yielded a single-source female DNA profile, designated UF-1 (unknown female 1).
+   K1, K2 and K3 are excluded as the source of UF-1.
+2. UF-1 was searched against the state and national DNA indexes on 2026-10-22. No candidate match was returned.
+3. Q3 (wine glass A) yielded a single-source male profile that matches K1 (Richard Halvorsen).
+   Random match probability: approximately 1 in 3.1 x 10^24 (synthetic statistic).
+4. Q2 (cabinet handle) is a two-person mixture. The major contributor profile matches UF-1
+   (likelihood ratio approximately 8.4 x 10^19 in favour of UF-1 as a contributor; synthetic statistic).
+   The minor component is low-level with probable allele drop-out. K2 (Priya Raman) cannot be excluded
+   as the minor contributor (likelihood ratio approximately 4.2 x 10^3, limited support; synthetic statistic).
+   K1 (Richard Halvorsen) and K3 (Dana Whitfield) are excluded as contributors to Q2.
+5. Q1 (cabinet keypad) is a mixture of at least three contributors. K1 and K3 cannot be excluded
+   (likelihood ratios approximately 3.8 x 10^9 and 1.2 x 10^6; synthetic statistics). The remaining alleles
+   are consistent with UF-1 (likelihood ratio approximately 2.6 x 10^7; synthetic statistic). K2 is excluded.
+
+LIMITATIONS
+- DNA results cannot establish when or how DNA was deposited. Touch DNA may persist on surfaces between cleanings.
+- Per the requesting agency, the EBC cabinet glass and handle are wiped by the executive-floor cleaning crew on
+  Friday evenings; the keypad is not cleaned. This information was provided by the agency and was not verified
+  by the laboratory.
+- No reference samples were submitted for any individual other than K1, K2 and K3. UF-1 can be compared
+  with additional reference samples if they are submitted.
+
+Retention: DNA extracts retained at -20 C. Remaining swab material returned to SBRPD Property 2026-10-22.

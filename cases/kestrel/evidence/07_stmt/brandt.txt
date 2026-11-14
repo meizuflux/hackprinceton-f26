@@ -1,0 +1,18 @@
+SYNTHETIC CASE DATA - FICTIONAL - FOR TRAINING AND DEMONSTRATION ONLY
+SOUTH BAY REGIONAL POLICE DEPARTMENT - WRITTEN STATEMENT
+Case: SBRPD-26-104417
+Statement of: Tom Brandt, Director of Global Security, Aurion Compute
+Taken by: Det. Ana Reyes
+Date and time: 2026-10-19 12:15
+
+1. I am responsible for physical security at Aurion Park.
+2. On Thursday 10/15 at about 3:48 pm Jordan Ellis emailed me asking that the floor 4 cameras not record on Saturday from 9:00 to 11:30 pm for a confidential board-prep session, and suggested I schedule the camera recorder firmware update in that window. I scheduled change CHG-4471 for CAM-E-F4-01 and CAM-E-F4-02, 21:00 to 23:30. Badge readers and the cabinet keep logging during camera maintenance.
+3. It is unusual for the CEO's office to ask for cameras to be off, but board material has been sensitive before. I did not question it.
+4. On Monday 10/19 at about 7:58 Dana called me. I arrived at 8:41 and went to the EBC at about 8:52. I did not open the cabinet and I asked that nobody touch it.
+5. I pulled the cabinet audit trail. It shows an executive-override opening at 22:51:14 on Saturday using badge BID-100001 (Mr. Halvorsen's) with the executive PIN. It also shows one failed PIN attempt about twelve seconds before that.
+6. RFID inventory shows ES-0007 present at the 22:00 scan and absent at 23:00. The automatic alert at midnight went to the secops-alerts mailbox, which we only monitor on weekdays. That is a process gap and it is mine.
+7. I exported badge, cabinet, RFID, garage plate-reader and camera records and clips for 10/16 to 10/19 and gave them to Det. Reyes at 11:20. I have not yet reviewed the garage video in detail.
+8. Elevator controller logs (LiftCore) and Wi-Fi association logs are kept by those systems and were not part of my export. The Wi-Fi controller keeps 14 days of logs. The camera system keeps 30 days.
+9. Marco Bellini resigned on 10/2 and his badge was deactivated that day.
+
+I have read this statement and it is true to the best of my knowledge. Signed: T. Brandt
