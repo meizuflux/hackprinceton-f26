@@ -48,6 +48,34 @@ function unionBounds(a: Bounds, b: Bounds): Bounds {
   };
 }
 
+function clamp(value: number, min: number, max: number) {
+  return Math.min(Math.max(value, min), max);
+}
+
+function clampSpan(
+  origin: number,
+  size: number,
+  contentOrigin: number,
+  contentSize: number,
+) {
+  const span = Math.max(size, 0);
+  const contentSpan = Math.max(contentSize, 1);
+  // A view larger than the pins may slide only until the pins touch its edge.
+  // A smaller view stays inside the pins, so the minimap cannot leave the board.
+  if (span >= contentSpan) {
+    return clamp(origin, contentOrigin + contentSpan - span, contentOrigin);
+  }
+  return clamp(origin, contentOrigin, contentOrigin + contentSpan - span);
+}
+
+/** Keep a minimap-driven viewport over the pins. Canvas panning is not clamped. */
+export function clampViewToContent(view: Bounds, content: Bounds) {
+  return {
+    x: clampSpan(view.x, view.width, content.x, content.width),
+    y: clampSpan(view.y, view.height, content.y, content.height),
+  };
+}
+
 function frameScene(bounds: Bounds) {
   const scale = Math.min(
     (MAP_WIDTH - MAP_PADDING * 2) / bounds.width,
@@ -75,18 +103,29 @@ export function CanvasMinimap() {
     height: Math.max(flowHeight, 1) / zoom,
   };
   // Frame the pins and the visible area together, then scale just enough
-  // that the viewport rectangle stays inside the map.
-  const bounds = unionBounds(sceneBounds(nodes), view);
+  // that the viewport rectangle stays inside the map. Navigation uses the
+  // pins alone, so a drag cannot follow the rectangle off the board.
+  const scene = sceneBounds(nodes);
+  const bounds = unionBounds(scene, view);
   const { scale, offsetX, offsetY } = frameScene(bounds);
   const frame = useRef({
     bounds,
+    scene,
     scale,
     offsetX,
     offsetY,
     flowWidth,
     flowHeight,
   });
-  frame.current = { bounds, scale, offsetX, offsetY, flowWidth, flowHeight };
+  frame.current = {
+    bounds,
+    scene,
+    scale,
+    offsetX,
+    offsetY,
+    flowWidth,
+    flowHeight,
+  };
 
   const viewX = (view.x - bounds.x) * scale + offsetX;
   const viewY = (view.y - bounds.y) * scale + offsetY;
@@ -102,9 +141,18 @@ export function CanvasMinimap() {
     const flowX = current.bounds.x + (mapX - current.offsetX) / current.scale;
     const flowY = current.bounds.y + (mapY - current.offsetY) / current.scale;
     const nextZoom = transform[2] || 1;
+    const nextView = clampViewToContent(
+      {
+        x: flowX - Math.max(current.flowWidth, 1) / nextZoom / 2,
+        y: flowY - Math.max(current.flowHeight, 1) / nextZoom / 2,
+        width: Math.max(current.flowWidth, 1) / nextZoom,
+        height: Math.max(current.flowHeight, 1) / nextZoom,
+      },
+      current.scene,
+    );
     void setViewport({
-      x: current.flowWidth / 2 - flowX * nextZoom,
-      y: current.flowHeight / 2 - flowY * nextZoom,
+      x: -nextView.x * nextZoom,
+      y: -nextView.y * nextZoom,
       zoom: nextZoom,
     });
   }
