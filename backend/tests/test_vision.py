@@ -81,7 +81,7 @@ def test_vision_never_changes_findings(run_dir, tmp_path):
     """Descriptions are attached to media cards only: every analysis item, gap and insight is identical with and
     without them, and so is what the replayed LLM cache sees."""
     llm = {"model": "claude-sonnet-5-5", "verifier_model": "claude-sonnet-5-5", "cache_mode": "replay"}
-    plain = analyze(run_dir, tmp_path / "a", llm=dict(llm))
+    plain = analyze(run_dir, tmp_path / "a", llm={**llm, "vision_cache_dir": str(tmp_path / "empty")})
     with_v = analyze(run_dir, tmp_path / "b", llm={**llm, "vision_client": FakeClient(), "cache_mode": "replay",
                                                    "vision_cache_dir": str(tmp_path / "vc")})
 
