@@ -139,11 +139,12 @@ def test_answers_cite_sources_drop_uncited_and_replay(api, monkeypatch):
 
 def test_step_helpers_truncate_args_and_estimate_duration():
     from mapletrace_reason.chat import _short_args, model_step
+    from mapletrace_reason.llm_cache import EST_BASE_MS, EST_TOKENS_PER_S
     long = "x" * 300
     assert len(_short_args({"query": long})["query"]) == 120
     resp = AIMessage(content="", usage_metadata={"input_tokens": 1000, "output_tokens": 550, "total_tokens": 1550})
     est = model_step(resp, 5, cached=True)
-    assert est["durationSource"] == "estimated" and est["durationMs"] == 10800
+    assert est["durationSource"] == "estimated" and est["durationMs"] == round(EST_BASE_MS + 550 / EST_TOKENS_PER_S * 1000)
     assert est["costUsd"] == round((1000 * 2.0 + 550 * 10.0) / 1e6, 6), "LLM_COSTS.md prices"
     live = model_step(resp, 2500, cached=False)
     assert live["durationSource"] == "live" and live["durationMs"] == 2500
