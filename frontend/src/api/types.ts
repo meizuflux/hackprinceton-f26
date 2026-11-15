@@ -3,6 +3,9 @@ export type CitationId = string;
 
 export type NodeType = "person" | "location" | "device" | "event" | "statement";
 
+/** Which part of the pipeline produced a board item (backend/TRACE.md). Independent of certainty. */
+export type Origin = "record" | "rules" | "ml" | "llm" | "agent";
+
 /** Backend label: `observed` comes straight from records, `inferred` is analysis. */
 export type Certainty = "observed" | "inferred";
 
@@ -21,6 +24,10 @@ export interface EvidenceNode {
   /** Backend stable key; investigator overrides target it. */
   key?: string;
   score?: number;
+  /** Pipeline provenance from the backend; absent on fixtures. */
+  origin?: Origin;
+  stage?: string;
+  evidenceIds?: string[];
 }
 
 export interface EvidenceEdge {
@@ -35,6 +42,10 @@ export interface EvidenceEdge {
   certainty?: Certainty;
   /** Why the backend drew this relationship. */
   basis?: string;
+  /** Pipeline provenance from the backend; absent on fixtures. */
+  origin?: Origin;
+  stage?: string;
+  evidenceIds?: string[];
 }
 
 export interface SourceRecord {
@@ -90,6 +101,7 @@ export interface Insight {
   assumptions?: string[];
   limitations?: string[];
   key?: string;
+  origin?: Origin;
 }
 
 export interface EvidenceSuggestion {
@@ -235,6 +247,36 @@ export type IngestionStatus = "processing" | "ready" | "failed";
 export interface UploadOptions {
   /** Shown as the case title; the backend derives the case ID from it. */
   caseName?: string;
+  /** `live` makes billed model calls; `replay` (default) uses the committed cache. */
+  analysisMode?: "replay" | "live";
+}
+
+/** Run trace event (backend/TRACE.md). Times are on the replay clock. */
+export type TracePhase = "ingest" | "rules" | "ml" | "llm" | "agent" | "output";
+export interface TraceEvent {
+  seq: number;
+  tMs: number;
+  phase: TracePhase;
+  type:
+    | "run_started"
+    | "phase_started"
+    | "phase_finished"
+    | "file_hashed"
+    | "file_parsed"
+    | "entities_linked"
+    | "stage_finished"
+    | "ml_signal"
+    | "llm_call"
+    | "agent_tool"
+    | "insight_recorded"
+    | "run_finished";
+  [field: string]: unknown;
+}
+export interface TracePage {
+  status: IngestionStatus;
+  timing: "recorded" | "estimated" | "live";
+  events: TraceEvent[];
+  next: number;
 }
 export interface UploadResult {
   jobId: string;
@@ -379,6 +421,8 @@ export interface CaseApi {
   /** Without an ID, returns the most recent ready case. */
   getCase(caseId?: string): Promise<CaseData>;
   listCases(): Promise<CaseSummary[]>;
+  /** Run trace from `after` (exclusive); undefined when the adapter has no trace (the mock). */
+  getTrace(caseId: string, after?: number): Promise<TracePage | undefined>;
   /** Opens the demo case (a prepared snapshot with the live adapter) and returns its ID. */
   openDemo(): Promise<string>;
   /** Evidence file inventory; empty when the adapter has no ingestion output. */

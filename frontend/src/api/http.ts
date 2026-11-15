@@ -6,6 +6,7 @@ import type {
   RecordPage,
   CaseData,
   CaseSummary,
+  TracePage,
   IngestionProgress,
   UploadOptions,
   UploadResult,
@@ -73,6 +74,8 @@ export function createHttpApi(baseUrl: string): CaseApi {
       form.append("file", file);
       const caseName = options?.caseName?.trim();
       if (caseName) form.append("case_name", caseName);
+      if (options?.analysisMode)
+        form.append("analysis_mode", options.analysisMode);
       return request<UploadResult>("/upload", { method: "POST", body: form });
     },
 
@@ -108,6 +111,12 @@ export function createHttpApi(baseUrl: string): CaseApi {
 
     listCases(): Promise<CaseSummary[]> {
       return request<CaseSummary[]>("/cases");
+    },
+
+    getTrace(caseId: string, after = 0): Promise<TracePage> {
+      return request<TracePage>(
+        `/cases/${encodeURIComponent(caseId)}/trace?after=${after}`,
+      );
     },
 
     listFiles(caseId: string): Promise<EvidenceFile[]> {
