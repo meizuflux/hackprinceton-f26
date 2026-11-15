@@ -3,7 +3,7 @@ import type { Selection } from "./Inspector";
 
 export type Tab = "gaps" | "insights" | "suggestions";
 
-/** Returns the node IDs relevant to a selection (gap, insight, node, edge, suggestion, or source). */
+/** Returns the node IDs relevant to a selection (gap, insight, contradiction, node, edge, suggestion, or source). */
 export function getNodesForSelection(
   selection: Selection,
   data: CaseData,
@@ -81,6 +81,18 @@ export function getNodesForSelection(
       break;
     }
 
+    case "contradiction": {
+      const item = data.contradictions?.find((c) => c.id === selection.id);
+      if (item) {
+        for (const n of data.nodes) {
+          if (n.citations.some((c) => item.citations.includes(c))) {
+            ids.add(n.id);
+          }
+        }
+      }
+      break;
+    }
+
     case "source": {
       for (const n of data.nodes) {
         if (n.citations.includes(selection.id)) ids.add(n.id);
@@ -136,6 +148,31 @@ export interface FocusFitOptions {
 }
 
 /** Computes padding strings in pixels so ReactFlow (@xyflow/system) doesn't treat padding as percentage ratios. */
+/** Width of the floating case toolbar plus its inset and a margin. */
+const TOOLBAR_CLEARANCE: PaddingPx = "80px";
+
+/**
+ * Story-view fit padding: clear of the view switch at the top, the case
+ * toolbar on the left, and (above 900px) the open review dock plus the zoom
+ * controls beside it on the right.
+ */
+export function getStoryPadding(options: {
+  isNarrow?: boolean;
+  dockOpen?: boolean;
+  /** A replay's run panel (340px, beside the toolbar) is open on the left. */
+  runPanelOpen?: boolean;
+}): { top: PaddingPx; bottom: PaddingPx; left: PaddingPx; right: PaddingPx } {
+  const isNarrow = options.isNarrow ?? false;
+  const besideDock = !isNarrow && (options.dockOpen ?? false);
+  return {
+    top: "108px",
+    bottom: "56px",
+    // inset 16 + toolbar 48 + gap 12 + run panel 340 + gap 16
+    left: !isNarrow && options.runPanelOpen ? "432px" : TOOLBAR_CLEARANCE,
+    right: besideDock ? "470px" : "72px",
+  };
+}
+
 export function getFocusPadding(options: {
   isNarrow?: boolean;
   dockOpen?: boolean;

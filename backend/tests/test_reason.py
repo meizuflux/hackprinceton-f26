@@ -91,6 +91,17 @@ def test_board_links_citations_direction_and_gaps(sample):
     assert any(g["nodeIds"] for g in gaps.values()) and any("gapId" in n for n in nodes.values())
 
 
+def test_board_story_selects_existing_nodes(sample):
+    """The opening story is a selection of existing board nodes, centred on a key event, with one headline item."""
+    board = sample[4]
+    story = board["story"]
+    node_ids = {n["id"] for n in board["nodes"]}
+    assert story["nodeIds"][0] == story["centerId"] and story["centerId"] in node_ids
+    assert set(story["nodeIds"]) <= node_ids and len(story["nodeIds"]) <= 12
+    collection = {"contradiction": "contradictions", "gap": "gaps", "insight": "insights"}[story["headline"]["kind"]]
+    assert story["headline"]["id"] in {x["id"] for x in board[collection]}
+
+
 def test_silence_interval_wording():
     from mapletrace_reason.timeline import _interval
     assert [_interval(0), _interval(12), _interval(14 * 60), _interval(3 * 3600)] == \

@@ -12,6 +12,7 @@ import { isMock } from "../api/client";
 import type { CaseData } from "../api/types";
 import { MediaInspector, mediaNodeFor } from "./MediaInspector";
 import { relationshipLabel } from "./relationships";
+import { plainCounts } from "./headline";
 import {
   formatCaseTime,
   insightKind,
@@ -20,7 +21,14 @@ import {
 } from "./presentation";
 
 export type Selection = {
-  kind: "node" | "edge" | "gap" | "insight" | "suggestion" | "source";
+  kind:
+    | "node"
+    | "edge"
+    | "gap"
+    | "insight"
+    | "suggestion"
+    | "source"
+    | "contradiction";
   id: string;
   sourceId?: string;
 };
@@ -53,7 +61,12 @@ export function Inspector({
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
     if (selection) panelRef.current?.focus();
-  }, [selection?.id, selection?.kind]);
+    // Opened from a particular source: bring that (expanded) source into view.
+    if (selection?.sourceId)
+      panelRef.current
+        ?.querySelector(".source-item[open]")
+        ?.scrollIntoView({ block: "start" });
+  }, [selection?.id, selection?.kind, selection?.sourceId]);
   useEffect(() => {
     if (!selection) return;
     const onKeyDown = (event: KeyboardEvent) => {
@@ -81,6 +94,8 @@ export function Inspector({
         return data.insights.find((entry) => entry.id === selection.id);
       case "suggestion":
         return data.suggestions.find((entry) => entry.id === selection.id);
+      case "contradiction":
+        return data.contradictions?.find((entry) => entry.id === selection.id);
       case "source": {
         const source = data.sources.find((entry) => entry.id === selection.id);
         return source
@@ -145,6 +160,10 @@ export function Inspector({
   const insight =
     selection.kind === "insight"
       ? (item as CaseData["insights"][number])
+      : undefined;
+  const contradiction =
+    selection.kind === "contradiction"
+      ? (item as NonNullable<CaseData["contradictions"]>[number])
       : undefined;
   const structuredInsight = Boolean(insight?.observations?.length);
   const suggestionGaps = suggestion
@@ -215,15 +234,17 @@ export function Inspector({
           <span className={`kind-badge kind-${selection.kind}`}>
             {selection.kind === "gap"
               ? "Question to verify"
-              : selection.kind === "insight"
-                ? insightKind(item as CaseData["insights"][number])
-                : selection.kind === "suggestion"
-                  ? "Suggested next step"
-                  : selection.kind === "node"
-                    ? "Evidence record"
-                    : selection.kind === "edge"
-                      ? relationshipLabel(edge!.type, edge!.certainty)
-                      : "Source excerpt"}
+              : selection.kind === "contradiction"
+                ? "Possible contradiction"
+                : selection.kind === "insight"
+                  ? insightKind(item as CaseData["insights"][number])
+                  : selection.kind === "suggestion"
+                    ? "Suggested next step"
+                    : selection.kind === "node"
+                      ? "Evidence record"
+                      : selection.kind === "edge"
+                        ? relationshipLabel(edge!.type, edge!.certainty)
+                        : "Source excerpt"}
           </span>
           {score !== undefined && (
             <span className="detail-score">
@@ -269,7 +290,9 @@ export function Inspector({
         {gap?.whyItMatters ? (
           <p className="inspector-description">{gap.whyItMatters}</p>
         ) : structuredInsight ? null : (
-          <p className="inspector-description">{description}</p>
+          <p className="inspector-description">
+            {contradiction ? plainCounts(description) : description}
+          </p>
         )}
 
         {gap?.missing && (
@@ -325,6 +348,37 @@ export function Inspector({
                   </ul>
                 </div>
               ) : null,
+            )}
+          </section>
+        )}
+
+        {contradiction && (
+          <section className="inspector-section inspector-structured">
+            <p className="muted">
+              A contradiction is not proof. Records and statements can disagree
+              for ordinary reasons.
+            </p>
+            {contradiction.possibleReasons.length > 0 && (
+              <>
+                <h3>Possible reasons</h3>
+                <ul>
+                  {contradiction.possibleReasons.map((reason) => (
+                    <li key={reason}>{reason}</li>
+                  ))}
+                </ul>
+              </>
+            )}
+            {contradiction.resolvingEvidence.length > 0 && (
+              <>
+                <h3>Evidence that would resolve it</h3>
+                <ul>
+                  {[...new Set(contradiction.resolvingEvidence)].map(
+                    (entry) => (
+                      <li key={entry}>{humanize(entry)}</li>
+                    ),
+                  )}
+                </ul>
+              </>
             )}
           </section>
         )}

@@ -1,10 +1,12 @@
 # Build context for backend/Dockerfile is the repository root (the frontend image uses
 # frontend/ and frontend/.dockerignore). The backend image needs only backend/ code, demo/,
-# llm_cache/, requirements.txt and the Kestrel upload ZIP; everything else stays out, including
+# llm_cache/, pyproject.toml, uv.lock and the Kestrel upload ZIP; everything else stays out, including
 # secrets, answer keys (.truth/), the generator, run outputs and virtual environments.
 **
 
-!backend/requirements.txt
+!backend/pyproject.toml
+!backend/uv.lock
+!backend/.python-version
 !backend/mapletrace_api/
 !backend/mapletrace_ingest/
 !backend/mapletrace_reason/

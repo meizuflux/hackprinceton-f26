@@ -26,6 +26,15 @@ export type ThreadData = {
   origin?: Origin;
   isFocused?: boolean;
   isDimmed?: boolean;
+  /** Story view: the label waits for hover, focus or selection. */
+  quiet?: boolean;
+  /** The thread or one of its cards is under the pointer. */
+  hovered?: boolean;
+  /** Label offset for parallel threads between the same cards, across the thread. */
+  labelOffset?: number;
+  /** Stands for this many real threads into a group's hidden cards. */
+  aggregateCount?: number;
+  ariaLabel?: string;
   onInspect: () => void;
 };
 
@@ -39,7 +48,7 @@ export const ThreadEdge = memo(function ThreadEdge(
     props.sourcePosition === Position.Left ||
     props.sourcePosition === Position.Right;
   const labelWidth = horizontal
-    ? Math.max(64, Math.min(166, Math.abs(props.targetX - props.sourceX) - 4))
+    ? Math.max(88, Math.min(166, Math.abs(props.targetX - props.sourceX) - 4))
     : 166;
   const mark = markedOrigin(data.origin);
   return (
@@ -54,20 +63,31 @@ export const ThreadEdge = memo(function ThreadEdge(
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`thread-label nodrag nopan ${data.kind} thread-${data.category} ${props.selected || data.isFocused ? "is-selected" : ""} ${data.isDimmed ? "is-dimmed" : ""} ${mark ? `has-origin origin-${mark}` : ""}`}
+          className={`thread-label nodrag nopan ${data.kind} thread-${data.category} ${props.selected || data.isFocused ? "is-selected" : ""} ${data.isDimmed ? "is-dimmed" : ""} ${data.quiet ? "is-quiet" : ""} ${data.hovered ? "is-hovered" : ""} ${data.aggregateCount ? "is-aggregate" : ""} ${mark ? `has-origin origin-${mark}` : ""}`}
           style={{
-            transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
+            transform: `translate(-50%, -50%) translate(${x + (horizontal ? 0 : (data.labelOffset ?? 0) * 4.25)}px, ${y + (horizontal ? (data.labelOffset ?? 0) : 0)}px)`,
             maxWidth: labelWidth,
           }}
           onClick={(event) => {
             event.stopPropagation();
             data.onInspect();
           }}
-          aria-label={`${data.kind === "observed" ? "Observed" : data.kind === "claim" ? "Claim" : "Inference"}${mark ? `, from ${originMarks[mark].label}` : ""}, ${threadColors[data.category].label.toLowerCase()}: ${data.label}. Inspect relationship and sources`}
-          title={`${threadColors[data.category].label}: ${data.label}`}
+          aria-label={
+            data.ariaLabel ??
+            `${data.kind === "observed" ? "Observed" : data.kind === "claim" ? "Claim" : "Inference"}${mark ? `, from ${originMarks[mark].label}` : ""}, ${threadColors[data.category].label.toLowerCase()}: ${data.label}. Inspect relationship and sources`
+          }
+          title={
+            data.aggregateCount
+              ? data.label
+              : `${threadColors[data.category].label}: ${data.label}`
+          }
         >
           {mark && <OriginIcon origin={data.origin} size={11} />}
-          {data.badge && <strong>{data.badge}</strong>}
+          {data.aggregateCount ? (
+            <strong className="thread-count">{data.aggregateCount}</strong>
+          ) : (
+            data.badge && <strong>{data.badge}</strong>
+          )}
           <span>{data.label}</span>
         </button>
       </EdgeLabelRenderer>

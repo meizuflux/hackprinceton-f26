@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Camera, ChevronDown, FileText, HelpCircle } from "lucide-react";
+import { Camera, FileText, HelpCircle, Shapes } from "lucide-react";
 import type { EvidenceEdge, EvidenceNode } from "../api/types";
 import {
   CARD_KINDS,
@@ -18,8 +18,9 @@ import { cardIcons } from "./EvidenceNode";
 
 /**
  * Key to the board's color coding; lists only what this case contains.
- * `yield` collapses it while the review dock is open, so the board keeps its
- * visible area; the reader's own choice returns when the dock closes.
+ * A compact "Key" button opens it as a small popover above the button.
+ * `yield` closes it while the review dock opens, so the board keeps its
+ * visible area.
  */
 export function BoardLegend({
   nodes,
@@ -30,26 +31,20 @@ export function BoardLegend({
   edges: EvidenceEdge[];
   yield?: boolean;
 }) {
-  const [open, setOpen] = useState(
-    () =>
-      typeof window === "undefined" ||
-      !window.matchMedia("(max-width: 1199px)").matches,
-  );
-  const openRef = useRef(open);
+  const [open, setOpen] = useState(false);
+  const rootRef = useRef<HTMLElement>(null);
+  const toggleRef = useRef<HTMLButtonElement>(null);
   useEffect(() => {
-    openRef.current = open;
-  }, [open]);
-  const openBeforeYield = useRef<boolean | null>(null);
-  useEffect(() => {
-    if (yieldSpace) {
-      if (openBeforeYield.current === null)
-        openBeforeYield.current = openRef.current;
-      setOpen(false);
-    } else if (openBeforeYield.current !== null) {
-      setOpen(openBeforeYield.current);
-      openBeforeYield.current = null;
-    }
+    if (yieldSpace) setOpen(false);
   }, [yieldSpace]);
+  useEffect(() => {
+    if (!open) return;
+    const onPointerDown = (event: PointerEvent) => {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    };
+    document.addEventListener("pointerdown", onPointerDown);
+    return () => document.removeEventListener("pointerdown", onPointerDown);
+  }, [open]);
   const kinds = new Set(nodes.map((node) => cardKind(node.type)));
   const categories = new Set(edges.map((edge) => threadCategory(edge.type)));
   const relationKinds = new Set(
@@ -63,21 +58,26 @@ export function BoardLegend({
   const hasQuestion = nodes.some((node) => node.gapId);
   return (
     <section
+      ref={rootRef}
       className="board-legend nopan nodrag nowheel"
       data-open={open}
-      aria-label="Board legend"
+      aria-label="Board key"
+      onKeyDown={(event) => {
+        // Escape closes the key only; it must not also close the inspector.
+        if (event.key === "Escape" && open) {
+          event.stopPropagation();
+          setOpen(false);
+          toggleRef.current?.focus();
+        }
+      }}
     >
-      <button
-        type="button"
-        className="board-legend-toggle"
-        aria-expanded={open}
-        aria-controls="board-legend-body"
-        onClick={() => setOpen((value) => !value)}
+      <div
+        id="board-legend-body"
+        className="board-legend-body"
+        role="group"
+        aria-label="Colour key"
+        hidden={!open}
       >
-        Legend
-        <ChevronDown size={14} aria-hidden="true" />
-      </button>
-      <div id="board-legend-body" className="board-legend-body" hidden={!open}>
         <div className="board-legend-row">
           <h3>Cards</h3>
           <ul>
@@ -163,6 +163,22 @@ export function BoardLegend({
           </div>
         )}
       </div>
+      <button
+        ref={toggleRef}
+        type="button"
+        className="board-legend-toggle"
+        aria-expanded={open}
+        aria-controls="board-legend-body"
+        title={
+          open
+            ? "Hide the colour key"
+            : "Show what card colours and thread styles mean"
+        }
+        onClick={() => setOpen((value) => !value)}
+      >
+        <Shapes size={14} aria-hidden="true" />
+        Key
+      </button>
     </section>
   );
 }

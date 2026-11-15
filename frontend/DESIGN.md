@@ -210,7 +210,8 @@ Colour on the board comes only from the API's type and certainty, through the in
 - **Certainty:** observed threads are solid, inferences dashed `8 7`, claims dashed `3 6`. Inferred cards have a dashed outline and an "Inferred" chip.
 - **Pushpins** take the card's type ink (9px, with a soft drop and inner shade); `#ad604a` rust is only the fallback when no type ink is set.
 - **Open questions:** an amber outline and a question flag on the card.
-- **Legend:** collapsible, at the bottom left, listing only the types present in the case. The minimap mirrors the colours.
+- **Key:** a 32px pill at the bottom left opening a popover (Cards, Threads) that lists only the types present in the case. The minimap mirrors the colours.
+- **Story view:** compact story cards (196×96) frame a 300×140 hero card; group cards show an exact count and fan out their members; the opening fit aims for about 90% zoom beside the open dock.
 
 ### Origin marks
 
@@ -248,13 +249,13 @@ The board is the primary canvas and never resizes when navigation or review pane
 
 Analysis, source inspection, and audit share a review dock: 400px wide, 16px from the right and bottom, with 8px corners. While the dock is open above 900px, the canvas sets `--dock-offset: 416px` (dock plus gap), and the minimap and zoom controls move left of the dock with a 0.2s ease-out on `right`; the Ask widget moves to the matching 432px. At widths up to 900px, the dock stacks below the board and the offset stays 0. At widths up to 540px, search spans the board toolbar. Returning from an inspector restores review context.
 
-Bottom-right chrome stacks in a fixed order: the 240px minimap sits at the 16px board inset, the zoom controls sit 10px to its left, and the Ask widget sits above the minimap. `CanvasMinimap` publishes its rendered height as `--minimap-height`, and the widget's bottom is that height plus 28px (inset 16 + gap 12), so it expands upward without covering the minimap, the zoom controls or the bottom-left legend.
+Bottom-right chrome stacks in a fixed order: the 240px minimap sits at the 16px board inset, the zoom controls sit 10px to its left, and the Ask widget sits above the minimap. `CanvasMinimap` publishes its rendered height as `--minimap-height`, and the widget's bottom is that height plus 28px (inset 16 + gap 12), so it expands upward without covering the minimap, the zoom controls or the bottom-left Key.
 
 The board offers graph and list views, visible search, pan and zoom controls, fit view, and a minimap. The minimap frames the pins alone, so its scale never changes while panning. A clipped viewport rectangle shows the visible area. Pressing the rectangle grabs it; pressing elsewhere centres the view there; arrow keys pan. Minimap navigation clamps the view to the pins; panning the canvas itself may still leave the board. The zoom readout sits in the zoom controls and resets to 100%. A two-finger trackpad swipe pans the canvas; pinch, the zoom controls, and holding the zoom key while scrolling change scale. The shared spacing rhythm uses compact 8–24px steps.
 
 ## Elevation & Depth
 
-Depth combines tonal surface changes with restrained shadows. The paper background stays nearly flat; paper cards lift slightly from it. Floating chrome (toolbar, zoom controls, dock, minimap, legend) shares one shadow, and dialogs sit above a blurred backdrop. Focus on the board is amber: reviewed targets get an amber outline and a warm glow while everything else dims.
+Depth combines tonal surface changes with restrained shadows. The paper background stays nearly flat; paper cards lift slightly from it. Floating chrome (toolbar, zoom controls, dock, minimap, Key) shares one shadow, and dialogs sit above a blurred backdrop. Focus on the board is amber: reviewed targets get an amber outline and a warm glow while everything else dims.
 
 ### Shadow Vocabulary
 - **Chrome** (`--shadow`, `0 8px 28px #03070c66`): floating toolbar, zoom controls, review dock and other overlays on the canvas.
