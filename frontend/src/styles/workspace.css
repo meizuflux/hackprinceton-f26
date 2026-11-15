@@ -40,21 +40,20 @@
 .board-toolbar,
 .workspace-topbar {
   position: absolute;
-  z-index: 10;
-  top: 16px;
-  left: 76px;
-  right: 16px;
+  z-index: 20;
+  top: 12px;
+  left: 12px;
+  right: 12px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 24px;
   min-height: 56px;
-  padding: 8px 12px 8px 18px;
+  padding: 8px 16px;
   border: 1px solid #424b3d;
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
-  transition: left 0.15s ease;
 }
 .board-title {
   min-width: 0;
@@ -474,15 +473,16 @@
   }
 }
 @media (max-width: 540px) {
-  .board-toolbar {
-    left: 68px;
-    right: 12px;
-    top: 12px;
-    padding: 10px 12px;
+  .board-toolbar,
+  .workspace-topbar {
+    left: 8px;
+    right: 8px;
+    top: 8px;
+    padding: 8px 10px;
   }
   .navigation-toggle {
-    top: 12px;
-    left: 12px;
+    top: 68px;
+    left: 8px;
     width: 44px;
   }
   .board-actions {
