@@ -67,13 +67,28 @@ export function revealedGraph(
   return { nodes, edges };
 }
 
+/** Image descriptions appear only once the media_vision stage has finished. */
+export function withheldVision<
+  N extends { media?: { vision?: unknown } | undefined },
+>(node: N, progress: TraceProgress): N {
+  if (
+    progress.finished ||
+    !node.media?.vision ||
+    progress.stagesFinished.has("media_vision")
+  )
+    return node;
+  return { ...node, media: { ...node.media, vision: null } };
+}
+
 /** The case as far as the run has got; the full case once the run finished. */
 export function revealCase(data: CaseData, progress: TraceProgress): CaseData {
   if (progress.finished) return data;
   const graph = revealedGraph(data, progress);
   return {
     ...data,
-    nodes: data.nodes.filter((n) => graph.nodes.has(n.id)),
+    nodes: data.nodes
+      .filter((n) => graph.nodes.has(n.id))
+      .map((n) => withheldVision(n, progress)),
     edges: data.edges.filter((e) => graph.edges.has(e.id)),
     gaps: data.gaps.filter((g) => itemRevealed(g, progress, "gaps")),
     suggestions: data.suggestions.filter((s) =>

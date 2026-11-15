@@ -260,3 +260,11 @@ Errors are always `{"error": {"code", "message"}}`. Uploads are capped at `MAPLE
 - **Cleaning rules from the plan:** reader clock drift correction, plate edit distance, message noise classifier, RFID single misses.
 - **Scorer:** an evaluation against the locally generated answer key (`make data-truth`).
 - **Not parsed yet:** XLSX, phone backup SQLite databases, disk images. They're hashed and listed as `unsupported`.
+
+## Photos and video
+
+Every `media` row becomes an observed board card with rule-backed links (`mapletrace_reason/media.py`, stage
+`media_links`); see [MEDIA.md](MEDIA.md). With `--llm`, `mapletrace_reason/vision.py` adds neutral image descriptions
+to those cards from the separate cache `llm_cache/vision-<archive sha256>.jsonl` (replay-only without a key; frame
+extraction needs an `ffmpeg` binary and only runs when recording; never install PyAV, which changes deepagents' `read_file` tool description and so the investigator cache key). Descriptions never reach claims, gaps, insights or the
+investigator. `make backend-vision-record` (billed) records only that cache and rebuilds the snapshot.

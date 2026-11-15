@@ -113,6 +113,15 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
         if trace:
             trace.phase("agent", "Investigator agent")
         stage("agent_insights", llm_run.investigate(R, verdicts), 92)
+    # Image descriptions: attached to media cards only; never read by any stage above or below.
+    vision, vision_summary = {}, None
+    if llm:
+        from . import vision as vision_mod
+        try:
+            vision, vision_summary = vision_mod.run(case, llm, trace, audit)
+        except Exception as exc:  # noqa: BLE001 - optional stage; the analysis carries on without descriptions
+            vision_summary = {"enabled": True, "error": str(exc)[:300]}
+            audit.write("llm", "media_vision_failed", {"error": str(exc)[:300]})
 
     if trace:
         trace.phase("output", "Verifying and writing the board")
@@ -146,14 +155,18 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
     analysis = {"version": version, "pipeline_version": VERSION, "analysed_at": analysed_at, "case": case.info,
                 "evidence": evidence, "verdicts": verdicts, "timeline": timeline, "changes": changes, "overrides": applied,
                 "verification": verification, "coverage": tl.source_coverage(ctx),
-                "llm": llm_run.summary() if llm_run else {"enabled": False}}
+                "llm": {**llm_run.summary(), **({"vision": vision_summary} if vision_summary else {})}
+                if llm_run else {"enabled": False}}
     for kind, b in R.items.items():
         analysis[plural(kind)] = [it.to_dict() for it in b]
     audit_rows = [{"id": f"A-{r[0]}", "time": r[1], "title": f"{r[2]}: {r[3].replace('_', ' ')}",
                    "description": r[4][:300], "citations": []}
                   for r in adb.execute("SELECT seq, ts_utc, stage, action, detail_json FROM audit_log ORDER BY seq")]
-    brd = board_mod.build_board(case, ctx, R, verdicts, timeline, changes, applied,
-                                {"analysed_at": analysed_at, "audit": audit_rows})
+    media_started = trace.now_ms() if trace else 0
+    extras = {"analysed_at": analysed_at, "audit": audit_rows, "vision": vision}
+    brd = board_mod.build_board(case, ctx, R, verdicts, timeline, changes, applied, extras)
+    if trace:
+        trace.stage_finished("media_links", "Media cards and links", extras["media_stats"], media_started)
     graph = {"nodes": brd["nodes"], "edges": brd["edges"]}
     if trace:
         trace.totals.update({"records": len(case.records), "nodes": len(brd["nodes"]), "edges": len(brd["edges"]),
@@ -178,7 +191,8 @@ _STAGE_LABELS = {"ml_signals": "ML signals", "connections": "Identity connection
                  "key_events": "Key events", "source_independence": "Source independence",
                  "uncertain_times": "Uncertain times", "missing_periods": "Missing periods", "claims": "Claims",
                  "contradictions": "Contradictions", "explanations": "Competing explanations", "gaps": "Gaps",
-                 "next_steps": "Suggested evidence", "insights": "Insights", "agent_insights": "Agent insights"}
+                 "next_steps": "Suggested evidence", "insights": "Insights", "agent_insights": "Agent insights",
+                 "media_vision": "Image descriptions", "media_links": "Media cards and links"}
 
 
 def _trace_stage(trace, name: str, items, started_ms: int) -> None:

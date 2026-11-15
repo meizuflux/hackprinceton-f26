@@ -37,3 +37,15 @@ Each response in `backend/llm_cache/<archive sha256>.jsonl` keeps the API's usag
 Each chat answer is a short tool loop on `claude-sonnet-5-5` with medium reasoning effort, at most 10 model calls. Recording the four Kestrel suggested questions with `make backend-chat-record` took 16 model calls. The API reported 63,576 uncached input tokens and 5,016 output tokens, about **$0.18** in total, or roughly $0.05 per answer. No prompt caching applied.
 
 Replayed answers, including the recorded suggested questions, cost nothing. Each new free-typed question is billed at about the same rate; a long question can take up to 10 calls.
+
+## Image descriptions (estimate, not yet recorded)
+
+`make backend-vision-record` sends each Kestrel photo and three frames of each video to `claude-sonnet-5-5` once: 11 photos + 4 videos x 3 frames = 23 images, one request each. Estimate per request: about 1,600 input tokens for a 1024 px image plus about 250 for the prompt, and about 300 output tokens.
+
+| Token type | Tokens | Price per 1M tokens | Cost |
+|---|---:|---:|---:|
+| Input | 23 x 1,850 = 42,550 | $2.00 | $0.085 |
+| Output | 23 x 300 = 6,900 | $10.00 | $0.069 |
+| **Total** | | | **about $0.15** |
+
+The analysis and chat caches are replayed during this run, so only the images are billed. Replays of the recorded `vision-<archive sha256>.jsonl` cost nothing. Replace this estimate with the reported usage after recording.

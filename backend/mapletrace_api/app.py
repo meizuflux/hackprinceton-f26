@@ -183,6 +183,8 @@ def _llm_config(meta: dict, case_dir: Optional[Path] = None) -> Optional[dict]:
                 "cache_dir": str(case_dir / "llm_cache")}
     sha = meta["uploads"][0]["sha256"] if len(meta.get("uploads", [])) == 1 else None
     cached = bool(sha) and cache_path(sha).exists()
+    if meta.get("vision_record") and cached:  # make backend-vision-record: replay the analysis, record only images
+        return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": "replay", "vision_mode": "record"}
     if meta.get("llm"):
         mode = "record"
     elif cached:

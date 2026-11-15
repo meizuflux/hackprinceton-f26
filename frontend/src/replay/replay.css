@@ -235,3 +235,11 @@
   font-variant-numeric: tabular-nums;
   opacity: 0.75;
 }
+
+/* Search feedback sits beside the run panel, or below the collapsed chip. */
+:has(> .replay-hud) .search-feedback {
+  left: calc(16px + 48px + 12px + 340px + 12px);
+}
+:has(> .replay-chip) .search-feedback {
+  top: calc(var(--topbar-clearance-y, 68px) + 48px);
+}
