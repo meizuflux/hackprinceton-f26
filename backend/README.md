@@ -198,7 +198,7 @@ Model calls cost money, so responses are recorded per uploaded archive in `backe
 - **Replay:** an upload whose archive matches a cache file replays it automatically, even without the `llm` flag. It needs no API key and never calls the API: a miss raises before any request is sent, the failed call is logged, and the deterministic analysis continues.
 - **Record:** `--llm` (CLI) or `llm=true` (upload) reuses cached responses and records the ones it lacks. Those calls are billed.
 - **CLI:** `--llm-cache record|replay|off` (default `record`).
-- **Demo snapshot:** `backend/demo/kestrel.tar.gz` holds the finished Kestrel case, including the replayed LLM results. `POST /demo` installs it once as case `kestrel-demo`, which is instant and makes no model calls. The snapshot omits the uploaded ZIP; `POST /demo` restores it from `cases/kestrel/` after checking its hash.
+- **Demo snapshot:** `backend/demo/kestrel.tar.gz` holds the finished Kestrel case, including the replayed LLM results. `POST /demo` installs it as case `kestrel-demo`, which is instant and makes no model calls, and writes the snapshot's SHA-256 to `demo_snapshot.sha256` in the case folder. It reinstalls when that hash no longer matches the committed snapshot or a version lacks its `trace.jsonl` (installs from before the run trace never replayed), carrying `overrides.jsonl` over and re-applying it. The snapshot omits the uploaded ZIP; `POST /demo` restores it from `cases/kestrel/` after checking its hash.
 - **Rebuilding:** `make backend-llm-record` makes one billed run that records responses for the Kestrel ZIP. `make backend-demo-snapshot` rebuilds the snapshot by replaying the cache, and refuses if any response is missing. Both go through the same code path as `POST /upload`, so their requests match later uploads of the same archive.
 - **When to re-record:** changing prompts, tools, model settings or anything in the analysis that the model sees changes the request hashes, so record again and rebuild the snapshot. The names, docstrings (whitespace included) and outputs of the tools in `llm.read_tools` are part of the request, and chat uses the same tools, so editing them invalidates both caches.
 
@@ -231,7 +231,7 @@ uvicorn mapletrace_api.app:app --port 8000      # CORS allows localhost:5173 and
 | GET | `/cases/{caseId}/records?evidenceId=&recordType=&limit=&offset=` | Normalized ingestion records, read-only: `{total, limit, offset, types: {recordType: count}, items: [{id, recordType, fields, citations: [{evidenceId, locator, sourceId?}]}]}`. `fields` holds flat scalars (`ts_utc`, `ts_start_utc`/`ts_end_utc`, `ts_raw`, `ts_precision`, `ts_flags`, `actor`, `target`, `lat`, `lon`, `content`, `reliability`, `duplicate_of`, then scalar attributes; protected attributes are never returned). `sourceId` is present only when the record is cited on the board. `types` counts record types within the file filter (ignoring `recordType`). `limit` 1–500 (default 100) |
 | GET | `/cases/{caseId}/audit-chain` | `{verified, head, checks: [{source, ok, message}], entries: [{seq, time, stage, action, fileId, detail, hash, prevHash, source: ingest \| analysis}]}`. `verified` re-runs `mapletrace_ingest verify` (database hash, chain, evidence hashes), checks the analysis chain continues from the ingestion head, and checks the board/analysis outputs against their logged hashes |
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
-| POST | `/demo` | Install the committed Kestrel snapshot once and return `{caseId}` (`404 no_demo_snapshot` if it is missing) |
+| POST | `/demo` | Install the committed Kestrel snapshot and return `{caseId}` (`404 no_demo_snapshot` if it is missing). Reused until the snapshot changes; a stale install is replaced, keeping its `overrides.jsonl` (then `jobId` names the re-analysis that re-applies them) |
 | GET | `/health` | Liveness check (used by Docker); `llmLive` is true when a server API key allows `analysis_mode=live` |
 | GET | `/cases/{caseId}/trace?after=N` | Run trace events (ingestion and analysis) with a replay clock, readable while the job runs: `{status, timing, events, next}`. See [`TRACE.md`](TRACE.md) |
 | GET | `/chat/status?case_id=` | Case chat availability, mode (`live` with a key, `replay` without) and suggested questions with a `recorded` flag. See [`frontend/CHAT.md`](../frontend/CHAT.md) |
@@ -254,6 +254,7 @@ Errors are always `{"error": {"code", "message"}}`. Uploads are capped at `MAPLE
 - **Top-level:** `contradictions`, `explanations`, `timeline`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `changes`, `overrides`, `signals` (ML leads: `type`, `method`, `score`, `certainty`, `citations`).
 - **Provenance:** every node and edge has `origin` (`record` \| `rules` \| `ml` \| `llm` \| `agent`), `stage` and `evidenceIds`; `insights[]` and `signals[]` carry `origin`. ML signals (except identity clusters, which are threads between people) and agent insights are inferred nodes (`sig-<key>`, `ins-<key>`, with `itemId`) joined by `inference` edges to the nodes they share citations with.
 - **`key`:** every item has a stable key, which is what overrides target.
+- **Readable titles:** nodes may carry `displayLabel` (at most 44 characters), `displaySummary` and `labelOrigin` (`rules` \| `llm`); `sources[]` carry `fileLabel` (the MANIFEST.csv title). Presentation only; `label` and `summary` are unchanged. See [LABELS.md](LABELS.md).
 
 ## Not done yet
 - **Content analysis:** OCR, speech-to-text and vision on media. Videos are flagged as "failed extraction" gaps with a "analyse video already in the case" next step.
@@ -268,3 +269,14 @@ Every `media` row becomes an observed board card with rule-backed links (`maplet
 to those cards from the separate cache `llm_cache/vision-<archive sha256>.jsonl` (replay-only without a key; frame
 extraction needs an `ffmpeg` binary and only runs when recording; never install PyAV, which changes deepagents' `read_file` tool description and so the investigator cache key). Descriptions never reach claims, gaps, insights or the
 investigator. `make backend-vision-record` (billed) records only that cache and rebuilds the snapshot.
+Links come from cited rules only: the VMS export index, EXIF capture device and GPS, the MANIFEST.csv custodian and
+title, and the facility directory (camera room, and events on the camera's floor during a clip).
+
+## Readable titles
+
+`mapletrace_reason/labels.py` gives cards a short `displayLabel` and, for raw `key=value` records, a plain
+`displaySummary`, from the facility directory, MANIFEST.csv titles, saved contact names and explicit entity links;
+sources get a `fileLabel`. With an LLM config, `mapletrace_reason/label_llm.py` replays optional model-written titles
+(`claude-haiku-5-5`) for cards the rules leave unreadable from `llm_cache/labels-<archive sha256>.jsonl`, skipping
+silently when there is none; they are display-only (`labelOrigin: "llm"`) and never reach any finding or model input.
+`make backend-label-record` (billed) records them and rebuilds the snapshot. See [LABELS.md](LABELS.md).
