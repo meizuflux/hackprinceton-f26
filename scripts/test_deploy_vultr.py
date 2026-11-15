@@ -71,6 +71,26 @@ class DeployTests(unittest.TestCase):
             self.assertEqual(deploy.prepare_volume(args, 'instance-1'), ('block-1', 'volume-123', False))
             self.assertEqual(api.call_args_list[2].args, ('POST', '/blocks/block-1/attach', {'instance_id': 'instance-1', 'live': True}))
 
+    def test_locked_instance_retries_volume_attachment(self):
+        args = deploy.parser().parse_args(['--volume-id', 'block-1'])
+        block = {'block': {'region': 'ewr', 'status': 'active', 'attached_to_instance': ''}}
+        ready = {'block': {'region': 'ewr', 'status': 'active', 'attached_to_instance': 'instance-1', 'mount_id': 'volume-123'}}
+        responses = [{'instance': {'region': 'ewr'}}, block,
+                     deploy.VultrApiError(400, '{"error":"Server is currently locked","status":400}'),
+                     block, {}, ready]
+        with patch.object(deploy, 'api', side_effect=responses) as api, patch.object(deploy.time, 'sleep'):
+            self.assertEqual(deploy.prepare_volume(args, 'instance-1'), ('block-1', 'volume-123', False))
+            self.assertEqual(sum(call.args[0] == 'POST' for call in api.call_args_list), 2)
+
+    def test_other_attachment_errors_are_not_retried(self):
+        args = deploy.parser().parse_args(['--volume-id', 'block-1'])
+        block = {'block': {'region': 'ewr', 'status': 'active', 'attached_to_instance': ''}}
+        responses = [{'instance': {'region': 'ewr'}}, block, deploy.VultrApiError(400, '{"error":"invalid volume"}')]
+        with patch.object(deploy, 'api', side_effect=responses) as api:
+            with self.assertRaises(deploy.VultrApiError):
+                deploy.prepare_volume(args, 'instance-1')
+            self.assertEqual(api.call_count, 3)
+
     def test_volume_attached_elsewhere_or_in_another_region_is_rejected(self):
         args = deploy.parser().parse_args(['--volume-id', 'block-1'])
         for block, message in (({'region': 'ewr', 'status': 'active', 'attached_to_instance': 'other'}, 'another instance'),

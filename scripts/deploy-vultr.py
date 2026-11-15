@@ -63,6 +63,20 @@ def list_api(path, key):
 
 
 
+class VultrApiError(RuntimeError):
+    def __init__(self, status, body):
+        self.status = status
+        self.body = body
+        super().__init__(f"Vultr API returned HTTP {status}: {body}")
+
+    def is_instance_locked(self):
+        try:
+            error = json.loads(self.body).get("error", "")
+        except (ValueError, AttributeError):
+            return False
+        return self.status == 400 and isinstance(error, str) and error.strip().lower() == "server is currently locked"
+
+
 def api(method, path, payload=None):
     key = os.environ.get("VULTR_API_KEY")
     if not key:
@@ -75,7 +89,7 @@ def api(method, path, payload=None):
             body = response.read()
             return json.loads(body) if body else {}
     except urllib.error.HTTPError as exc:
-        raise RuntimeError(f"Vultr API returned HTTP {exc.code}: {exc.read(4096).decode(errors='replace')}") from exc
+        raise VultrApiError(exc.code, exc.read(4096).decode(errors='replace')) from exc
 
 
 def load_env_file(path, *, required=False):
@@ -172,8 +186,13 @@ def prepare_volume(args, instance_id, state=None):
             raise ValueError(f"Block storage {volume_id} is attached to another instance")
         if volume.get("status") == "active":
             if not attached and not attach_requested:
-                api("POST", f"/blocks/{volume_id}/attach", {"instance_id": instance_id, "live": True})
-                attach_requested = True
+                try:
+                    api("POST", f"/blocks/{volume_id}/attach", {"instance_id": instance_id, "live": True})
+                    attach_requested = True
+                except VultrApiError as exc:
+                    if not exc.is_instance_locked():
+                        raise
+                    print("Instance is still locked by Vultr; retrying volume attachment.", flush=True)
             elif attached == instance_id and volume.get("mount_id"):
                 mount_id = volume["mount_id"]
                 if not re.fullmatch(r"[A-Za-z0-9_-]+", mount_id):
@@ -327,7 +346,9 @@ def deploy(args):
     state.set(domain=domain)
     print(f"Public IPv4: {host}\nDNS: point the A record for {domain} to {host}.", flush=True)
     if args.instance_id:
-        api("PATCH", "/instances/" + instance_id, {"firewall_group_id": firewall_id})
+        current = api("GET", "/instances/" + instance_id)["instance"]
+        if current.get("firewall_group_id") != firewall_id:
+            api("PATCH", "/instances/" + instance_id, {"firewall_group_id": firewall_id})
     volume_id, mount_id, created_volume = prepare_volume(args, instance_id, state)
     state.set(volume_id=volume_id)
     print(f"Using block storage {volume_id} for case data.", flush=True)
