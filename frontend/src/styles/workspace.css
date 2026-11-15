@@ -187,15 +187,15 @@
   color: var(--brand-text);
   background: var(--brand-selected);
 }
+/* Bottom strip: minimap and zoom controls at the bottom left, the Key at the bottom right (left of an open
+   review dock), and the Ask widget centred between them (ask-widget.css). */
 .react-flow__controls {
-  left: auto !important;
-  right: calc(
-    var(--board-inset) + var(--dock-offset) + var(--minimap-width) +
-      var(--zoom-gap)
+  left: calc(
+    var(--board-inset) + var(--minimap-width) + var(--zoom-gap)
   ) !important;
-  bottom: var(--chrome-bottom, var(--board-inset)) !important;
+  right: auto !important;
+  bottom: var(--board-inset) !important;
   margin: 0 !important;
-  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -217,9 +217,8 @@
 .board-minimap {
   position: absolute;
   z-index: 5;
-  right: calc(var(--board-inset) + var(--dock-offset));
-  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-  bottom: var(--chrome-bottom, var(--board-inset));
+  left: var(--board-inset);
+  bottom: var(--board-inset);
   width: var(--minimap-width);
 }
 .board-minimap-map {
@@ -283,76 +282,11 @@
   box-shadow: var(--shadow);
   transition: top 0.15s ease;
 }
-.evidence-list {
-  position: absolute;
-  inset: var(--topbar-clearance-y, 68px) 16px 16px
-    calc(var(--toolbar-clearance, 48px) + 32px);
-  overflow: auto;
-  background: var(--surface);
-  border: 1px solid var(--chrome-border);
-  padding: 28px 32px;
-  border-radius: 8px;
-  transition: top 0.15s ease;
-}
-.evidence-list h2 {
-  font-size: 20px;
-  font-weight: 550;
-}
-.evidence-list > p {
-  color: var(--muted);
-  margin: 6px 0 24px;
-}
-.evidence-list h3 {
-  margin: 24px 0 12px;
-  font-size: 16px;
-}
-.evidence-list > button {
-  width: 100%;
-  display: grid;
-  grid-template-columns: 90px 1fr auto;
-  align-items: center;
-  gap: 16px;
-  text-align: left;
-  padding: 14px 12px;
-  color: var(--text);
-  background: transparent;
-  border-bottom: 1px solid var(--line);
-  font-size: 13px;
-}
-.evidence-list > button:hover {
-  background: var(--raised);
-}
-.evidence-list strong {
-  font-weight: 500;
-}
-.evidence-list button > span:last-child {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--muted);
-  white-space: nowrap;
-}
-.list-record-type {
-  color: var(--muted);
-  text-transform: capitalize;
-  font-size: 12px;
-}
-.canvas-wrap:has(.evidence-list) .search-feedback {
-  top: auto;
-  bottom: 28px;
-  left: 100px;
-}
-/* With the review dock open, the minimap, zoom controls and Ask widget sit left of
-   it, so the board's floating chrome never stacks underneath the dock. */
+/* With the review dock open, the Key and the Ask widget's span end left of it, so the board's floating chrome
+   never stacks underneath the dock. */
 @media (min-width: 901px) {
   .workspace:has(> .review-dock.is-open) .canvas-wrap {
     --dock-offset: 416px;
-  }
-}
-@media (prefers-reduced-motion: reduce) {
-  .board-minimap,
-  .react-flow__controls {
-    transition: none;
   }
 }
 @media (max-width: 1100px) {
@@ -404,10 +338,6 @@
     top: calc(var(--topbar-clearance-y, 116px) + 8px);
     left: 68px;
   }
-  .evidence-list {
-    inset: var(--topbar-clearance-y, 116px) 12px 12px 68px;
-    padding: 20px 16px;
-  }
 }
 @media (max-width: 540px) {
   .board-toolbar,
@@ -436,30 +366,12 @@
     --board-inset: 12px;
     --minimap-width: 188px;
     --zoom-gap: 8px;
-    --chrome-bottom: 54px;
   }
   .board-legend {
-    bottom: var(--board-inset);
     font-size: 11px;
   }
   .search-feedback {
     top: calc(var(--topbar-clearance-y, 160px) + 8px);
     left: 60px;
-  }
-  .evidence-list {
-    inset: var(--topbar-clearance-y, 160px) 8px 8px 60px;
-    padding: 16px 12px;
-  }
-  .evidence-list > button {
-    grid-template-columns: 1fr auto;
-    gap: 4px 8px;
-    padding: 12px 6px;
-  }
-  .evidence-list .list-record-type {
-    grid-column: 1 / -1;
-  }
-  .canvas-wrap:has(.evidence-list) .search-feedback {
-    left: 24px;
-    bottom: 24px;
   }
 }

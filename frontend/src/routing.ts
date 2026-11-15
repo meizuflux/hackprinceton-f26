@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 export type WorkspaceView =
-  "board" | "evidence" | "files" | "insights" | "chat";
+  "board" | "files" | "insights" | "evidence" | "chat" | "audit";
 
 /** Insights subsections: open questions, what records show, what analysis infers. */
 export const insightsTabs = ["questions", "evidence", "inferences"] as const;
@@ -27,7 +27,7 @@ export function parseRoute(pathname: string): AppRoute {
   if (/^\/projects\/new\/?$/.test(pathname)) return { kind: "new-project" };
 
   const match =
-    /^\/cases\/([^/]+)(?:\/(evidence|files|insights|chat)(?:\/([^/]+))?)?\/?$/.exec(
+    /^\/cases\/([^/]+)(?:\/(evidence|files|insights|chat|audit)(?:\/([^/]+))?)?\/?$/.exec(
       pathname,
     );
   if (!match) return { kind: "not-found" };

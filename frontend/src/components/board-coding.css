@@ -199,13 +199,15 @@
   stroke-width: 2;
 }
 
-/* Key: a compact chrome button at the bottom left; the colour key opens above it on paper, in the card inks. */
+/* Key: a compact chrome button at the bottom right, left of an open review dock; the colour key opens above it on
+   paper, in the card inks. */
 .board-legend {
   position: absolute;
   z-index: 6;
-  bottom: var(--chrome-bottom, var(--board-inset));
-  left: var(--board-inset);
+  bottom: var(--board-inset);
+  right: calc(var(--board-inset) + var(--dock-offset));
   font-size: 12px;
+  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .board-legend-toggle {
   display: inline-flex;
@@ -239,7 +241,7 @@
 .board-legend-body {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 0;
+  right: 0;
   display: grid;
   grid-template-columns: auto auto;
   gap: 14px 22px;
@@ -251,7 +253,7 @@
   background: #faf8f1;
   color: #3f4238;
   box-shadow: var(--shadow);
-  transform-origin: bottom left;
+  transform-origin: bottom right;
   animation: legend-open 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes legend-open {
@@ -292,6 +294,9 @@
   border-top: 1px solid #d9d2c3;
 }
 @media (prefers-reduced-motion: reduce) {
+  .board-legend {
+    transition: none;
+  }
   .board-legend-body {
     animation: none;
   }
@@ -339,21 +344,6 @@
     var(--thread-ink) 0 3px,
     transparent 3px 7px
   );
-}
-
-/* List view: the same record-type ink as a small swatch. */
-.list-record-type[class*="kind-"] {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.list-record-type[class*="kind-"]::before {
-  content: "";
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--pin-ink) 50%, #f4f1e8);
 }
 
 /* Origin: graphite stamp + texture, never a new hue (see board-colors.ts). */

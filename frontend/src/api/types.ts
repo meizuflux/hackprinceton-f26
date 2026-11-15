@@ -439,6 +439,8 @@ export interface AuditChainEntry {
   time: string;
   stage: string;
   action: string;
+  /** Ingestion file the step concerns, when there is one. */
+  fileId?: number | null;
   detail: Record<string, unknown>;
   hash: string;
   prevHash: string;
