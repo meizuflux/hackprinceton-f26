@@ -85,6 +85,12 @@ class ChatService:
                 chat = self._chats[key] = CaseChat(ingest_dir, analysis_dir)
         return chat
 
+    def forget(self, case_id: str) -> None:
+        """Drop the loaded analysis of a case whose files were replaced in place (a reinstalled demo)."""
+        with self._lock:
+            for k in [k for k in self._chats if k[0] == case_id]:
+                del self._chats[k]
+
     def cache(self, sha: str) -> ReplayCache:
         """The shared cache for answering: records with a key, replays without one."""
         path = chat_cache_path(sha, self.cache_dir)

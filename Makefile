@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
 	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel \
-	backend-analyze-kestrel backend-serve backend-seed-kestrel backend-llm-record backend-vision-record backend-demo-snapshot backend-chat-record dev \
+	backend-analyze-kestrel backend-serve backend-seed-kestrel backend-llm-record backend-vision-record backend-label-record backend-demo-snapshot backend-chat-record dev \
 	docker-up docker-down docker-logs vultr-deploy vultr-test
 
 PYTHON ?= python3
@@ -32,6 +32,7 @@ help:
 	@echo "make backend-seed-kestrel  Upload the Kestrel ZIP to the running API and wait for analysis (API=...)"
 	@echo "make backend-llm-record    Record Kestrel LLM responses into backend/llm_cache/ (billed; needs ANTHROPIC_API_KEY)"
 	@echo "make backend-vision-record Record image descriptions of the Kestrel photos and video into backend/llm_cache/vision-*.jsonl, then rebuild the snapshot (billed; needs ANTHROPIC_API_KEY)"
+	@echo "make backend-label-record  Record short display labels for hard-to-read Kestrel cards into backend/llm_cache/labels-*.jsonl (MAPLETRACE_LABELS_MODEL, default claude-haiku-5-5), then rebuild the snapshot (billed; needs that provider's key)"
 	@echo "make backend-demo-snapshot Rebuild backend/demo/kestrel.tar.gz by replaying the cache (no API calls)"
 	@echo "make backend-chat-record   Record answers to the Kestrel chat's suggested questions (billed; needs ANTHROPIC_API_KEY)"
 	@echo "make dev               Start the API and Vite together (the frontend proxies /api to the API)"
@@ -108,6 +109,10 @@ backend-llm-record:
 
 backend-vision-record:
 	cd backend && $(BACKEND_PY) -m mapletrace_api.demo record-vision
+	$(MAKE) backend-demo-snapshot
+
+backend-label-record:
+	cd backend && $(BACKEND_PY) -m mapletrace_api.demo record-labels
 	$(MAKE) backend-demo-snapshot
 
 backend-demo-snapshot:

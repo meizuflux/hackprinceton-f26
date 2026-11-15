@@ -10,6 +10,7 @@ from __future__ import annotations
 import json
 import mimetypes
 import posixpath
+import re
 from collections import defaultdict
 
 from .store import haversine_m
@@ -61,6 +62,11 @@ def _export_rows(case) -> dict[str, tuple]:
         if name:
             out.setdefault(posixpath.basename(str(clip)), (r, cam, name))
     return out
+
+
+def camera_of_clip(case) -> dict[str, str]:
+    """clip file name -> camera ID named by the export row that lists it."""
+    return {clip: str(rec.attrs.get("camera_id") or name) for clip, (rec, _, name) in _export_rows(case).items()}
 
 
 def _label(m: dict, camera: str | None) -> str:
@@ -180,9 +186,121 @@ def add_media(case, R, nodes: dict, edges: dict, src, vision: dict | None = None
             edge(nid, t, "spatial", "photographed at", [nodes[nid]["citations"][0], nodes[t]["citations"][0]],
                  "inferred", f"place: EXIF GPS is {d:.0f} m from the centre of {nodes[t]['label'][:80]}", "place")
 
+    _directory_links(case, R, nodes, cards, exports, edge, src)
+
     counts = {"media": len(cards), "edges": 0}
     for e in edges.values():
         if e.get("stage") == "media_links":
             counts["edges"] += 1
             counts[e["rule"]] = counts.get(e["rule"], 0) + 1
     return counts
+
+
+CLIP_SLACK_S = 60  # an event this close to a clip's start or end counts as "during the clip"
+
+
+def _directory_links(case, R, nodes: dict, cards: list, exports: dict, edge, src) -> None:
+    """Links through the case's facility directory (labels.Directory), the MANIFEST.csv row of each media file and the
+    records behind event cards. Every link cites the media record and the records on the other end; the directory row
+    is cited whenever it places a camera or names a room."""
+    from .labels import Directory
+    from .store import parse_ts
+
+    D = Directory(case)
+    locs = [(nid, n) for nid, n in nodes.items() if nid.startswith("loc-")]
+
+    def room_locs(room: str) -> list[str]:
+        """Location cards named after the room, or naming a directory entry in it."""
+        out = []
+        for nid, n in locs:
+            p = D.find(n["label"])
+            if n["label"].casefold() == room.casefold() or (p and p.room.casefold() == room.casefold()):
+                out.append(nid)
+        return out
+
+    def cite_of(nid: str) -> list[str]:
+        return nodes[nid]["citations"][:1]
+
+    persons = {}
+    for eid, e in case.entities.items():
+        if e["entity_type"] == "person":
+            canon = e["canonical_id"] or eid
+            for name in (e["display_name"], e["value_norm"]):
+                if name:
+                    persons.setdefault(name.casefold(), canon)
+
+    items = {it.key: it for b in R.items.values() for it in b}
+    events = []  # (node id, [records]) for record-backed event cards already on the board
+    for nid, n in nodes.items():
+        if n.get("media") or n["type"] != "event":
+            continue
+        if nid.startswith("rec-"):
+            rids = [int(nid[4:])]
+        elif nid.startswith("ev-") and n.get("key") in items:
+            rids = items[n["key"]].data.get("record_ids") or []
+        else:
+            continue
+        recs = [case.records[r] for r in rids if r in case.records and case.records[r].ts]
+        if recs:
+            events.append((nid, recs))
+
+    for m, nid in cards:
+        f = case.files.get(m["file_id"]) or {}
+        man = f.get("manifest") or {}
+        mcite = nodes[nid]["citations"][0]
+
+        # custodian: the MANIFEST.csv custodian is, by exact name, a person card on the board
+        cust = persons.get(str(man.get("custodian") or "").casefold())
+        if cust is not None and f"ent-{cust}" in nodes:
+            pid = f"ent-{cust}"
+            edge(nid, pid, "temporal", "collected from", [mcite, *cite_of(pid)], "observed",
+                 f"custodian: MANIFEST.csv lists {case.name(cust)} as the custodian of {m['evidence_id']}", "custodian")
+
+        # camera_place: a clip's camera, placed in a room by the directory, joins location cards for that room
+        cam = None
+        if m["media_kind"] == "video":
+            ex = exports.get(posixpath.basename(m["path"]))
+            cam = D.find(str(ex[0].attrs.get("camera_id") or ex[2])) if ex else None
+        if cam and cam.room:
+            for loc in room_locs(cam.room):
+                edge(nid, loc, "spatial", "filmed in", [mcite, src(case.cite(cam.record_id)), *cite_of(loc)],
+                     "inferred", f"camera_place: the directory places camera {cam.id} in “{cam.room}”, "
+                                 f"which names this location", "camera_place")
+
+        # title_place: the MANIFEST.csv title names a directory ID or a room ("Scene photo: EBC cabinet SC-EBC-01")
+        title = str(man.get("title") or "")
+        named: list[tuple[str, list[str], int]] = []  # (what the title names, location cards, directory record)
+        for pid, p in D.by_id.items():
+            if re.search(rf"(?<![\w-]){re.escape(pid)}(?![\w-])", title):
+                named.append((pid, [loc for loc, n in locs if D.find(n["label"]) is p], p.record_id))
+        spans: list[tuple[int, int]] = []
+        for room in D.rooms():
+            hit = re.search(rf"(?<![\w-]){re.escape(room)}(?![\w-])", title, re.I)
+            if hit and not any(a <= hit.start() and hit.end() <= b for a, b in spans):
+                spans.append(hit.span())
+                named.append((room, room_locs(room), D.in_room(room)[0].record_id))
+        for what, targets, dir_rec in named:
+            for loc in targets:
+                edge(nid, loc, "spatial", "pictured at" if m["media_kind"] == "photo" else "shows",
+                     [mcite, src(case.cite(dir_rec)), *cite_of(loc)], "inferred",
+                     f"title_place: the MANIFEST.csv title “{title[:80]}” names {what}", "title_place")
+
+        # same_place_time: an event recorded on the camera's floor while the clip runs ("same place, nearby time")
+        if not (cam and cam.floor and cam.floor.lower() != "all" and m["captured_utc"] and m["duration_s"]):
+            continue
+        t0 = parse_ts(m["captured_utc"])
+        start, end = t0.timestamp() - CLIP_SLACK_S, t0.timestamp() + float(m["duration_s"]) + CLIP_SLACK_S
+        for enid, recs in events:
+            for r in recs:
+                q = D.for_record(r)
+                if not (q and q.floor == cam.floor and start <= r.ts.timestamp() <= end):
+                    continue
+                same_room = bool(q.room) and q.room.casefold() == cam.room.casefold()
+                rc = src(case.cite(r.id))
+                cites = [mcite, rc] + ([] if rc in nodes[enid]["citations"] else cite_of(enid)) + \
+                        [src(case.cite(cam.record_id)), src(case.cite(q.record_id))]
+                where = f"room “{q.room}”" if same_room else f"floor {cam.floor}"
+                edge(nid, enid, "temporal", f"same {'room' if same_room else 'floor'}, during clip", cites, "inferred",
+                     f"same_place_time: {case.cite(r.id)['id']} ({q.name}) is on {where}, like camera {cam.id}, "
+                     f"within {CLIP_SLACK_S} s of the clip", "same_place_time")
+                break

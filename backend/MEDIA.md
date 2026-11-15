@@ -13,8 +13,12 @@ Every ingested photo and video (a row in `case.db` `media`) becomes a board node
 - `media`: `{evidenceId, kind: "photo"|"video", mediaType, capturedUtc, captureSource, timeFlags: [...],
   durationS, width, height, deviceMake, deviceModel, gps: {lat, lon} | null}`, straight from the `media` table.
 
-Edges join a media card to other cards only through cited records, with `certainty: "observed"`, `origin: "rules"`,
-`stage: "media_links"` and a `basis` that names the rule:
+- `displayLabel` (rules, see `LABELS.md`): the camera's directory name and the clip's local time span ("Garage P2
+  camera · 21:35–21:38") or the photo's `MANIFEST.csv` title ("EBC cabinet SC-EBC-01, empty ES-0007 slot").
+
+Edges join a media card to other cards only through cited records, with `origin: "rules"`, `stage: "media_links"`,
+`directed: false`, a `rule` and a `basis` that starts with the rule name. `vms_export`, `capture_device` and
+`custodian` are `observed`; the rest are `inferred`:
 
 - `vms_export`: a video's clip file named in `vms_export_index.csv` (or any record whose attributes name the
   clip file) joins the clip to the camera card for that `camera_id` (the camera's device entity, `ent-<id>`; created
@@ -26,8 +30,28 @@ Edges join a media card to other cards only through cited records, with `certain
   `place_cluster` card, `sig-...`; the other location cards carry no coordinates) joins the photo to that location, citing both records; `certainty: "inferred"` (a GPS radius is an
   inference), `basis` gives the distance.
 
-Edge `type` is `temporal` for `vms_export` and `capture_device` and `spatial` for `place`; edges also carry `rule`.
-Media cards sit in their own backend layout column. Each edge must cite records on both ends. Media with no rule-backed link still appears as a card, unconnected.
+- `custodian`: the file's `MANIFEST.csv` custodian is, by exact name, a person card on the board ("collected from").
+  Cites the media record and the person card's first citation. Kestrel: the four camera-roll photos join Richard
+  Halvorsen.
+- `camera_place`: the clip's camera (from `vms_export`) is placed in a room by the facility directory (a reference
+  list with `id`, `kind`, name, floor and room per row, Kestrel's `doors_readers.csv`); the clip joins location cards
+  named after that room or naming a directory entry in it ("filmed in"). Cites the media record, the directory row
+  and the location card. Kestrel: the lobby clip joins "Lobby", both P2 clips join "Garage P2".
+- `title_place`: the `MANIFEST.csv` title names a directory ID or room as a whole word ("Scene photo: EBC cabinet
+  SC-EBC-01, ...", "... P2 elevator lobby door ..."); the media card joins the location cards for it ("pictured at").
+  A room inside a longer matched room is not counted twice. Cites the media record, the directory row and the
+  location card.
+- `same_place_time` ("same place, nearby time"): an event card (a key event or unusual event, from its own records)
+  has a record on the camera's floor, per the directory, within 60 s of the clip's span. Label "same floor, during
+  clip" or "same room, during clip". Cites the media record, the event record, and the directory rows for the camera
+  and the event's place. Kestrel: the 21:35 P2 clip joins the held P2 elevator lobby door (BDG-000615, 21:36:49) and
+  the key event that includes it.
+
+Edge `type` is `temporal` for `vms_export`, `capture_device`, `custodian` and `same_place_time`, and `spatial` for
+`place`, `camera_place` and `title_place`. A pair of cards gets at most one edge of each type (the first rule wins).
+None of the rules use vision descriptions. Media cards sit in their own backend layout column. Each edge must cite
+records on both ends. Media with no rule-backed link still appears as a card, unconnected (Kestrel: the visitor kiosk
+photo). Media edges never pull cards into the opening story (`board.story`), so media stays one click away.
 `stage_finished` with `stage: "media_links"` is written to the trace after the rules stages.
 
 ## Image description (LLM, optional, isolated)
