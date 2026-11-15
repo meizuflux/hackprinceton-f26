@@ -1,0 +1,10 @@
+[Unit]
+Description=Back up MapleTrace case data to Vultr Object Storage
+Requires=docker.service
+After=docker.service
+RequiresMountsFor=/mnt/mapletrace-data
+ConditionPathIsMountPoint=/mnt/mapletrace-data
+
+[Service]
+Type=oneshot
+ExecStart=/opt/mapletrace/current/scripts/backup-vultr.sh
