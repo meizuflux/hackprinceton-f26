@@ -1,0 +1,219 @@
+/* Generalized files (normalized records). Shares heading, tokens and skeletons with raw-evidence.css. */
+.records-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px 14px;
+  padding: 12px 20px;
+  border-bottom: 1px solid var(--rule);
+}
+.records-field {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+.records-field:first-child {
+  flex: 1 1 280px;
+  max-width: 440px;
+}
+.records-field select {
+  min-width: 0;
+  height: 34px;
+  padding: 0 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #151916;
+  color: var(--text);
+  font:
+    13px "DM Sans",
+    sans-serif;
+}
+.records-field select:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 1px;
+}
+.records-search {
+  display: flex;
+  flex: 1 1 200px;
+  align-items: center;
+  gap: 8px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #151916;
+  color: var(--muted);
+}
+.records-search:focus-within {
+  border-color: #84936a;
+}
+.records-file {
+  padding: 8px 20px;
+  border-bottom: 1px solid var(--rule);
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.records-file .mono {
+  color: var(--text);
+}
+.records-file a,
+.records-citation a {
+  color: var(--green);
+  text-decoration-color: #d3dfaf66;
+  text-underline-offset: 3px;
+}
+.records-file a:hover,
+.records-citation a:hover {
+  text-decoration-color: var(--green);
+}
+.records-table-wrap {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+}
+.records-table-wrap[aria-busy="true"] {
+  opacity: 0.7;
+  transition: opacity 160ms;
+}
+.records-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+.records-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  padding: 8px 10px;
+  border-bottom: 1px solid var(--line);
+  background: #1d221e;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  text-align: left;
+  white-space: nowrap;
+}
+.records-table td {
+  padding: 5px 10px;
+  border-bottom: 1px solid #22281f;
+  vertical-align: top;
+}
+.records-table tbody tr:not(.records-detail):hover {
+  background: #1b201c;
+}
+.records-table tr.is-open,
+.records-detail td {
+  background: #1f261d;
+}
+.records-table td.records-toggle {
+  width: 36px;
+  padding: 1px 0 0 8px;
+}
+.records-toggle .icon-button {
+  min-width: 28px;
+  min-height: 28px;
+  padding: 6px;
+}
+.records-type {
+  color: #d1ddb9;
+  white-space: nowrap;
+}
+.records-time {
+  color: #cfd3c4;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.records-who {
+  max-width: 220px;
+  color: #cfd3c4;
+  overflow-wrap: anywhere;
+}
+.records-content {
+  width: 40%;
+  max-width: 0;
+  overflow: hidden;
+  color: var(--text);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.records-source {
+  white-space: nowrap;
+}
+.records-citation {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.records-board-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: transparent;
+  color: var(--amber);
+  font-size: 11px;
+}
+.records-board-link:hover {
+  background: #d4ad6a1c;
+}
+.records-table tr.records-detail td {
+  padding-top: 2px;
+  padding-bottom: 12px;
+}
+.records-detail dl {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 8px 18px;
+  margin: 0;
+}
+.records-detail dl div {
+  min-width: 0;
+}
+.records-detail dl .is-wide {
+  grid-column: 1 / -1;
+}
+.records-detail dt {
+  color: var(--muted);
+  font: 11px var(--mono);
+}
+.records-detail dd {
+  margin: 1px 0 0;
+  overflow-wrap: anywhere;
+}
+.records-empty {
+  padding: 28px 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+.records-loading {
+  display: grid;
+  gap: 14px;
+  padding: 18px 20px;
+}
+.records-pager {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px 6px 20px;
+  border-top: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+}
+.records-pager > span {
+  margin-right: auto;
+}
+@media (max-width: 900px) {
+  .records-toolbar,
+  .records-file {
+    padding-inline: 14px;
+  }
+  .records-table .records-who,
+  .records-table th:nth-child(4) {
+    display: none;
+  }
+}
