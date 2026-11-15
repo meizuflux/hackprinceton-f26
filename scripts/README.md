@@ -9,7 +9,7 @@ This deploys a **single Ubuntu VM** using the Vultr v2 API and builds the reposi
 - A Vultr region and plan that support Block Storage. A new volume incurs additional charges; an existing volume must contain exactly one ext4 filesystem.
 - A public DNS hostname with an A record pointing to the instance. Remove any AAAA record that does not point to the same server. A new instance prints its IP so you can update DNS during setup; retry with its ID if DNS or certificate issuance takes too long.
 - A public IPv4 SSH source CIDR for a new Vultr firewall group, or an existing firewall group with appropriate rules. New groups allow TCP 80/443 from IPv4 and IPv6 and SSH only from the supplied CIDR. On existing instances, attaching a different group replaces the current group, so verify access first. Reused groups are not modified or validated.
-- A pre-existing **private** Vultr Object Storage bucket and its HTTPS endpoint and access keys. The script does not create the subscription or bucket. Use a separate location or account for stronger isolation, and configure appropriate access, retention and lifecycle policies.
+- A pre-existing **private, unversioned** Vultr Object Storage bucket and its HTTPS endpoint and access keys. The access keys need permission to read bucket versioning and read/write its lifecycle configuration. Buckets with versioning enabled or suspended are rejected because expiration would not guarantee removal of old versions. The script does not create the subscription or bucket. Use a separate location or account for stronger isolation, and configure appropriate access, retention and lifecycle policies.
 - Verify the server's SSH host key through a trusted channel and add it to your local `known_hosts`. The script uses your normal SSH host-key policy and never disables verification. When provisioning, it prints the IP before waiting for SSH, allowing you to verify and add the host key in another terminal; otherwise retry with the saved instance ID.
 - Commit the desired revision first: only tracked files in `HEAD` are transferred. Tracked changes block deployment; untracked and ignored files are never transferred. The server requires internet access to install Docker and build images.
 
@@ -19,6 +19,10 @@ This deploys a **single Ubuntu VM** using the Vultr v2 API and builds the reposi
 export VULTR_API_KEY='...'
 export VULTR_OBJECT_ACCESS_KEY='...'
 export VULTR_OBJECT_SECRET_KEY='...'
+# JSON webhook accepting POST requests with a text field.
+export MAPLETRACE_ALERT_WEBHOOK='https://YOUR_ALERT_ENDPOINT'
+# Optional external dead-man monitor; alerts if healthy pings stop.
+export MAPLETRACE_HEARTBEAT_URL='https://YOUR_HEARTBEAT_ENDPOINT'
 # Optional: live LLM calls; without a key the backend uses recorded responses.
 export ANTHROPIC_API_KEY='...'
 # Optional: defaults to claude-sonnet-5-5; MAPLETRACE_CORS may also be set.
@@ -47,7 +51,7 @@ The script creates or attaches the block volume in the instance region. It forma
 
 The script enables Vultr instance backups and schedules them daily at 03:00 UTC; this can add charges and resets the existing instance backup schedule. These backups cover the instance disk, including Caddy certificate storage, but **not** the attached case-data volume. The script also installs a separate daily case-data backup timer for 03:30 UTC and runs an initial backup before declaring deployment successful. Each backup stops the backend while archiving `/data`, then restarts it before upload. During that interval API requests fail, and running ingestion, analysis, or chat jobs may be interrupted. Ensure the server has enough free primary-disk space for a compressed case archive.
 
-The case archive is sent to the private bucket using rclone. Each run writes a new object; there is no automatic pruning, so use bucket lifecycle policies or manage retention separately. Rclone credentials are stored at `/opt/mapletrace/rclone.conf` with mode 0600; root and Docker administrators can read them. Restrict bucket access and set the bucket private. This is a separate backup from the block volume, but restore is not automatic.
+The case archive is sent to the private bucket using rclone. Each run writes a new object. After the first successful backup, deployment merges a rule that expires objects with the `mapletrace-` prefix after 60 days, including pre-existing objects with that prefix. Other lifecycle rules are preserved; avoid concurrent lifecycle edits during deployment. Vultr executes policies daily, so deletion may occur after the 60-day point. The selected bucket must support lifecycle policy changes. Rclone credentials are stored at `/opt/mapletrace/rclone.conf` with mode 0600; root and Docker administrators can read them. Restrict bucket access and set the bucket private. This is a separate backup from the block volume, but restore is not automatic.
 
 The script transfers an archive of the committed revision, writes `/opt/mapletrace/.env` with mode 0600, builds and starts Compose, waits for a valid TLS certificate and checks `/health` and `/api/health` over HTTPS locally, and updates `/opt/mapletrace/current` after success. The Vultr API key stays on the deploying machine. The Anthropic key is sent over SSH and stored on the server; root and Docker administrators can read it. Builds can take several minutes. Failure may leave a partially updated deployment; inspect the logs and redeploy the desired revision. Releases are not automatically pruned.
 
@@ -85,6 +89,20 @@ sudo systemctl start mapletrace-backup.service
 rclone --config /opt/mapletrace/rclone.conf lsf vultr:PRIVATE_BUCKET
 ```
 
-A successful deployment runs one backup immediately; later runs follow the timer. Failed jobs are recorded in the journal; no alerting is configured. Check the journal and bucket regularly. The filesystem must be mounted and the backend running for the job to run. Backup files are stored in the bucket without client-side encryption; protect the bucket and credentials. The archive is temporarily written on the instance's primary disk and deleted after the run.
+A successful deployment runs one backup immediately; later runs follow the timer. Failed jobs are recorded in the journal and reported by the monitoring service. Check the journal and bucket regularly. The filesystem must be mounted and the backend running for the job to run. Backup files are stored in the bucket without client-side encryption; protect the bucket and credentials. The archive is temporarily written on the instance's primary disk and deleted after the run.
 
 To test a restore without touching live data, download an archive with `rclone --config /opt/mapletrace/rclone.conf copyto vultr:PRIVATE_BUCKET/OBJECT_NAME /tmp/mapletrace-restore.tar.gz`, extract it into a new empty temporary directory with `tar -xzf`, and verify the case contents and database integrity. To restore live data, stop the backend and timer, preserve a backup of the current volume, verify the target mount and archive, restore to an empty directory on the mounted volume, set ownership for UID 10001, then restart the backend and timer. Never overwrite the live case directory while the backend is writing. Practice this process before relying on it.
+
+## Monitoring and alerts
+
+The deployment requires `MAPLETRACE_ALERT_WEBHOOK`, an HTTPS endpoint accepting `POST` JSON such as `{"text":"MapleTrace alert: ..."}`. The URL is stored as root-readable `/opt/mapletrace/monitor.json`; do not put credentials in source control. The host checks frontend and backend HTTPS health, the case mount, free space on the primary and case disks (alert below 15%), backup service/timer state, and whether a successful backup is older than 36 hours. Checks run every five minutes. A backend health check is skipped while a backup is running; other checks continue. Alerts and recovery messages are sent on state changes; failed deliveries are retried on the next check.
+
+Set `MAPLETRACE_HEARTBEAT_URL` to an external dead-man monitor that accepts JSON POSTs if you want detection of server failure or loss of connectivity. The host sends it a ping only when all local checks are healthy. Configure the external monitor to alert when pings stop; allow at least 15 minutes of grace, and note that a prolonged backup or failed alert endpoint can delay pings. Without this external monitor, a fully stopped server cannot send its own alert. The endpoint and its alerts are configured separately; the deploy script does not provision that service.
+
+```sh
+systemctl status mapletrace-monitor.timer
+journalctl -u mapletrace-monitor.service -n 100 --no-pager
+sudo systemctl start mapletrace-monitor.service
+```
+
+Monitor startup runs a local check but does not send a test notification when the system is healthy. Verify the webhook using the provider's test facility and test the external heartbeat monitor independently. Webhook and heartbeat failures are logged without printing their URLs.

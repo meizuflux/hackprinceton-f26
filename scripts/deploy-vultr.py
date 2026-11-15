@@ -128,6 +128,18 @@ def backup_config(args):
     return out.getvalue().encode()
 
 
+
+def monitor_config(domain):
+    webhook = os.environ.get("MAPLETRACE_ALERT_WEBHOOK", "")
+    heartbeat = os.environ.get("MAPLETRACE_HEARTBEAT_URL", "")
+    for label, url, required in (("MAPLETRACE_ALERT_WEBHOOK", webhook, True), ("MAPLETRACE_HEARTBEAT_URL", heartbeat, False)):
+        if not url and not required:
+            continue
+        parsed = urlparse(url)
+        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or "\n" in url or "\r" in url:
+            raise ValueError(f"{label} must be an HTTPS URL")
+    return json.dumps({"domain": domain, "webhook": webhook, "heartbeat": heartbeat}).encode()
+
 def prepare_firewall(args):
     if args.firewall_group_id:
         return args.firewall_group_id
@@ -155,6 +167,7 @@ def deploy(args):
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     config = env_content(args.domain)
     backup = backup_config(args)
+    monitor = monitor_config(args.domain)
     if not args.instance_id:
         missing = [name for name in ("region", "plan", "os_id", "ssh_key_id") if not getattr(args, name)]
         if missing:
@@ -198,12 +211,12 @@ def deploy(args):
         raise RuntimeError("git archive failed")
     settings = io.BytesIO()
     with tarfile.open(fileobj=settings, mode="w") as archive_file:
-        for name, content in ((".env", config), ("rclone.conf", backup), ("backup-bucket", args.backup_bucket.encode())):
+        for name, content in ((".env", config), ("rclone.conf", backup), ("backup-bucket", args.backup_bucket.encode()), ("monitor.json", monitor)):
             info = tarfile.TarInfo(name)
             info.mode = 0o600
             info.size = len(content)
             archive_file.addfile(info, io.BytesIO(content))
-    settings_command = f"umask 077; tar -xf - -C {REMOTE}; chmod 600 {REMOTE}/.env {REMOTE}/rclone.conf {REMOTE}/backup-bucket"
+    settings_command = f"umask 077; tar -xf - -C {REMOTE}; chmod 600 {REMOTE}/.env {REMOTE}/rclone.conf {REMOTE}/backup-bucket {REMOTE}/monitor.json"
     run(ssh + ["flock -x /run/lock/mapletrace.lock sh -c " + shlex.quote(settings_command)], input=settings.getvalue())
     storage_script = (ROOT / "scripts" / "mount-vultr-storage.sh").read_bytes()
     storage_args = ["sh", "-s", "--", mount_id, "yes" if created_volume else "no",
@@ -219,9 +232,9 @@ if ! command -v docker >/dev/null 2>&1; then
   rm -f /tmp/mapletrace-install-docker.sh
 fi
 docker compose version >/dev/null
-if ! command -v rclone >/dev/null 2>&1; then
+if ! command -v rclone >/dev/null 2>&1 || ! /usr/bin/python3 -c 'import boto3' >/dev/null 2>&1; then
   apt-get update
-  apt-get install -y rclone
+  apt-get install -y rclone python3-boto3
 fi
 cd {shlex.quote(release)}
 docker compose --project-name mapletrace --env-file {REMOTE}/.env -f scripts/compose.vultr.yaml up -d --build --remove-orphans --wait --wait-timeout 300
@@ -245,6 +258,8 @@ systemctl enable --now mapletrace-backup.timer
     run(ssh + ["sh -s"], input=remote_command.encode())
     # Run one backup now so missing bucket permissions or credentials fail deployment.
     run(ssh + ["systemctl start mapletrace-backup.service"])
+    run(ssh + ["/usr/bin/python3 /opt/mapletrace/current/scripts/configure-vultr-lifecycle.py"])
+    run(ssh + ["install -m 0644 /opt/mapletrace/current/scripts/mapletrace-monitor.service /opt/mapletrace/current/scripts/mapletrace-monitor.timer /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now mapletrace-monitor.timer && systemctl start mapletrace-monitor.service"])
     print(f"Deployed {revision} to https://{args.domain}/ (instance {instance_id}).", flush=True)
 
 

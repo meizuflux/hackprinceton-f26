@@ -1,0 +1,8 @@
+[Unit]
+Description=Check MapleTrace health and send alerts
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/python3 /opt/mapletrace/current/scripts/monitor-vultr.py
