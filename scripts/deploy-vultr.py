@@ -119,7 +119,7 @@ if ! command -v docker >/dev/null 2>&1; then
 fi
 docker compose version >/dev/null
 cd {shlex.quote(release)}
-docker compose --project-name mapletrace --env-file {REMOTE}/.env -f scripts/compose.vultr.yaml up -d --build --wait --wait-timeout 300
+docker compose --project-name mapletrace --env-file {REMOTE}/.env -f scripts/compose.vultr.yaml up -d --build --remove-orphans --wait --wait-timeout 300
 # Caddy obtains a certificate asynchronously after the public DNS record resolves.
 i=0
 until curl -fsS --max-time 10 --resolve {args.domain}:443:127.0.0.1 https://{args.domain}/health >/dev/null && \

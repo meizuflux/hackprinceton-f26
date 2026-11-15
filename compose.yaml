@@ -1,4 +1,4 @@
-# MapleTrace: FastAPI backend + nginx-served frontend. Open http://localhost:5173.
+# MapleTrace: FastAPI backend + Caddy-served frontend. Open http://localhost:5173.
 # The frontend proxies /api/ to the backend; only the frontend is published, on loopback.
 services:
   backend:

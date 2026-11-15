@@ -114,7 +114,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 
 - The backend image is built from the repo root and mirrors the repo layout under `/app`. The root `.dockerignore` is an allowlist: add any new runtime file to it.
 - Data lives in the `mapletrace-data` volume at `/data`; the image runs as a non-root user.
-- The frontend image is built with `VITE_API_BASE_URL=/api` (`mock` is a build arg). nginx strips `/api` the way Vite does, and its `client_max_body_size 100m` must follow `MAPLETRACE_MAX_UPLOAD_MB`.
+- The frontend image is built with `VITE_API_BASE_URL=/api` (`mock` is a build arg). Caddy serves the frontend and strips `/api` the way Vite does; its `max_size` must follow `MAPLETRACE_MAX_UPLOAD_MB`.
 - Only the frontend is published, on `127.0.0.1:5173`. `ANTHROPIC_API_KEY` is optional.
 
 ## Specification change approval
@@ -125,4 +125,4 @@ Rules and durable decisions for agents working in this repository. How-to materi
 
 ## Vultr deployment
 
-- `scripts/deploy-vultr.py` deploys committed revisions to a single Ubuntu instance using `scripts/compose.vultr.yaml`. Caddy provides automatic TLS for the configured domain; the app remains unauthenticated. Persistent case data and Caddy certificates stay in Compose volumes. Keep the deploy upload limit aligned with nginx.
+- `scripts/deploy-vultr.py` deploys committed revisions to a single Ubuntu instance using `scripts/compose.vultr.yaml`. Caddy provides automatic TLS for the configured domain; the app remains unauthenticated. Persistent case data and Caddy certificates stay in Compose volumes. Keep the deploy upload limit aligned with Caddy.

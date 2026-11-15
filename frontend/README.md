@@ -40,7 +40,7 @@ Chat calls same-origin `/api`, or `VITE_CHAT_API_BASE_URL` when set.
 | `/cases/:caseId/files` | Generalized files (normalized ingestion records) |
 | `/cases/:caseId/chat` | Case chat |
 
-Browser history and direct links work; nginx falls back to the app for these routes. With the mock adapter, excerpts are fictional, originals are unavailable and no normalized records exist.
+Browser history and direct links work; Caddy falls back to the app for these routes. With the mock adapter, excerpts are fictional, originals are unavailable and no normalized records exist.
 
 ## Structure
 

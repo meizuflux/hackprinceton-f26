@@ -1,4 +1,4 @@
-# Single-host deployment. Keep upload limit aligned with frontend/nginx.conf.
+# Single-host deployment. Keep upload limit aligned with frontend/Caddyfile.
 services:
   backend:
     build:
@@ -24,24 +24,17 @@ services:
       context: ../frontend
       args:
         VITE_API_BASE_URL: /api
-    depends_on:
-      backend:
-        condition: service_healthy
-    restart: unless-stopped
-  proxy:
-    image: caddy:2
     environment:
       MAPLETRACE_DOMAIN: ${MAPLETRACE_DOMAIN:?Set MAPLETRACE_DOMAIN}
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data
       - caddy-config:/config
     depends_on:
-      frontend:
-        condition: service_started
+      backend:
+        condition: service_healthy
     restart: unless-stopped
 volumes:
   mapletrace-data:
