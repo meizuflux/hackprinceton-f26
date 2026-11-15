@@ -170,7 +170,10 @@ export const EvidenceNode = memo(function EvidenceNode({
       <h3>{data.label}</h3>
       {data.media ? (
         <p className="pin-subtitle" title={mediaDevice(data.media)}>
-          {mediaDevice(data.media) ?? "Device not recorded"}
+          {mediaDevice(data.media) ??
+            (data.media.kind === "video"
+              ? "CCTV export"
+              : "Device not recorded")}
         </p>
       ) : (
         <>
