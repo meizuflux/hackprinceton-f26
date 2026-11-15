@@ -31,3 +31,7 @@ For comparison, the same token counts on `claude-opus-5-5` ($4 input, $20 output
 ## How these numbers were produced
 
 Each response in `backend/llm_cache/<archive sha256>.jsonl` keeps the API's usage report (`response_metadata.usage`: `input_tokens`, `cache_creation_input_tokens`, `cache_read_input_tokens`, `output_tokens`). The table sums those fields. Prices are Anthropic first-party API list prices for Claude Sonnet 5.5 ($2 input, $10 output, $0.20 cache read per 1M tokens). Five-minute cache writes are billed at 1.25× the input price. Check current pricing before relying on these figures; this estimate is not a bill.
+
+## Case chat (estimate, not yet measured)
+
+Each chat answer is a short tool loop on `claude-sonnet-5-5` with medium reasoning effort: a system prompt and tool schemas of about 1,100 tokens, tool results capped at 12,000 characters each, and at most 10 model calls. A typical answer takes 3 to 6 calls, about 15,000 to 40,000 input tokens and 2,000 to 8,000 output tokens (reasoning included): roughly $0.10 to $0.30. `make backend-chat-record` records the four Kestrel suggested questions, so expect under about $1.20. Replayed answers, including suggested questions once recorded, cost nothing; every new free-typed question is billed.

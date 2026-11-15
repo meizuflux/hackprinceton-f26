@@ -208,6 +208,17 @@ Model calls cost money, so responses are recorded per uploaded archive in `backe
 - **Rebuilding:** `make backend-llm-record` makes one billed run that records responses for the Kestrel ZIP. `make backend-demo-snapshot` rebuilds the snapshot by replaying the cache, and refuses if any response is missing. Both go through the same code path as `POST /upload`, so their requests match later uploads of the same archive.
 - **When to re-record:** changing prompts, tools, model settings or anything in the analysis that the model sees changes the request hashes, so record again and rebuild the snapshot.
 
+### Case chat
+
+`mapletrace_reason/chat.py` answers an investigator's questions about the latest analysis of a case; `mapletrace_api/chat.py` serves it (contract in [`frontend/CHAT.md`](../frontend/CHAT.md)).
+- **Model and tools:** `claude-sonnet-5-5` (`MAPLETRACE_CHAT_MODEL`, medium reasoning effort) with the investigator's read-only tools (`llm.read_tools`), plus `list_items` and `get_item` over the finished analysis. It ends with `submit_answer`; at most 10 model calls per answer.
+- **Cite or drop:** an observation must cite record IDs a tool returned in that conversation, or it is dropped. Citations come from `case.cite()`, and `source_id` is set only when the citation is in the board's `sources`. Observations, inference and unknowns stay separate. `evidence_status` drops from `supported` to `partial` when a citation was dropped, and is `insufficient` when none remain.
+- **Memory:** per `thread_id`, in server memory, up to 200 threads and the last 4 turns; lost on restart (an unknown thread starts a new one).
+- **Suggested questions:** 3 to 5, derived deterministically from the analysis: the undecided key event (or its leading explanation), the strongest contradiction, then the highest-ranked open gaps. They are always answered without the thread's history, so a recorded answer replays in any thread.
+- **Cost control:** responses are cached in `backend/llm_cache/chat-<archive sha256>.jsonl`, keyed by the full request, so the same question in the same thread state replays for free. With `ANTHROPIC_API_KEY` the cache records; without it only recorded answers are served, and a miss returns `503 needs_api_key` before anything is sent. Prompts hold no case name, time or random ID.
+- **Recording:** `make backend-chat-record` installs the demo snapshot in a temporary folder and records the answers to its suggested questions (billed: roughly $0.10 to $0.30 per question, so under about $1.20 for four). `python -m mapletrace_api.chat suggestions` lists them and whether each replays, without calling the API.
+- **Audit:** chat reads the finished analysis and is not written to the case's audit log.
+
 ## API (`mapletrace_api`)
 
 ```sh
@@ -228,6 +239,8 @@ uvicorn mapletrace_api.app:app --port 8000      # CORS allows http://localhost:5
 | GET | `/cases/{caseId}/audit-chain` | `{verified, head, checks: [{source, ok, message}], entries: [{seq, time, stage, action, fileId, detail, hash, prevHash, source: ingest \| analysis}]}`. `verified` re-runs `mapletrace_ingest verify` (database hash, chain, evidence hashes), checks the analysis chain continues from the ingestion head, and checks the board/analysis outputs against their logged hashes |
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
 | POST | `/demo` | Install the committed Kestrel snapshot once and return `{caseId}` (`404 no_demo_snapshot` if it is missing) |
+| GET | `/chat/status?case_id=` | Case chat availability, mode (`live` with a key, `replay` without) and suggested questions with a `recorded` flag. See "Case chat" |
+| POST | `/cases/{caseId}/chat` (`{message, thread_id?}`) | Cited answer `{thread_id, message: {role, content, evidence_status, citations, observations, inference, unknowns}, suggested, replayed, model_calls}`. `503 needs_api_key` when the answer is not recorded and no key is set |
 | GET / POST | `/cases/{caseId}/overrides` | Read or record investigator corrections (`dismiss`, `confirm`, `set_status`, `set_label`, `note`, `reject_link`) |
 
 Errors are always `{"error": {"code", "message"}}`. Case data lives under `$MAPLETRACE_DATA` (default `backend/data/cases/<caseId>/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
