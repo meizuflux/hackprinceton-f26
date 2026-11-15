@@ -1,48 +1,60 @@
-/* Floating "Ask a question" on the mind map. It sits in the board's bottom strip, to the left of the zoom controls
-   and level with them, so it stays clear of the cards, the minimap, the zoom controls and the Key (bottom left); its
-   suggestions rise above it on hover. When the review dock is open it moves left of the dock with the controls.
-   Full graph: inset 16 + minimap 240 + zoom gap 10 + controls 38 + gap 10. */
+/* Floating "Ask a question" on the mind map. It sits in the board's bottom strip, level with the zoom controls,
+   centred on the board between the left cluster (minimap and zoom controls) and the Key at the bottom right, so it
+   never covers either; its suggestions rise above it on hover. The span it may use ends left of an open review dock.
+   --ask-left: inset 16 + minimap 240 + zoom gap 10 + controls 38 + gap 12.
+   --ask-right: inset 16 + Key (at most 72) + gap 12. */
 .case-board-panel:has(> .ask-widget) {
   position: relative;
+  --ask-left: 316px;
+  --ask-right: 100px;
+  --ask-dock: 0px;
+  --ask-bottom: 16px;
+}
+/* Story view has no minimap: the controls sit at the edge (inset 16 + controls 38 + gap 12). */
+.case-board-panel:has(> .ask-widget):has(.canvas-wrap.is-story) {
+  --ask-left: 66px;
+}
+@media (min-width: 901px) {
+  .case-board-panel:has(> .ask-widget):has(.review-dock.is-open) {
+    --ask-dock: 416px; /* dock 400 + gap 16, as --dock-offset */
+  }
 }
 .ask-widget {
-  --ask-bottom: 16px;
+  --ask-width: min(
+    340px,
+    calc(100% - var(--ask-left) - var(--ask-right) - var(--ask-dock))
+  );
   position: absolute;
   z-index: 11;
-  right: 314px;
+  /* Centred on the visible board, but never past either end of its span. */
+  left: clamp(
+    var(--ask-left),
+    calc((100% - var(--ask-dock) - var(--ask-width)) / 2),
+    calc(100% - var(--ask-right) - var(--ask-dock) - var(--ask-width))
+  );
   bottom: var(--ask-bottom);
+  width: var(--ask-width);
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: stretch;
   gap: 10px;
   pointer-events: none;
-  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  transition: left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .ask-widget > * {
   pointer-events: auto;
-}
-.case-board-panel:has(.review-dock.is-open) > .ask-widget {
-  right: 730px; /* dock offset 416 + the full-graph strip 314 */
-}
-/* Story view has no minimap: the zoom controls sit at the edge, so the box sits just left of them (inset 16 +
-   controls 38 + gap 10). */
-.case-board-panel:has(.canvas-wrap.is-story) > .ask-widget {
-  right: 64px;
-}
-.case-board-panel:has(.canvas-wrap.is-story):has(.review-dock.is-open)
-  > .ask-widget {
-  right: 480px; /* dock offset 416 + controls 38 + gap 10 + inset 16 */
 }
 /* Suggestions are hidden until the box is hovered or focused, then rise above it one by one. They sit in their own
    layer above the box, so revealing them never moves the box. The bottom padding bridges the gap to the box, so the
    pointer can travel up to a chip without the list closing. */
 .ask-chips {
   position: absolute;
-  right: 0;
+  left: 50%;
   bottom: 100%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
-  align-items: flex-end;
+  align-items: center;
   gap: 6px;
   margin: 0;
   padding: 0 0 8px;
@@ -52,7 +64,7 @@
 .ask-chips li {
   opacity: 0;
   transform: translateY(10px) scale(0.98);
-  transform-origin: bottom right;
+  transform-origin: bottom center;
   transition:
     opacity 0.16s ease-out,
     transform 0.16s ease-out;
@@ -93,7 +105,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  width: min(340px, calc(100vw - 32px));
+  width: 100%;
   padding: 4px 4px 4px 12px;
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius);
@@ -141,36 +153,23 @@
   }
 }
 @media (max-width: 900px) {
-  /* The board is one viewport tall and the review dock stacks below it. The full graph's bottom strip is too narrow
-     for the minimap, the zoom controls and the box side by side, so the box stacks above the minimap instead
-     (inset 16 + the minimap's rendered height, published by CanvasMinimap, + gap 12). */
-  .ask-widget,
-  .case-board-panel:has(.review-dock.is-open) > .ask-widget {
-    --ask-bottom: calc(28px + var(--minimap-height, 176px));
-    right: 16px;
-  }
+  /* The board is one viewport tall and the review dock stacks below it, so the widget pins to the board's bottom
+     rather than the scrolling panel's. */
   .ask-widget {
     bottom: calc(100% - 100dvh + var(--ask-bottom));
   }
-  .case-board-panel:has(.canvas-wrap.is-story) > .ask-widget,
-  .case-board-panel:has(.canvas-wrap.is-story):has(.review-dock.is-open)
-    > .ask-widget {
-    --ask-bottom: 16px;
-    right: 64px;
-  }
 }
 @media (max-width: 540px) {
-  .ask-widget,
-  .case-board-panel:has(.review-dock.is-open) > .ask-widget {
-    /* chrome bottom 54 + the minimap's rendered height + gap 10 */
-    --ask-bottom: calc(64px + var(--minimap-height, 116px));
-    right: 12px;
+  .case-board-panel:has(> .ask-widget) {
+    /* inset 12 + Key 72 + gap 8 */
+    --ask-right: 92px;
+    --ask-left: 58px; /* story view: inset 12 + controls 38 + gap 8 */
   }
-  /* story view: chrome bottom 54, beside the zoom controls (inset 12 + controls 38 + gap 8) */
-  .case-board-panel:has(.canvas-wrap.is-story) > .ask-widget,
-  .case-board-panel:has(.canvas-wrap.is-story):has(.review-dock.is-open)
-    > .ask-widget {
-    --ask-bottom: 54px;
-    right: 58px;
+  /* The full graph's strip is too narrow beside the minimap and controls, so the box spans the board one row
+     above them (inset 12 + the taller of the minimap, published by CanvasMinimap, and the controls 146 + gap 10). */
+  .case-board-panel:has(> .ask-widget):not(:has(.canvas-wrap.is-story)) {
+    --ask-left: 12px;
+    --ask-right: 12px;
+    --ask-bottom: calc(22px + max(var(--minimap-height, 146px), 146px));
   }
 }
