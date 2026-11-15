@@ -1,14 +1,14 @@
 .review-dock {
   position: absolute;
   z-index: 12;
-  top: var(--topbar-clearance-y, 76px);
-  right: 12px;
+  top: var(--topbar-clearance-y, 68px);
+  right: 16px;
   bottom: 118px;
-  width: min(390px, calc(100% - 24px));
+  width: min(400px, calc(100% - 32px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #505a44;
+  border: 1px solid #364232;
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);

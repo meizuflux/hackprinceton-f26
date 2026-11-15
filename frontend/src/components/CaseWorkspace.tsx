@@ -79,7 +79,7 @@ export function CaseWorkspace({
       const rootRect = root.getBoundingClientRect();
       if (topbarRect.height > 0) {
         const bottomOffset = topbarRect.bottom - rootRect.top;
-        const clearance = Math.round(bottomOffset + 8);
+        const clearance = Math.round(bottomOffset + 16);
         root.style.setProperty("--topbar-clearance-y", `${clearance}px`);
         root.style.setProperty(
           "--topbar-height",

@@ -1,7 +1,7 @@
 .case-workspace {
-  --topbar-clearance-y: 76px;
-  --topbar-height: 56px;
-  --toolbar-clearance: 76px;
+  --topbar-clearance-y: 68px;
+  --topbar-height: 52px;
+  --toolbar-clearance: 80px;
   position: relative;
   height: 100dvh;
   display: grid;
@@ -11,15 +11,15 @@
 .case-toolbar {
   position: absolute;
   z-index: 30;
-  top: var(--topbar-clearance-y, 76px);
-  left: 12px;
+  top: var(--topbar-clearance-y, 68px);
+  left: 16px;
   width: 48px;
-  max-height: calc(100dvh - var(--topbar-clearance-y, 76px) - 16px);
+  max-height: calc(100dvh - var(--topbar-clearance-y, 68px) - 16px);
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border: 1px solid #424b3d;
-  border-radius: var(--radius);
+  border: 1px solid #364232;
+  border-radius: 6px;
   box-shadow: var(--shadow);
   transition:
     top 0.15s ease,
@@ -27,7 +27,7 @@
     width 0.15s ease;
 }
 .case-toolbar[data-expanded="true"] {
-  width: min(192px, calc(100vw - 24px));
+  width: min(192px, calc(100vw - 32px));
 }
 .case-toolbar-header {
   display: flex;
@@ -118,11 +118,11 @@
 }
 .case-content-panel {
   position: absolute;
-  top: var(--topbar-clearance-y, 76px);
+  top: var(--topbar-clearance-y, 68px);
   left: var(--toolbar-clearance);
-  right: 12px;
-  bottom: 12px;
-  border: 1px solid #424b3d;
+  right: 16px;
+  bottom: 16px;
+  border: 1px solid #364232;
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
@@ -135,39 +135,35 @@
     top 0.15s ease;
 }
 .case-panels > .section-inspector {
-  top: var(--topbar-clearance-y, 76px);
-  right: 12px;
-  bottom: 12px;
-  width: min(390px, calc(100% - 24px));
-  max-height: calc(100% - var(--topbar-clearance-y, 76px) - 16px);
+  top: var(--topbar-clearance-y, 68px);
+  right: 16px;
+  bottom: 16px;
+  width: min(400px, calc(100% - 32px));
+  max-height: calc(100% - var(--topbar-clearance-y, 68px) - 16px);
+  border: 1px solid #364232;
   transition:
     top 0.15s ease,
     max-height 0.15s ease;
 }
 @media (min-width: 901px) {
   .case-workspace:has(.case-toolbar[data-expanded="true"]) {
-    --toolbar-clearance: 220px;
+    --toolbar-clearance: 224px;
   }
   .case-panels:has(> .section-inspector) .case-content-panel {
-    right: 414px;
+    right: 432px;
   }
 }
 @media (max-width: 900px) {
   .case-workspace {
-    --toolbar-clearance: 64px;
+    --toolbar-clearance: 68px;
   }
   .case-toolbar {
-    left: 8px;
-  }
-  .workspace-topbar {
-    top: 8px;
-    left: 8px;
-    right: 8px;
+    left: 10px;
   }
   .case-content-panel {
     left: var(--toolbar-clearance);
-    right: 8px;
-    bottom: 8px;
+    right: 10px;
+    bottom: 10px;
   }
   .case-board-panel {
     overflow: auto;
@@ -183,7 +179,7 @@
     top: auto;
     right: auto;
     bottom: auto;
-    margin: 12px 8px 12px 64px;
+    margin: 16px 10px 16px 68px;
     width: auto;
     max-height: none;
   }
