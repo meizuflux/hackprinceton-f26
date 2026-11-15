@@ -11,7 +11,8 @@ import re
 
 from .store import PROTECTED_KEYS
 
-NEEDS_CITATION = {"finding", "contradiction", "hypothesis", "insight", "connection", "episode", "claim", "source_group"}
+NEEDS_CITATION = {"finding", "contradiction", "hypothesis", "insight", "connection", "episode", "claim", "source_group",
+                  "signal"}
 _ACCUSATORY = [
     (re.compile(r"\b(lied|is lying|liar)\b", re.I), "gave an account that conflicts with records"),
     (re.compile(r"\b(guilty|culprit|perpetrator|thief|criminal)\b", re.I), "person of interest"),

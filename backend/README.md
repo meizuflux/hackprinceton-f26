@@ -161,6 +161,7 @@ python -m compstat_reason override runs/kestrel <stable_key> dismiss --note "rea
 
 | Stage | What it does | Method | Code |
 |---|---|---|---|
+| ML signals (runs first) | Each subject's likely home, work and recurring evening places; days that break a subject's routine; automated/spam vs human messages; name forms that are probably the same person. Each is a cited lead (`ML-xx`) with its model and parameters. Signals are their own kind and are not fed to later stages, so they never change findings, explanations or gaps; they go to the board (`signals`) and to the agent (`list_ml_signals`) | **DBSCAN** (haversine) on location points, **IsolationForest** on daily movement profiles, **TF-IDF + logistic regression** weakly labelled from rules, record linkage with surname blocking + **character TF-IDF agglomerative clustering**. Fixed seeds; no answer key | `ml.py` |
 | Connections | Credential → person (from records that list both), account handles → person ("AURION\\rhalvorsen" → Richard Halvorsen), uncertain identity links from ingestion | rules, labelled observed/inferred | `analytics.py` |
 | Findings | Repeated co-location; unusual events per log; one person in two places at once; notable communication (deleted messages, saved aliases, late-night contact); unidentified heavy-contact numbers | space-time join, **IsolationForest per log** with feature explanations, strict concurrency rules, pair statistics | `analytics.py` |
 | Key events | Groups the strongest findings into episodes. The key moment is where an anomaly and a presence conflict coincide, weighted by how many independent systems recorded them | clustering in time | `analytics.py` |
@@ -187,7 +188,7 @@ On Kestrel (about 4 seconds, no LLM), the analysis finds:
 
 Set `ANTHROPIC_API_KEY` in your environment; never commit it. With `--llm`:
 - **Claim extraction:** `claude-opus-5-5` extracts claims from each statement and interview using structured output (`method="json_schema"`, since Opus 5.5 rejects forced tool use). Every claim must cite a sentence ID from that document; invented IDs are discarded.
-- **Investigator:** a deepagents agent (`deepagents` 0.7.x) gets read-only tools (`list_explanations`, `list_open_questions`, `search_records`, `get_record`) and two guarded writers:
+- **Investigator:** a deepagents agent (`deepagents` 0.7.x) gets read-only tools (`list_explanations`, `list_open_questions`, `list_ml_signals`, `search_records`, `get_record`) and two guarded writers:
   - `record_insight` rejects insights without valid record IDs, and downgrades "high" to "medium" with fewer than three independent sources.
   - `answer_question` can mark a gap partially resolved, never resolved.
 - **Verifier subagent:** `claude-sonnet-5-5` checks citations.
@@ -207,7 +208,7 @@ uvicorn compstat_api.app:app --port 8000      # CORS allows http://localhost:517
 | GET | `/status/{jobId}` | `{status: processing \| ready \| failed, progress, stage, message, caseId}` |
 | GET | `/case` | Latest ready case as `CaseData` (drop-in for the frontend's `getCase()`) |
 | GET | `/cases`, `/cases/{caseId}` | List cases; one case as `CaseData` |
-| GET | `/cases/{caseId}/{section}` | `graph`, `gaps`, `insights`, `suggestions`, `contradictions`, `explanations`, `timeline`, `audit`, `changes`, `sources`, `uncertainTimes`, `missingPeriods`, `sourceGroups` |
+| GET | `/cases/{caseId}/{section}` | `graph`, `gaps`, `insights`, `suggestions`, `contradictions`, `explanations`, `timeline`, `audit`, `changes`, `sources`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `signals` |
 | GET | `/cases/{caseId}/source?id=EV-071:seq=40162` | One cited record in full (source inspector) |
 | GET | `/cases/{caseId}/evidence/{evidenceId}` | The original evidence file (read-only copy) |
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
@@ -220,7 +221,7 @@ Errors are always `{"error": {"code", "message"}}`. Case data lives under `$COMP
 - **`gaps[]`:** `gapType`, `status`, `direction`, `missing`, `answer`, `previousStatus`, `key`.
 - **`insights[]`:** `certainty`, `confidence`, `observations[]` (each cited), `inference`, `unknowns`, `counterevidence`, `assumptions`, `limitations`, and `explanations` for verdict insights.
 - **`suggestions[]`:** `gapIds`, `artifact`, `score`.
-- **Top-level:** `contradictions`, `explanations`, `timeline`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `changes`, `overrides`.
+- **Top-level:** `contradictions`, `explanations`, `timeline`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `changes`, `overrides`, `signals` (ML leads: `type`, `method`, `score`, `certainty`, `citations`).
 - **`key`:** every item has a stable key, which is what overrides target.
 
 ## Not done yet

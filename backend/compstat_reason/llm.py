@@ -189,6 +189,13 @@ class LLMRun:
                                       for k in v["ranked"] for h in R.get("hypothesis") if h.key == k]} for v in verdicts]
             return log("list_explanations", {}, rows)
 
+        def list_ml_signals() -> str:
+            """List the traditional-ML signals computed before reasoning: place clusters (home, work, recurring evening
+            places), unusual days per person, message triage (automated vs human) and possible name variants. Each has
+            its method and record IDs. Treat them as leads to check with get_record, not as facts."""
+            from .ml import signals_for_agent
+            return log("list_ml_signals", {}, signals_for_agent(R))
+
         def search_records(query: str, start: str = "", end: str = "", person: str = "", limit: int = 20) -> str:
             """Search case records by words in their text, place or actor. Optional ISO start/end times (UTC) and a
             person name. Returns record IDs you can cite."""
@@ -267,7 +274,7 @@ class LLMRun:
             return log("answer_question", {"gap_id": gap_id}, {"ok": True})
 
         return {"list_open_questions": list_open_questions, "list_explanations": list_explanations,
-                "search_records": search_records, "get_record": get_record, "record_insight": record_insight,
+                "list_ml_signals": list_ml_signals, "search_records": search_records, "get_record": get_record, "record_insight": record_insight,
                 "answer_question": answer_question}
 
     def investigate(self, R, verdicts) -> list[Item]:
@@ -282,7 +289,8 @@ class LLMRun:
         agent = create_deep_agent(model=self.chat(), tools=list(t.values()),
                                   system_prompt=INVESTIGATOR_PROMPT.format(max_insights=max_insights),
                                   subagents=[verifier], name="compstat-investigator")
-        task = (f"Case: {case.info.get('case_name')}. Time zone {tz}. Start with list_explanations and list_open_questions.")
+        task = (f"Case: {case.info.get('case_name')}. Time zone {tz}. Start with list_explanations and list_open_questions; "
+                "list_ml_signals has clustering and classification leads you can check against the records.")
         try:
             agent.invoke({"messages": [{"role": "user", "content": task}]},
                          config={"recursion_limit": int(self.cfg.get("max_steps", 40)) * 3})

@@ -209,7 +209,8 @@ def test_api_end_to_end(sample, tmp_path, monkeypatch):
     board = client.get(f"/cases/{case_id}").json()
     assert CASEDATA_KEYS <= set(board) and board["id"] == case_id
     assert client.get("/case").json()["id"] == case_id
-    for section in ("gaps", "insights", "suggestions", "contradictions", "explanations", "timeline", "audit", "graph"):
+    for section in ("gaps", "insights", "suggestions", "contradictions", "explanations", "timeline", "audit", "graph",
+                    "signals"):
         assert client.get(f"/cases/{case_id}/{section}").status_code == 200
     sid = board["sources"][0]["id"]
     assert client.get(f"/cases/{case_id}/source", params={"id": sid}).json()["id"] == sid
