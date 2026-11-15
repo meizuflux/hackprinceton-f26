@@ -71,6 +71,10 @@ export const mockApi: CaseApi = {
     return undefined;
   },
 
+  async viewEvidence() {
+    return undefined;
+  },
+
   evidenceFileUrl() {
     return undefined;
   },

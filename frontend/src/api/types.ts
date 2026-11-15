@@ -230,7 +230,77 @@ export interface RecordPage {
   total: number;
   limit: number;
   offset: number;
+  /** Record types and counts within the file filter. */
+  types?: Record<string, number>;
   items: NormalizedEvidenceRecord[];
+}
+
+/** 0-based item range to highlight; a column span applies only to single-item ranges. */
+export interface ViewRange {
+  start: number;
+  end: number;
+  colStart?: number;
+  colEnd?: number;
+}
+
+export type EvidenceViewKind =
+  | "table"
+  | "text"
+  | "json"
+  | "document"
+  | "image"
+  | "video"
+  | "audio"
+  | "pdf"
+  | "binary";
+
+/** A stored evidence file in viewable form, with a citation resolved by the backend. */
+export interface EvidenceView {
+  evidenceId: string;
+  fileId: number;
+  path: string;
+  filename: string;
+  sha256: string;
+  bytes: number;
+  format: string;
+  evidenceType: string;
+  parseStatus: string;
+  manifestMatch: boolean | null;
+  recordCount: number;
+  kind: EvidenceViewKind;
+  mediaType: string | null;
+  notes: string[];
+  pretty?: boolean;
+  target: {
+    locator: string;
+    resolved: boolean;
+    recordIds: number[];
+    sharedRecordIds: number[];
+    ranges: ViewRange[];
+    sharedRanges: ViewRange[];
+    page: number | null;
+    whole: boolean;
+    note?: string;
+  } | null;
+  table?: {
+    columns: string[];
+    total: number;
+    offset: number;
+    limit: number;
+    items: Array<{ row: number; line: number; cells: string[] }>;
+  };
+  lines?: {
+    unit: "line" | "paragraph";
+    total: number;
+    offset: number;
+    limit: number;
+    items: Array<{
+      n: number;
+      text: string;
+      label?: string;
+      truncated?: boolean;
+    }>;
+  };
 }
 
 export interface AuditChainEntry {
@@ -266,10 +336,25 @@ export interface CaseApi {
   listFiles(caseId: string): Promise<EvidenceFile[]>;
   getRecords(
     caseId: string,
-    query?: { evidenceId?: string; limit?: number; offset?: number },
+    query?: {
+      evidenceId?: string;
+      recordType?: string;
+      limit?: number;
+      offset?: number;
+    },
   ): Promise<RecordPage>;
   /** Hash-chained audit log, re-verified; undefined without ingestion output. */
   getAuditChain(caseId: string): Promise<AuditChain | undefined>;
-  /** URL of the original evidence file, when the adapter can serve bytes. */
-  evidenceFileUrl(caseId: string, evidenceId: string): string | undefined;
+  /** A stored file with a citation locator resolved; undefined without ingestion output. */
+  viewEvidence(
+    caseId: string,
+    evidenceId: string,
+    query?: { locator?: string; offset?: number; limit?: number },
+  ): Promise<EvidenceView | undefined>;
+  /** URL of the original evidence file, when the adapter can serve bytes. `inline` renders media in place. */
+  evidenceFileUrl(
+    caseId: string,
+    evidenceId: string,
+    options?: { inline?: boolean },
+  ): string | undefined;
 }

@@ -175,6 +175,11 @@ def _text_ranges(text: str, lines: list[str], locators: list[dict], ranges: Rang
     body = stripped[0] if stripped else text
     starts = [0] + [m.end() for m in re.finditer(r"\n", body)]
     prefix = []
+    if stripped and any("doc_line" in loc for loc in locators):
+        note = ("Transcript citations use the document's own numbers ([0014] is line=14); "
+                "the gutter counts lines of the file.")
+        if note not in notes:
+            notes.append(note)
     if stripped:  # transcripts: the document's own "[0009] " numbers were stripped before offsets were taken
         for l in lines:
             m = re.match(r"^\[(\d{1,6})\]\s?", l)
