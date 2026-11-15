@@ -93,7 +93,7 @@ export function InsightsPage({
   return (
     <div className="insights-page" ref={scroller}>
       <header className="insights-hero">
-        <h1>Insights</h1>
+        <h2>Insights</h2>
         <p>
           Open questions, what the records show, and what the analysis infers,
           each with its original sources.

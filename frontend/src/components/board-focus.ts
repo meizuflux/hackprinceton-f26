@@ -142,11 +142,14 @@ export function getFocusPadding(options: {
 }): { top: PaddingPx; bottom: PaddingPx; left: PaddingPx; right: PaddingPx } {
   const isNarrow = options.isNarrow ?? false;
   const dockOpen = options.dockOpen ?? false;
-  const rightPad: PaddingPx = !isNarrow && dockOpen ? "440px" : "60px";
+  const besideDock = !isNarrow && dockOpen;
+  const rightPad: PaddingPx = besideDock ? "440px" : "60px";
 
   return {
     top: "90px",
-    bottom: "100px",
+    // Beside the open dock, the minimap and zoom controls sit at the bottom of
+    // the visible canvas; keep the focused cards above them.
+    bottom: besideDock ? "200px" : "100px",
     left: "90px",
     right: rightPad,
   };

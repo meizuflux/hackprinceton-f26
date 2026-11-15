@@ -1,4 +1,4 @@
-import { LoaderCircle, RotateCw } from "lucide-react";
+import { LoaderCircle, MessageSquare, RotateCw } from "lucide-react";
 import { useEffect, useMemo, useRef } from "react";
 import { ChatComposer } from "./ChatComposer";
 import { ChatMessageView } from "./ChatMessageView";
@@ -25,8 +25,21 @@ export function ChatThread({
   const sources = useMemo(() => new Set(sourceIds), [sourceIds]);
 
   useEffect(() => {
-    if (scrollRef.current && messages.length)
-      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    const scroller = scrollRef.current;
+    if (!scroller || !messages.length) return;
+    // Open a new answer at its question, so the reader starts at the top of
+    // the reply rather than its last line; otherwise follow the newest entry.
+    const questions = scroller.querySelectorAll<HTMLElement>(".chat-user");
+    const lastQuestion = questions[questions.length - 1];
+    const answered =
+      !pending && messages[messages.length - 1]?.role === "assistant";
+    scroller.scrollTop =
+      answered && lastQuestion
+        ? scroller.scrollTop +
+          lastQuestion.getBoundingClientRect().top -
+          scroller.getBoundingClientRect().top -
+          12
+        : scroller.scrollHeight;
   }, [messages, pending, failure]);
 
   return (
@@ -109,7 +122,8 @@ export function ChatPanel({
   return (
     <section className="chat-panel" aria-label="Ask about this case">
       <header className="chat-panel-heading">
-        <h1>Ask about this case</h1>
+        <MessageSquare size={18} aria-hidden="true" />
+        <h2>Ask about this case</h2>
         {chat.status?.available && (
           <span className="chat-connection">
             {chat.live ? "Live answers" : "Recorded answers only"}

@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { formatCaseTime, insightStrength } from "./presentation";
+import {
+  formatCaseSubtitle,
+  formatCaseTime,
+  insightStrength,
+} from "./presentation";
 import { relationshipKind, relationshipLabel } from "./relationships";
 
 describe("relationship certainty", () => {
@@ -39,6 +43,23 @@ describe("insight strength", () => {
   it("shows backend confidence as a label, never a percentage", () => {
     expect(insightStrength({ score: 0.88, confidence: "medium" })).toBe(
       "Medium confidence",
+    );
+  });
+});
+
+describe("case subtitle", () => {
+  it("formats embedded times and counts without changing the API wording", () => {
+    expect(
+      formatCaseSubtitle(
+        "57 files · 5630 records · analysed 2026-11-15T02:25:08Z",
+        "America/Los_Angeles",
+      ),
+    ).toBe("57 files · 5,630 records · analysed Sat 14 Nov, 18:25");
+    expect(
+      formatCaseSubtitle("Fictional case file · Warehouse 4 · Nov 12, 2026"),
+    ).toBe("Fictional case file · Warehouse 4 · Nov 12, 2026");
+    expect(formatCaseSubtitle("Case SBRPD-26-104417 · 1200 files")).toBe(
+      "Case SBRPD-26-104417 · 1,200 files",
     );
   });
 });

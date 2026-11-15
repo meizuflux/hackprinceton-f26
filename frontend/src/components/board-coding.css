@@ -206,8 +206,8 @@
   bottom: var(--chrome-bottom, var(--board-inset));
   left: var(--board-inset);
   max-width: calc(
-    100% - var(--board-inset) * 2 - var(--minimap-width) - 36px -
-      var(--zoom-gap) * 2
+    100% - var(--board-inset) * 2 - var(--dock-offset, 0px) -
+      var(--minimap-width) - 36px - var(--zoom-gap) * 2
   );
   border: 1px solid #b4ab9a;
   border-radius: var(--radius);

@@ -27,7 +27,7 @@
 .insights-page button:focus-visible,
 .insights-page a:focus-visible,
 .insights-page summary:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -35,12 +35,11 @@
 .insights-hero {
   padding-top: 26px;
 }
-.insights-hero h1 {
-  font:
-    500 24px/1.2 "Newsreader",
-    Georgia,
-    serif;
-  letter-spacing: -0.02em;
+.insights-hero h2 {
+  font-size: 22px;
+  font-weight: 550;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
 }
 .insights-hero p {
   max-width: 62ch;
@@ -125,7 +124,7 @@
   border-radius: 4px;
 }
 .insights-search:focus-within {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 .insights-search input {

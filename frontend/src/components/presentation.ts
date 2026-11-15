@@ -60,3 +60,20 @@ export function insightStrength(insight: {
 export function insightKind(insight: { certainty?: string }) {
   return insight.certainty === "observed" ? "Observed basis" : "Inference";
 }
+
+/**
+ * Presentation-only formatting for the case subtitle the API supplies: embedded
+ * ISO timestamps read as case-local times and long counts gain separators. The
+ * wording and every value come from the API unchanged.
+ */
+export function formatCaseSubtitle(subtitle: string, timeZone?: string) {
+  return subtitle
+    .replace(/\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:\d{2})/g, (iso) =>
+      formatCaseTime(iso, timeZone),
+    )
+    .replace(
+      /(^|\s)(\d{4,})(?= [a-z])/g,
+      (_, lead: string, count: string) =>
+        `${lead}${Number(count).toLocaleString("en-US")}`,
+    );
+}
