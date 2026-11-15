@@ -1,6 +1,6 @@
 # Case chat contract
 
-The backend (`backend/mapletrace_api/chat.py`, `backend/mapletrace_reason/chat.py`) answers questions about the latest analysis of an ingested case with `claude-sonnet-5-5` and read-only tools. The frontend never supplies answers, fixtures or fallbacks. Two views share one adapter (`src/api/chat.ts`) and one hook (`src/components/useCaseChat.ts`):
+The backend (`backend/mapletrace_api/chat.py`, `backend/mapletrace_reason/chat.py`) answers questions about the latest analysis of an ingested case with the chat model (`claude-sonnet-5-5` by default; `MAPLETRACE_CHAT_MODEL` may differ from the import model, see `backend/README.md`, "Choosing models") and read-only tools. The frontend never supplies answers, fixtures or fallbacks. Two views share one adapter (`src/api/chat.ts`) and one hook (`src/components/useCaseChat.ts`):
 
 - **`/cases/:caseId/chat`:** the chat page (`ChatPanel`), with cited excerpts under each answer.
 - **The mind map:** a small "Ask a question" box (`AskWidget`, mounted in `Board` in `src/App.tsx`) with an input and suggested-question chips. It renders no answers: submitting queues the question (`chat-handoff.ts`) and navigates to `/cases/:caseId/chat`, where `ChatPanel` asks it. It sits above the minimap and zoom controls, moves left of the review dock when the dock is open, and never covers the minimap, zoom controls or legend.
@@ -23,7 +23,7 @@ The adapter calls same-origin `/api` (the Vite proxy strips it), or `VITE_CHAT_A
 ```
 
 - The frontend requires an exact `case_id` match and `authoritative: true`. An unknown or unfinished case returns `{"available": false, "case_id", "reason"}`.
-- `live` is true when the server has `ANTHROPIC_API_KEY`. Without it only recorded answers replay, and the composer is disabled.
+- `live` is true when the server has the chat model provider's key (`ANTHROPIC_API_KEY` by default). `modelId` is the chat model as `provider:model`. Without it only recorded answers replay, and the composer is disabled.
 - `suggestions` (3 to 5) are derived deterministically from the analysis: the undecided key event, the strongest contradiction, and the highest-ranked open gaps. `recorded` means the answer replays from the cache without a model call; the server checks this by replaying it.
 
 ## `POST /cases/{caseId}/chat`

@@ -29,7 +29,7 @@ see below), `phase`, `type`.
 
 | type | phase | extra fields |
 |---|---|---|
-| `run_started` | ingest | `mode`: `live` or `replay`; `llm`: bool; `model`: string or null; `archive`: {`filename`, `sha256`, `bytes`} |
+| `run_started` | ingest | `mode`: `live` or `replay`; `llm`: bool; `model`: string or null (the investigator's model as recorded in cache keys); `models`: {`investigator`, `vision`} as `provider:model` (LLM runs only); `archive`: {`filename`, `sha256`, `bytes`} |
 | `phase_started` | any | `label` (human text, e.g. "Hashing and parsing evidence") |
 | `phase_finished` | any | `label`, `durationMs` |
 | `file_hashed` | ingest | `evidenceId`, `filename`, `sha256`, `bytes`, `manifestMatch` (bool or null) |

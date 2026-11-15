@@ -39,7 +39,8 @@ Rules and durable decisions for agents working in this repository. How-to materi
 
 ## LLM layer and cache
 
-- The LLM layer (`--llm`, deepagents + Anthropic) only adds claims and agent insights, and both must cite resolvable record IDs. The default model is `claude-sonnet-5-5`.
+- The LLM layer (`--llm`, deepagents) only adds claims and agent insights, and both must cite resolvable record IDs. Models are resolved per role (investigator, chat, vision, labels) in `backend/mapletrace_reason/models.py` from `MAPLETRACE_<ROLE>_MODEL` as `provider:model`; never hard-code a model or provider elsewhere. Defaults: `claude-sonnet-5-5` for the investigator, with chat and vision following it, and `claude-haiku-5-5` for labels. Chat may use a different model from the one that analysed the case. Live calls need the role's provider key; replay needs none.
+- Cache keys contain the model, so a different model never replays another's answers. Anthropic models keep their plain name in keys, audit entries and `agent:<model>` labels (`ModelSpec.label`), and default construction must stay byte-identical so the committed caches hit (`backend/tests/test_models.py`).
 - Never put upload-form values (such as the case name) into model prompts: replay keys must match across uploads of the same archive.
 - Recorded responses are committed on purpose: `backend/llm_cache/<archive sha256>.jsonl` (analysis), `backend/llm_cache/chat-<archive sha256>.jsonl` (chat), and `backend/demo/kestrel.tar.gz` (the finished Kestrel case served by `POST /demo`). After changing anything the model sees, rebuild with `make backend-llm-record` (billed), `make backend-demo-snapshot` (free) and `make backend-chat-record` (billed).
 - Tool names, docstrings (whitespace included) and outputs in `llm.read_tools` are part of the cache keys of both the investigator and chat caches. Editing them invalidates both. So do installed packages that change deepagents' built-in tool schemas: never add PyAV (`av`) to the backend, because it rewrites the `read_file` description.
@@ -131,7 +132,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 - The backend image is built from the repo root and mirrors the repo layout under `/app`. The root `.dockerignore` is an allowlist: add any new runtime file to it.
 - Data lives in the `mapletrace-data` volume at `/data`; the image runs as a non-root user.
 - The frontend image is built with `VITE_API_BASE_URL=/api` (`mock` is a build arg). Caddy serves the frontend and strips `/api` the way Vite does; its `max_size` must follow `MAPLETRACE_MAX_UPLOAD_MB`.
-- Only the frontend is published, on `127.0.0.1:5173`. `ANTHROPIC_API_KEY` is optional.
+- Only the frontend is published, on `127.0.0.1:5173`. `ANTHROPIC_API_KEY` and `GOOGLE_API_KEY` are optional.
 
 ## Specification change approval
 

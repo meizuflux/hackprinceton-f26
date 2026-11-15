@@ -45,7 +45,7 @@ Open [localhost:5173](http://localhost:5173). `compose.yaml` runs two services:
 
 The demo button and the Kestrel upload work without a key. Case data lives in the `mapletrace-data` volume at `/data`; it survives `make docker-down` and is removed by `docker compose down -v`.
 
-Compose reads `ANTHROPIC_API_KEY` (optional) and `MAPLETRACE_LLM_MODEL` (default `claude-sonnet-5-5`) from your shell or a git-ignored root `.env`; never commit keys. `MAPLETRACE_DATA`, `MAPLETRACE_MAX_UPLOAD_MB=100` and `MAPLETRACE_CORS` are set in `compose.yaml`. If you raise the upload limit, also raise `max_size` in `frontend/Caddyfile`.
+Compose reads `ANTHROPIC_API_KEY` and `GOOGLE_API_KEY` (optional) and the per-role model settings (`MAPLETRACE_INVESTIGATOR_MODEL`, default `anthropic:claude-sonnet-5-5`, plus `MAPLETRACE_CHAT_MODEL`, `MAPLETRACE_VISION_MODEL` and `MAPLETRACE_LABELS_MODEL`; see `backend/README.md`, "Choosing models") from your shell or a git-ignored root `.env`; never commit keys. `MAPLETRACE_DATA`, `MAPLETRACE_MAX_UPLOAD_MB=100` and `MAPLETRACE_CORS` are set in `compose.yaml`. If you raise the upload limit, also raise `max_size` in `frontend/Caddyfile`.
 
 For a mock-only frontend without a backend: `docker build --build-arg VITE_API_BASE_URL=mock -t mapletrace-mock frontend`, then `docker run --rm -p 127.0.0.1:5173:80 mapletrace-mock`.
 

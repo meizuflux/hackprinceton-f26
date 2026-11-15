@@ -26,7 +26,9 @@ ROOT = Path(__file__).resolve().parent.parent
 API = "https://api.vultr.com/v2"
 REMOTE = "/opt/mapletrace"
 DEFAULT_DOMAIN = "mapletrace.work"
-ENV_KEYS = {"VULTR_API_KEY", "ANTHROPIC_API_KEY", "MAPLETRACE_LLM_MODEL", "MAPLETRACE_CHAT_MODEL", "MAPLETRACE_CORS"}
+BACKEND_ENV_KEYS = ("ANTHROPIC_API_KEY", "GOOGLE_API_KEY", "MAPLETRACE_LLM_MODEL", "MAPLETRACE_INVESTIGATOR_MODEL",
+                    "MAPLETRACE_CHAT_MODEL", "MAPLETRACE_VISION_MODEL", "MAPLETRACE_LABELS_MODEL", "MAPLETRACE_CORS")
+ENV_KEYS = {"VULTR_API_KEY", *BACKEND_ENV_KEYS}
 DEFAULT_ENV_FILE = ROOT / "scripts" / ".env"
 STATE_DIR = Path.home() / ".local" / "state" / "mapletrace-vultr"
 
@@ -123,7 +125,7 @@ def load_env_file(path, *, required=False):
 
 def env_content(domain):
     lines = [f"MAPLETRACE_DOMAIN='{domain}'"]
-    for name in ("ANTHROPIC_API_KEY", "MAPLETRACE_LLM_MODEL", "MAPLETRACE_CHAT_MODEL", "MAPLETRACE_CORS"):
+    for name in BACKEND_ENV_KEYS:
         value = os.environ.get(name, "")
         if "\n" in value or "\r" in value:
             raise ValueError(f"{name} must be a single line")

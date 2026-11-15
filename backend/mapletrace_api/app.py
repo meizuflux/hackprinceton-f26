@@ -54,7 +54,7 @@ from mapletrace_ingest.verify import verify_run
 from mapletrace_ingest.db import GENESIS_HASH, verify_audit_chain
 from mapletrace_ingest.pipeline import ingest_zip
 from mapletrace_ingest.trace import TraceWriter
-from mapletrace_reason import history
+from mapletrace_reason import history, models
 from mapletrace_reason.llm_cache import cache_path
 from mapletrace_reason.pipeline import analyze
 from mapletrace_reason.store import PROTECTED_KEYS, citation_id, unique_labels
@@ -66,7 +66,10 @@ MAX_UPLOAD = int(os.environ.get("MAPLETRACE_MAX_UPLOAD_MB", "100")) * 1024 * 102
 SECTIONS = {"graph", "gaps", "insights", "suggestions", "contradictions", "explanations", "timeline", "audit", "changes",
             "sources", "nodes", "edges", "uncertainTimes", "missingPeriods", "sourceGroups", "signals"}
 _lock = threading.Lock()
-LLM_MODEL = os.environ.get("MAPLETRACE_LLM_MODEL", "claude-sonnet-5-5")
+# Import-time analysis (investigator and verifier) and image descriptions; see mapletrace_reason/models.py.
+INVESTIGATOR = models.resolve("investigator")
+VISION = models.resolve("vision")
+LLM_MODEL = INVESTIGATOR.label  # "claude-sonnet-5-5" by default: the string in cache keys, audit and agent labels
 REPO = Path(__file__).resolve().parents[2]
 DEMO_SNAPSHOT = Path(__file__).resolve().parents[1] / "demo" / "kestrel.tar.gz"
 DEMO_ARCHIVE = REPO / "cases" / "kestrel" / "kestrel_case_upload.zip"
@@ -173,25 +176,28 @@ def _combined_zip(case_dir: Path, meta: dict, version: int) -> Path:
     return out
 
 
+def _models_cfg() -> dict:
+    return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "vision_model": VISION.label}
+
+
 def _llm_config(meta: dict, case_dir: Optional[Path] = None) -> Optional[dict]:
     """LLM settings for a case. An upload whose archive has recorded responses (`backend/llm_cache/`) replays them for
     free, without calling the API; an explicit LLM request records responses it does not have yet (billed).
     `analysis_mode: live` makes real calls and neither reads nor writes the committed cache: its responses go to a
     case-local cache (`<case>/llm_cache/`), which only a re-analysis of that same case replays."""
     if meta.get("analysis_mode") == "live" and case_dir is not None:
-        return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": "record",
-                "cache_dir": str(case_dir / "llm_cache")}
+        return {**_models_cfg(), "cache_mode": "record", "cache_dir": str(case_dir / "llm_cache")}
     sha = meta["uploads"][0]["sha256"] if len(meta.get("uploads", [])) == 1 else None
     cached = bool(sha) and cache_path(sha).exists()
     if meta.get("vision_record") and cached:  # make backend-vision-record: replay the analysis, record only images
-        return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": "replay", "vision_mode": "record"}
+        return {**_models_cfg(), "cache_mode": "replay", "vision_mode": "record"}
     if meta.get("llm"):
         mode = "record"
     elif cached:
         mode = "replay"
     else:
         return None
-    return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": mode}
+    return {**_models_cfg(), "cache_mode": mode}
 
 
 def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str], reingest: bool = True) -> None:
@@ -203,7 +209,8 @@ def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str
         llm = _llm_config(meta, case_dir)
         trace = TraceWriter(ingest_dir / "trace.jsonl",
                             {"mode": "live" if meta.get("analysis_mode") == "live" else "replay", "llm": bool(llm),
-                             "model": LLM_MODEL if llm else None})
+                             "model": LLM_MODEL if llm else None,
+                             **({"models": {"investigator": INVESTIGATOR.id, "vision": VISION.id}} if llm else {})})
         if reingest:
             _job(job_id, status="processing", progress=5, stage="ingest", message="Hashing and reading evidence")
             src = _combined_zip(case_dir, meta, version)
@@ -271,8 +278,9 @@ def _scalar(v) -> bool:
 # --------------------------------------------------------------------------- routes
 @app.get("/health")
 def health():
-    # llmLive: a server API key is configured, so an upload may ask for analysis_mode=live (billed)
-    return {"ok": True, "time": _now(), "llmLive": bool(os.environ.get("ANTHROPIC_API_KEY"))}
+    # llmLive: the investigator's provider key is configured, so an upload may ask for analysis_mode=live (billed).
+    # models: the resolved provider:model per role (never keys), and whether each could call its provider live.
+    return {"ok": True, "time": _now(), "llmLive": INVESTIGATOR.live(), "models": models.summary()}
 
 
 @app.post("/upload")
@@ -285,9 +293,9 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
     analysis_mode = (analysis_mode or "").strip().lower() or "replay"
     if analysis_mode not in ("replay", "live"):
         raise ApiError(400, "bad_analysis_mode", "analysis_mode must be 'replay' or 'live'")
-    if analysis_mode == "live" and not os.environ.get("ANTHROPIC_API_KEY"):
-        raise ApiError(400, "needs_api_key", "live analysis makes billed model calls and needs ANTHROPIC_API_KEY on the "
-                                             "server; use analysis_mode=replay")
+    if analysis_mode == "live" and not INVESTIGATOR.live():
+        raise ApiError(400, "needs_api_key", f"live analysis makes billed model calls with {INVESTIGATOR.id} and needs "
+                                             f"{INVESTIGATOR.key_hint()} on the server; use analysis_mode=replay")
     if timezone_name:
         from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
         try:

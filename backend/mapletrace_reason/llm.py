@@ -1,4 +1,4 @@
-"""Optional LLM layer (LangChain + deepagents, Anthropic Claude).
+"""Optional LLM layer (LangChain + deepagents; Anthropic Claude by default, any provider via `models.py`).
 
 1. Claim extraction: a structured-output call per statement/interview turns free text into the same claim
    structure the rule-based extractor produces, citing the exact sentence (by record ID).
@@ -14,7 +14,6 @@ from __future__ import annotations
 
 import hashlib
 import json
-import os
 import re
 import threading
 from datetime import datetime
@@ -25,10 +24,11 @@ from pydantic import BaseModel, Field
 
 from .analytics import Context, case_tz
 from .claims import _match_person, _night_window
+from . import models
 from .model import Item, stable_key
 from .store import iso, parse_ts
 
-DEFAULT_MODEL = "claude-sonnet-5-5"
+DEFAULT_MODEL = models.parse(models.DEFAULT_INVESTIGATOR).label  # "claude-sonnet-5-5"
 
 INVESTIGATOR_PROMPT = """You are an evidence analyst helping an investigator review a case. You work only from the
 tools provided; never invent facts, names, times or records.
@@ -137,12 +137,10 @@ def read_tools(case, ctx: Context, R, verdicts, log) -> dict:
 
 
 def make_chat_model(model: str, cache=None, reasoning_effort: str = "high"):
-    """ChatAnthropic as the LLM layer configures it. Every argument is part of the recorded request key, so keep them
-    stable. Without ANTHROPIC_API_KEY only cached responses work: a replay cache raises on a miss before sending."""
-    from langchain_anthropic import ChatAnthropic
-    key = {} if os.environ.get("ANTHROPIC_API_KEY") else {"api_key": "replay-only"}
-    return ChatAnthropic(model=model, max_tokens=16000, reasoning_effort=reasoning_effort, max_retries=3, timeout=600,
-                         cache=cache, **key)
+    """The chat model as the LLM layer configures it (`models.make_model`; ChatAnthropic for the default). Every
+    argument is part of the recorded request key, so keep them stable. Without the provider's API key only cached
+    responses work: a replay cache raises on a miss before sending."""
+    return models.make_model(model, max_tokens=16000, reasoning_effort=reasoning_effort, timeout=600, cache=cache)
 
 
 class LLMRun:
@@ -164,8 +162,10 @@ class LLMRun:
             archive = case.info.get("source_archive_sha256", "unknown")
             self.cache = ReplayCache(cache_path(archive, Path(cfg.get("cache_dir") or CACHE_DIR)), mode)
             self.cache.listener = self._on_model_call
-        if self._chat is None and mode != "replay" and not os.environ.get("ANTHROPIC_API_KEY"):
-            raise RuntimeError("LLM mode needs the ANTHROPIC_API_KEY environment variable (or run without --llm)")
+        spec = models.parse(cfg.get("model") or DEFAULT_MODEL)
+        if self._chat is None and mode != "replay" and not spec.has_key():
+            raise RuntimeError(f"LLM mode with {spec.id} needs the {spec.key_hint()} environment variable "
+                               "(or run without --llm)")
 
     def chat(self, verifier: bool = False):
         if verifier and self._verifier_chat is not None:

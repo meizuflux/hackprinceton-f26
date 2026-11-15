@@ -180,15 +180,31 @@ On Kestrel (about 4 seconds, no LLM), the analysis finds:
 
 ## LLM layer (`--llm`)
 
-Set `ANTHROPIC_API_KEY` in your environment; never commit it. With `--llm`:
-- **Claim extraction:** `claude-sonnet-5-5` (set `MAPLETRACE_LLM_MODEL` or `--model` to change) extracts claims from each statement and interview using structured output (`method="json_schema"`, since Sonnet 5.5 rejects forced tool use). Every claim must cite a sentence ID from that document; invented IDs are discarded.
+Set the API key of the configured provider (`ANTHROPIC_API_KEY` for the default) in your environment; never commit it. With `--llm`:
+- **Claim extraction:** `claude-sonnet-5-5` by default (see [Choosing models](#choosing-models); `--model` on the CLI) extracts claims from each statement and interview using structured output (`method="json_schema"`, since Sonnet 5.5 rejects forced tool use). Every claim must cite a sentence ID from that document; invented IDs are discarded.
 - **Investigator:** a deepagents agent (`deepagents` 0.7.x) gets read-only tools (`list_explanations`, `list_open_questions`, `list_ml_signals`, `search_records`, `get_record`) and two guarded writers:
   - `record_insight` rejects insights without valid record IDs, and downgrades "high" to "medium" with fewer than three independent sources.
   - `answer_question` can mark a gap partially resolved, never resolved.
-- **Verifier subagent:** `claude-sonnet-5-5` checks citations.
+- **Verifier subagent:** the investigator's model (`--verifier-model` on the CLI) checks citations.
 - **Audit:** every model call and tool call is written to the audit log.
 - **Sandboxing:** the agent runs in deepagents' in-memory sandbox, with no file system or shell access.
 - **Labelling:** agent output is marked `generated_by: agent:<model>` and `inferred`.
+
+### Choosing models
+
+Each LLM role reads its own setting, a provider-qualified model string that LangChain's `init_chat_model` dispatches (`mapletrace_reason/models.py`):
+
+| Role | Setting | Default | Used for |
+|---|---|---|---|
+| investigator | `MAPLETRACE_INVESTIGATOR_MODEL` (legacy `MAPLETRACE_LLM_MODEL`) | `anthropic:claude-sonnet-5-5` | Import-time claim extraction, the investigator agent and its verifier |
+| chat | `MAPLETRACE_CHAT_MODEL` | the investigator's model | Case chat |
+| vision | `MAPLETRACE_VISION_MODEL` | the investigator's model | Photo and video descriptions |
+| labels | `MAPLETRACE_LABELS_MODEL` | `anthropic:claude-haiku-5-5` | Readable label annotation |
+
+- **Switching provider** is only a setting, for example `MAPLETRACE_INVESTIGATOR_MODEL=google_genai:gemini-3-pro` with `GOOGLE_API_KEY` (or `GEMINI_API_KEY`). `langchain-anthropic` and `langchain-google-genai` are installed by default (deepagents already depends on the Google package, so listing it changes no installed package or tool schema). Another provider needs its LangChain package, installed ad hoc (`uv pip install langchain-openai`) rather than added to the lock. Bare names keep working: `gemini-...` means Google, `gpt-...` OpenAI, anything else Anthropic.
+- **Chat may differ from import:** the chat model is independent of the model that analysed the case, because chat reads the finished analysis, not the model's history.
+- **Live versus replay** follows the role's provider: `/health` `llmLive` and `analysis_mode=live` need the investigator's key, chat records only with the chat model's key, and `needs_api_key` errors name the variable to set. `/health` `models` lists each role's `provider:model` and whether it could call its provider (never a key); chat status adds `modelId`, and LLM runs record `models` in the trace's `run_started`.
+- **Caches:** request keys contain the model class and name, so answers recorded with one model never replay for another: switching a role's model makes its cache miss (record again, billed) while the other roles still replay. Anthropic models are recorded under their plain name, so the committed caches, made with the defaults, still hit. Only Anthropic and OpenAI models receive the `reasoning_effort` setting; other providers use their own default.
 
 ### Cached LLM results
 
@@ -205,9 +221,9 @@ Model calls cost money, so responses are recorded per uploaded archive in `backe
 ### Case chat
 
 `mapletrace_reason/chat.py` answers an investigator's questions about the latest analysis of a case; `mapletrace_api/chat.py` serves it. [`frontend/CHAT.md`](../frontend/CHAT.md) is the HTTP contract and describes citations, threads, suggested questions and errors; this section covers the implementation.
-- **Model and tools:** `claude-sonnet-5-5` (`MAPLETRACE_CHAT_MODEL`, falling back to `MAPLETRACE_LLM_MODEL`; medium reasoning effort) with the investigator's read-only tools (`llm.read_tools`), plus `list_items` and `get_item` over the finished analysis. It ends with `submit_answer`; at most 10 model calls per answer.
+- **Model and tools:** `claude-sonnet-5-5` by default (`MAPLETRACE_CHAT_MODEL`, falling back to the investigator's model, see [Choosing models](#choosing-models); medium reasoning effort) with the investigator's read-only tools (`llm.read_tools`), plus `list_items` and `get_item` over the finished analysis. It ends with `submit_answer`; at most 10 model calls per answer.
 - **Citations:** come from `case.cite()`; `source_id` is set only when the citation is in the board's `sources`.
-- **Cost control:** responses are cached in `backend/llm_cache/chat-<archive sha256>.jsonl`, keyed by the full request, so the same question in the same thread state replays for free. With `ANTHROPIC_API_KEY` the cache records; without it only recorded answers are served, and a miss returns `503 needs_api_key` before anything is sent. Prompts hold no case name, time or random ID.
+- **Cost control:** responses are cached in `backend/llm_cache/chat-<archive sha256>.jsonl`, keyed by the full request, so the same question in the same thread state replays for free. With the chat model's API key the cache records; without it only recorded answers are served, and a miss returns `503 needs_api_key` before anything is sent. Prompts hold no case name, time or random ID.
 - **Recording:** `make backend-chat-record` installs the demo snapshot in a temporary folder and records the answers to its suggested questions (billed). `python -m mapletrace_api.chat suggestions` lists them and whether each replays, without calling the API.
 - **Audit:** chat reads the finished analysis and is not written to the case's audit log.
 
@@ -232,13 +248,13 @@ uvicorn mapletrace_api.app:app --port 8000      # CORS allows localhost:5173 and
 | GET | `/cases/{caseId}/audit-chain` | `{verified, head, checks: [{source, ok, message}], entries: [{seq, time, stage, action, fileId, detail, hash, prevHash, source: ingest \| analysis}]}`. `verified` re-runs `mapletrace_ingest verify` (database hash, chain, evidence hashes), checks the analysis chain continues from the ingestion head, and checks the board/analysis outputs against their logged hashes |
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
 | POST | `/demo` | Install the committed Kestrel snapshot once and return `{caseId}` (`404 no_demo_snapshot` if it is missing) |
-| GET | `/health` | Liveness check (used by Docker); `llmLive` is true when a server API key allows `analysis_mode=live` |
+| GET | `/health` | Liveness check (used by Docker); `llmLive` is true when the investigator provider's key allows `analysis_mode=live`; `models: {role: {model: "provider:model", live}}` (no keys) |
 | GET | `/cases/{caseId}/trace?after=N` | Run trace events (ingestion and analysis) with a replay clock, readable while the job runs: `{status, timing, events, next}`. See [`TRACE.md`](TRACE.md) |
 | GET | `/chat/status?case_id=` | Case chat availability, mode (`live` with a key, `replay` without) and suggested questions with a `recorded` flag. See [`frontend/CHAT.md`](../frontend/CHAT.md) |
 | POST | `/cases/{caseId}/chat` (`{message, thread_id?}`) | Cited answer `{thread_id, message: {role, content, evidence_status, citations, summary, observations, inference, unknowns}, suggested, replayed, model_calls}`. `503 needs_api_key` when the answer is not recorded and no key is set. See [`frontend/CHAT.md`](../frontend/CHAT.md) |
 | GET / POST | `/cases/{caseId}/overrides` | Read or record investigator corrections (`dismiss`, `confirm`, `set_status`, `set_label`, `note`, `reject_link`) |
 
-Errors are always `{"error": {"code", "message"}}`. Uploads are capped at `MAPLETRACE_MAX_UPLOAD_MB` (default 100). The LLM model is `MAPLETRACE_LLM_MODEL` (default `claude-sonnet-5-5`). Case data lives under `$MAPLETRACE_DATA/cases/<caseId>/` (default `backend/data/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
+Errors are always `{"error": {"code", "message"}}`. Uploads are capped at `MAPLETRACE_MAX_UPLOAD_MB` (default 100). LLM models are set per role; see [Choosing models](#choosing-models). Case data lives under `$MAPLETRACE_DATA/cases/<caseId>/` (default `backend/data/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
 
 ### Board fields
 
