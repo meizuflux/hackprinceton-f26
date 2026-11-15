@@ -6,15 +6,15 @@
     "colorMeta": {
       "primary": {
         "role": "primary",
-        "displayName": "Soft Sage",
-        "canonical": "#d3dfaf",
-        "tonalRamp": ["#20251c", "#353d2e", "#4c5740", "#667451", "#829264", "#9eae7e", "#b8c99a", "#d3dfaf"]
+        "displayName": "Glassy Sky Blue",
+        "canonical": "#78cbff",
+        "tonalRamp": ["#04203a", "#0e3a63", "#1d5f9a", "#3d92e3", "#58b2ff", "#78cbff", "#9cdcff", "#b4e4ff"]
       },
       "workspace": {
         "role": "neutral",
-        "displayName": "Moss Workspace",
-        "canonical": "#171a19",
-        "tonalRamp": ["#101211", "#171a19", "#202523", "#2b302d", "#3a403d", "#505853", "#747b76", "#a5aaa5"]
+        "displayName": "Ink Workspace",
+        "canonical": "#10151c",
+        "tonalRamp": ["#0c1117", "#10151c", "#18202a", "#202a36", "#2c3946", "#33414f", "#5b6b7c", "#a3b2c2"]
       },
       "question": {
         "role": "secondary",
@@ -31,14 +31,14 @@
       "text": {
         "role": "neutral",
         "displayName": "Warm Text",
-        "canonical": "#e8e8df",
-        "tonalRamp": ["#292925", "#45453f", "#62625b", "#808078", "#9d9d95", "#b9b9b0", "#d1d1c9", "#e8e8df"]
+        "canonical": "#e6ecf2",
+        "tonalRamp": ["#232a31", "#3c454f", "#56616c", "#727e8a", "#8f9ba7", "#adb8c3", "#cad3dc", "#e6ecf2"]
       },
       "text-muted": {
         "role": "neutral",
-        "displayName": "Muted Sage Gray",
-        "canonical": "#b0b8a6",
-        "tonalRamp": ["#20221e", "#373b32", "#50564a", "#69715f", "#838b78", "#99a28d", "#a5ae9a", "#b0b8a6"]
+        "displayName": "Muted Slate",
+        "canonical": "#a3b2c2",
+        "tonalRamp": ["#1e232a", "#333c46", "#4a5664", "#627182", "#7b8b9c", "#909fb0", "#9aa9b9", "#a3b2c2"]
       },
       "thread": {
         "role": "accent",
@@ -107,7 +107,7 @@
       "kind": "input",
       "description": "Visible search field for evidence pins.",
       "html": "<label class=\"ds-search\"><span aria-hidden=\"true\">⌕</span><input placeholder=\"Find a pin…\" aria-label=\"Find evidence\"></label>",
-      "css": ".ds-search { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 8px; border: 1px solid #3b4233; border-radius: 4px; background: #191e18; color: #858e7e; } .ds-search input { width: 110px; border: 0; outline: 0; background: transparent; color: #d5ddc9; font: 400 12px \"DM Sans\", sans-serif; } .ds-search:focus-within { outline: 2px solid var(--green); outline-offset: 4px; }"
+      "css": ".ds-search { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 8px; border: 1px solid #33414f; border-radius: 4px; background: #191e18; color: #858e7e; } .ds-search input { width: 110px; border: 0; outline: 0; background: transparent; color: #d5ddc9; font: 400 12px \"DM Sans\", sans-serif; } .ds-search:focus-within { outline: 2px solid var(--green); outline-offset: 4px; }"
     },
     {
       "name": "Evidence Pin",
@@ -121,12 +121,12 @@
       "kind": "custom",
       "description": "Expandable original source excerpt in the inspector.",
       "html": "<details class=\"ds-source-item\" open><summary><span><strong>messages/sample.txt</strong><small>Message excerpt</small></span><span aria-hidden=\"true\">⌄</span></summary><blockquote>Fictional excerpt shown for the demo.</blockquote></details>",
-      "css": ".ds-source-item { border: 1px solid #3b4233; border-radius: 4px; background: #20251f; color: #e8e8df; } .ds-source-item summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; cursor: pointer; list-style: none; } .ds-source-item summary strong, .ds-source-item summary small { display: block; } .ds-source-item summary strong { font: 500 13px \"DM Sans\", sans-serif; } .ds-source-item summary small { margin-top: 4px; color: #b0b8a6; font: 400 11px \"DM Sans\", sans-serif; } .ds-source-item blockquote { margin: 0; padding: 12px; border-top: 1px solid #303530; color: #b0b8a6; font: 400 13px/1.5 \"Newsreader\", Georgia, serif; } .ds-source-item summary:focus-visible { outline: 2px solid #d3dfaf; outline-offset: 2px; }"
+      "css": ".ds-source-item { border: 1px solid #33414f; border-radius: 4px; background: #151d26; color: #e6ecf2; } .ds-source-item summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; cursor: pointer; list-style: none; } .ds-source-item summary strong, .ds-source-item summary small { display: block; } .ds-source-item summary strong { font: 500 13px \"DM Sans\", sans-serif; } .ds-source-item summary small { margin-top: 4px; color: #a3b2c2; font: 400 11px \"DM Sans\", sans-serif; } .ds-source-item blockquote { margin: 0; padding: 12px; border-top: 1px solid #2c3946; color: #a3b2c2; font: 400 13px/1.5 \"Newsreader\", Georgia, serif; } .ds-source-item summary:focus-visible { outline: 2px solid #8ed5ff; outline-offset: 2px; }"
     }
   ],
   "narrative": {
     "northStar": "The Evidence Pinboard",
-    "overview": "MapleTrace pairs a dark moss workspace with a faint warm paper canvas and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.\n\nTypography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.",
+    "overview": "MapleTrace pairs a cool ink workspace with a faint warm paper canvas and paper evidence cards. Glassy blue, taken from the logo, marks the main action, selection and focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.\n\nTypography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.",
     "keyCharacteristics": [
       "Dark moss workspace with a faint warm paper evidence surface.",
       "Paper-toned pinned cards with restrained accent colors.",
