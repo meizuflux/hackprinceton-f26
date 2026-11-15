@@ -147,11 +147,13 @@ function AssistantMessage({
   sourceIds,
   onOpenSource,
   compact,
+  onPlaying,
 }: {
   entry: ChatEntry;
   sourceIds: ReadonlySet<string>;
   onOpenSource: (sourceId: string) => void;
   compact: boolean;
+  onPlaying?: (playing: boolean) => void;
 }) {
   const citations = entry.citations ?? [];
   const chip = (index: number) => {
@@ -179,6 +181,12 @@ function AssistantMessage({
     : [entry.content];
   const playback = useAnswerPlayback(entry, segments);
   const done = playback.phase === "done";
+  // Lets the thread hold new questions until this answer has finished playing.
+  useEffect(() => {
+    onPlaying?.(!done);
+    return () => onPlaying?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [done]);
   const steps = entry.steps ?? [];
   const words = done
     ? Infinity
@@ -275,15 +283,18 @@ function AssistantMessage({
         <div className="chat-cites">{citations.map((_, i) => chip(i))}</div>
       )}
       {done && !compact && citations.length > 0 && (
-        <section className="chat-section chat-excerpts">
-          <h4>Cited excerpts</h4>
+        // Collapsed: each observation already carries its citation chips; the full excerpts are one click away.
+        <details className="chat-section chat-excerpts">
+          <summary>
+            Cited excerpts <span>({citations.length})</span>
+          </summary>
           {citations.map((citation, i) => (
             <figure key={i}>
               <figcaption>{chip(i)}</figcaption>
               <blockquote>{citation.excerpt}</blockquote>
             </figure>
           ))}
-        </section>
+        </details>
       )}
     </article>
   );
@@ -295,11 +306,14 @@ export function ChatMessageView({
   sourceIds,
   onOpenSource,
   compact = false,
+  onPlaying,
 }: {
   entry: ChatEntry;
   sourceIds: ReadonlySet<string>;
   onOpenSource: (sourceId: string) => void;
   compact?: boolean;
+  /** Reported by an answer while its steps and text are still playing. */
+  onPlaying?: (playing: boolean) => void;
 }) {
   if (entry.role === "user") {
     return (
@@ -315,6 +329,7 @@ export function ChatMessageView({
       sourceIds={sourceIds}
       onOpenSource={onOpenSource}
       compact={compact}
+      onPlaying={onPlaying}
     />
   );
 }

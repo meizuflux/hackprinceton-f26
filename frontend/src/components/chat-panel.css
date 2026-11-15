@@ -47,6 +47,11 @@
 .chat-log:empty {
   display: none;
 }
+.chat-spacer {
+  flex: none;
+  height: 0;
+  margin-top: -18px; /* cancel the transcript gap when the spacer is empty */
+}
 .chat-unavailable {
   padding: 16px;
   border: 1px solid var(--line);
@@ -289,8 +294,71 @@
   color: var(--muted);
   cursor: help;
 }
+.chat-excerpts summary {
+  width: fit-content;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.chat-excerpts summary:hover {
+  color: var(--brand-text);
+}
+.chat-excerpts[open] summary {
+  margin-bottom: 8px;
+}
 .chat-excerpts figure {
   margin: 0 0 10px;
+}
+
+/* ---------------------------------------------------------------- next questions (after the first answer) */
+.chat-next {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 8px;
+  min-width: 0;
+}
+.chat-next-label {
+  flex: none;
+  color: var(--muted);
+  font-size: 11px;
+}
+.chat-next ul {
+  display: flex;
+  gap: 6px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  overflow-x: auto;
+  list-style: none;
+  scrollbar-width: none;
+}
+.chat-next-chip {
+  max-width: 280px;
+  overflow: hidden;
+  padding: 5px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--panel);
+  color: #c9d7e5;
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+  transition:
+    border-color 0.15s ease-out,
+    background-color 0.15s ease-out,
+    opacity 0.15s ease-out;
+}
+.chat-next-chip:hover:not(:disabled),
+.chat-next-chip:focus-visible {
+  border-color: var(--brand-border);
+  background: var(--raised);
+}
+.chat-next-chip:disabled {
+  opacity: 0.45;
+  cursor: default;
 }
 .chat-excerpts blockquote {
   margin: 5px 0 0;

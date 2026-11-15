@@ -8,6 +8,7 @@ export function ChatComposer({
   live,
   available,
   pending,
+  holding = false,
   onAsk,
   onCancel,
 }: {
@@ -16,11 +17,13 @@ export function ChatComposer({
   live: boolean;
   available: boolean;
   pending: boolean;
+  /** The previous answer is still playing: the draft can be typed but not sent yet. */
+  holding?: boolean;
   onAsk: (text: string) => boolean;
   onCancel: () => void;
 }) {
   const [draft, setDraft] = useState("");
-  const enabled = available && live;
+  const enabled = available && live && !holding;
   const hintId = `${inputId}-hint`;
   return (
     <form
@@ -49,7 +52,7 @@ export function ChatComposer({
           rows={2}
           maxLength={1000}
           aria-describedby={hintId}
-          disabled={!enabled || pending}
+          disabled={!available || !live || pending}
           onKeyDown={(event) => {
             if (event.key === "Enter" && !event.shiftKey) {
               event.preventDefault();
