@@ -69,6 +69,82 @@ def _h(obj) -> str:
     return hashlib.sha256(json.dumps(obj, sort_keys=True, default=str).encode()).hexdigest()[:16]
 
 
+def read_tools(case, ctx: Context, R, verdicts, log) -> dict:
+    """Read-only tools over one analysed case, shared by the investigator and the case chat. `log(name, args, result)`
+    returns the string the model sees. Their names, docstrings and outputs are part of every recorded request: changing
+    them invalidates the LLM caches (`llm_cache.py`). The docstrings keep the indentation they had as methods: the raw
+    docstring, whitespace included, is the tool description."""
+    tz = case_tz(case)
+
+    def list_open_questions() -> str:
+        """List the open investigative questions (gaps) with their type, what is missing and the suggested direction."""
+        rows = [{"gap_id": g.id, "question": g.title, "type": g.data["gap_type"], "status": g.status,
+                 "missing": g.data["missing"], "direction": g.data["direction"]} for g in R.get("gap")]
+        return log("list_open_questions", {}, rows)
+
+    def list_explanations() -> str:
+        """List the competing explanations for each key event with their support, counter-evidence and verdict."""
+        rows = [{"episode": v["episode_title"], "verdict": v["verdict"],
+                 "explanations": [{"statement": h.text, "label": h.data["label"],
+                                   "supporting": [s["reason"] for s in h.data["supporting"][:5]],
+                                   "contradicting": [s["reason"] for s in h.data["contradicting"][:5]]}
+                                  for k in v["ranked"] for h in R.get("hypothesis") if h.key == k]} for v in verdicts]
+        return log("list_explanations", {}, rows)
+
+    def list_ml_signals() -> str:
+        """List the traditional-ML signals computed before reasoning: place clusters (home, work, recurring evening
+            places), unusual days per person, message triage (automated vs human) and possible name variants. Each has
+            its method and record IDs. Treat them as leads to check with get_record, not as facts."""
+        from .ml import signals_for_agent
+        return log("list_ml_signals", {}, signals_for_agent(R))
+
+    def search_records(query: str, start: str = "", end: str = "", person: str = "", limit: int = 20) -> str:
+        """Search case records by words in their text, place or actor. Optional ISO start/end times (UTC) and a
+            person name. Returns record IDs you can cite."""
+        words = [w for w in re.findall(r"\w+", query.lower()) if len(w) > 2]
+        s, e = parse_ts(start) if start else None, parse_ts(end) if end else None
+        hits = []
+        for r in case.timed:
+            if s and r.ts < s or e and r.ts > e:
+                continue
+            hay = " ".join([r.content, r.place or "", r.actor or "", r.target or ""]).lower()
+            who = [case.name(p) for p, _, _ in ctx.persons_for(r)]
+            if person and not any(person.lower() in w.lower() for w in who):
+                continue
+            if words and not all(w in hay for w in words):
+                continue
+            hits.append({"record_id": r.id, "time": r.ts.astimezone(tz).isoformat(timespec="minutes"), "type": r.type,
+                         "who": who, "what": r.content[:160], "where": r.place, "reliability": r.reliability,
+                         "citation": case.cite(r.id)["id"]})
+            if len(hits) >= min(int(limit), 50):
+                break
+        return log("search_records", {"query": query, "start": start, "end": end, "person": person}, hits)
+
+    def get_record(record_id: int) -> str:
+        """Read one record in full: text, time (with uncertainty), place, people, source file and citation."""
+        r = case.records.get(int(record_id))
+        if not r:
+            return log("get_record", {"record_id": record_id}, {"error": "no such record"})
+        return log("get_record", {"record_id": record_id}, {
+            "record_id": r.id, "type": r.type, "time": iso(r.ts), "window": [iso(r.start), iso(r.end)],
+            "precision": r.precision, "time_flags": r.flags, "reliability": r.reliability, "text": r.content,
+            "place": r.place, "people": [[case.name(p), c, b] for p, c, b in ctx.persons_for(r)],
+            "attributes": {k: v for k, v in r.attrs.items() if not isinstance(v, (dict, list))},
+            "citation": case.cite(r.id)})
+
+    return {"list_open_questions": list_open_questions, "list_explanations": list_explanations,
+            "list_ml_signals": list_ml_signals, "search_records": search_records, "get_record": get_record}
+
+
+def make_chat_model(model: str, cache=None, reasoning_effort: str = "high"):
+    """ChatAnthropic as the LLM layer configures it. Every argument is part of the recorded request key, so keep them
+    stable. Without ANTHROPIC_API_KEY only cached responses work: a replay cache raises on a miss before sending."""
+    from langchain_anthropic import ChatAnthropic
+    key = {} if os.environ.get("ANTHROPIC_API_KEY") else {"api_key": "replay-only"}
+    return ChatAnthropic(model=model, max_tokens=16000, reasoning_effort=reasoning_effort, max_retries=3, timeout=600,
+                         cache=cache, **key)
+
+
 class LLMRun:
     def __init__(self, case, ctx: Context, cfg: dict, audit):
         self.case, self.ctx, self.cfg, self.audit = case, ctx, cfg, audit
@@ -93,12 +169,9 @@ class LLMRun:
             return self._verifier_chat
         if not verifier and self._chat is not None:
             return self._chat
-        from langchain_anthropic import ChatAnthropic
         model = self.cfg.get("verifier_model" if verifier else "model", DEFAULT_MODEL)
         # Replay needs no key: the cache answers every request, and a miss raises before anything is sent.
-        key = {} if os.environ.get("ANTHROPIC_API_KEY") else {"api_key": "replay-only"}
-        m = ChatAnthropic(model=model, max_tokens=16000, reasoning_effort="medium" if verifier else "high", max_retries=3,
-                          timeout=600, cache=self.cache, **key)
+        m = make_chat_model(model, self.cache, "medium" if verifier else "high")
         if verifier:
             self._verifier_chat = m
         else:
@@ -181,66 +254,10 @@ class LLMRun:
     # ------------------------------------------------------------------ investigator
     def build_tools(self, R, verdicts, created: list) -> dict:
         """Read-only tools over the analysis, plus two guarded writers (record_insight, answer_question)."""
-        case, ctx = self.case, self.ctx
-        tz = case_tz(case)
+        case = self.case
         max_insights = int(self.cfg.get("max_insights", 5))
         log = self._tool_logger
-
-        def list_open_questions() -> str:
-            """List the open investigative questions (gaps) with their type, what is missing and the suggested direction."""
-            rows = [{"gap_id": g.id, "question": g.title, "type": g.data["gap_type"], "status": g.status,
-                     "missing": g.data["missing"], "direction": g.data["direction"]} for g in R.get("gap")]
-            return log("list_open_questions", {}, rows)
-
-        def list_explanations() -> str:
-            """List the competing explanations for each key event with their support, counter-evidence and verdict."""
-            rows = [{"episode": v["episode_title"], "verdict": v["verdict"],
-                     "explanations": [{"statement": h.text, "label": h.data["label"],
-                                       "supporting": [s["reason"] for s in h.data["supporting"][:5]],
-                                       "contradicting": [s["reason"] for s in h.data["contradicting"][:5]]}
-                                      for k in v["ranked"] for h in R.get("hypothesis") if h.key == k]} for v in verdicts]
-            return log("list_explanations", {}, rows)
-
-        def list_ml_signals() -> str:
-            """List the traditional-ML signals computed before reasoning: place clusters (home, work, recurring evening
-            places), unusual days per person, message triage (automated vs human) and possible name variants. Each has
-            its method and record IDs. Treat them as leads to check with get_record, not as facts."""
-            from .ml import signals_for_agent
-            return log("list_ml_signals", {}, signals_for_agent(R))
-
-        def search_records(query: str, start: str = "", end: str = "", person: str = "", limit: int = 20) -> str:
-            """Search case records by words in their text, place or actor. Optional ISO start/end times (UTC) and a
-            person name. Returns record IDs you can cite."""
-            words = [w for w in re.findall(r"\w+", query.lower()) if len(w) > 2]
-            s, e = parse_ts(start) if start else None, parse_ts(end) if end else None
-            hits = []
-            for r in case.timed:
-                if s and r.ts < s or e and r.ts > e:
-                    continue
-                hay = " ".join([r.content, r.place or "", r.actor or "", r.target or ""]).lower()
-                who = [case.name(p) for p, _, _ in ctx.persons_for(r)]
-                if person and not any(person.lower() in w.lower() for w in who):
-                    continue
-                if words and not all(w in hay for w in words):
-                    continue
-                hits.append({"record_id": r.id, "time": r.ts.astimezone(tz).isoformat(timespec="minutes"), "type": r.type,
-                             "who": who, "what": r.content[:160], "where": r.place, "reliability": r.reliability,
-                             "citation": case.cite(r.id)["id"]})
-                if len(hits) >= min(int(limit), 50):
-                    break
-            return log("search_records", {"query": query, "start": start, "end": end, "person": person}, hits)
-
-        def get_record(record_id: int) -> str:
-            """Read one record in full: text, time (with uncertainty), place, people, source file and citation."""
-            r = case.records.get(int(record_id))
-            if not r:
-                return log("get_record", {"record_id": record_id}, {"error": "no such record"})
-            return log("get_record", {"record_id": record_id}, {
-                "record_id": r.id, "type": r.type, "time": iso(r.ts), "window": [iso(r.start), iso(r.end)],
-                "precision": r.precision, "time_flags": r.flags, "reliability": r.reliability, "text": r.content,
-                "place": r.place, "people": [[case.name(p), c, b] for p, c, b in ctx.persons_for(r)],
-                "attributes": {k: v for k, v in r.attrs.items() if not isinstance(v, (dict, list))},
-                "citation": case.cite(r.id)})
+        reads = read_tools(case, self.ctx, R, verdicts, log)
 
         def record_insight(title: str, observations: list[dict], inference: str, unknowns: list[str],
                            counterevidence: list[str], assumptions: list[str], limitations: list[str],
@@ -285,9 +302,7 @@ class LLMRun:
             self.answers += 1
             return log("answer_question", {"gap_id": gap_id}, {"ok": True})
 
-        return {"list_open_questions": list_open_questions, "list_explanations": list_explanations,
-                "list_ml_signals": list_ml_signals, "search_records": search_records, "get_record": get_record, "record_insight": record_insight,
-                "answer_question": answer_question}
+        return {**reads, "record_insight": record_insight, "answer_question": answer_question}
 
     def investigate(self, R, verdicts) -> list[Item]:
         from deepagents import create_deep_agent

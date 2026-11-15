@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { chatApi } from "./chat";
+import { chatApi, ChatRequestError } from "./chat";
 
 afterEach(() => {
   vi.unstubAllGlobals();
@@ -124,5 +124,91 @@ describe("chat API adapter", () => {
         "invalid response",
       );
     }
+  });
+
+  it("keeps suggested questions with their recorded flag", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            available: true,
+            authoritative: true,
+            case_id: "case-123",
+            live: false,
+            mode: "replay",
+            suggestions: [
+              { question: "Who was at the door?", recorded: true },
+              { question: "", recorded: true },
+            ],
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    await expect(chatApi.status("case-123")).resolves.toMatchObject({
+      available: true,
+      live: false,
+      suggestions: [{ question: "Who was at the door?", recorded: true }],
+    });
+  });
+
+  it("reports a replay miss without a key as needs_api_key", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            error: { code: "needs_api_key", message: "Not recorded." },
+          }),
+          { status: 503 },
+        ),
+      ),
+    );
+    const error = await chatApi.send("case-123", "Question").catch((e) => e);
+    expect(error).toBeInstanceOf(ChatRequestError);
+    expect(error).toMatchObject({ code: "needs_api_key", status: 503 });
+  });
+
+  it("drops observations whose citations do not resolve", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn().mockResolvedValue(
+        new Response(
+          JSON.stringify({
+            thread_id: "t",
+            replayed: true,
+            message: {
+              role: "assistant",
+              content: "Answer",
+              evidence_status: "partial",
+              summary: "Answer",
+              citations: [
+                {
+                  evidence_id: "EV-071",
+                  locator: "seq=40162",
+                  excerpt: "x",
+                  source_id: "EV-071:seq=40162",
+                },
+              ],
+              observations: [
+                { text: "kept", citations: [0] },
+                { text: "out of range", citations: [3] },
+                { text: "uncited", citations: [] },
+              ],
+              inference: "maybe",
+              unknowns: ["who"],
+            },
+          }),
+          { status: 200 },
+        ),
+      ),
+    );
+    const reply = await chatApi.send("case-123", "Question");
+    expect(reply.replayed).toBe(true);
+    expect(reply.message.observations).toEqual([
+      { text: "kept", citations: [0] },
+    ]);
+    expect(reply.message.inference).toBe("maybe");
   });
 });

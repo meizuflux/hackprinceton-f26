@@ -16,6 +16,8 @@ Run:  uvicorn mapletrace_api.app:app --reload --port 8000      (from backend/)
     GET  /cases/{caseId}/audit-chain     ingestion + analysis audit entries with hashes, re-verified
     POST /cases/{caseId}/evidence        add a ZIP of new evidence -> new version, compared with the previous one
     POST /demo                           install the committed Kestrel demo snapshot (instant, no model calls) -> {caseId}
+    GET  /chat/status?case_id=...        case chat availability and suggested questions
+    POST /cases/{caseId}/chat            {message, thread_id?} -> cited answer (see mapletrace_api/chat.py)
     GET  /cases/{caseId}/overrides       investigator corrections
     POST /cases/{caseId}/overrides       record a correction -> re-analysis job
 
@@ -45,6 +47,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from mapletrace_api.chat import ChatError, ChatService
 from mapletrace_ingest.verify import verify_run
 from mapletrace_ingest.db import GENESIS_HASH, verify_audit_chain
 from mapletrace_ingest.pipeline import ingest_zip
@@ -67,6 +70,9 @@ DEMO_CASE_ID = "kestrel-demo"
 app = FastAPI(title="Mapletrace API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_methods=["*"], allow_headers=["*"],
                    allow_origins=os.environ.get("MAPLETRACE_CORS", "http://localhost:5173,http://127.0.0.1:5173").split(","))
+
+
+chat_service = ChatService()
 
 
 class ApiError(Exception):
@@ -483,6 +489,30 @@ def get_audit_chain(case_id: str):
         checks.append({"source": "analysis", "ok": False, "message": "analysis.db is missing"})
     return {"verified": all(c["ok"] for c in checks), "head": entries[-1]["hash"] if entries else GENESIS_HASH,
             "checks": checks, "entries": entries}
+
+
+class ChatIn(BaseModel):
+    message: str
+    thread_id: Optional[str] = None
+
+
+@app.get("/chat/status")
+def chat_status(case_id: str):
+    try:
+        ingest_dir, analysis_dir = _latest_dirs(case_id)
+    except ApiError as exc:
+        return {"available": False, "case_id": case_id, "reason": exc.message}
+    return chat_service.status(case_id, chat_service.case_chat(case_id, ingest_dir, analysis_dir))
+
+
+@app.post("/cases/{case_id}/chat")
+def chat(case_id: str, body: ChatIn):
+    ingest_dir, analysis_dir = _latest_dirs(case_id)
+    try:
+        return chat_service.ask(case_id, chat_service.case_chat(case_id, ingest_dir, analysis_dir), body.message,
+                                body.thread_id)
+    except ChatError as exc:
+        raise ApiError(exc.status, exc.code, exc.message) from None
 
 
 @app.get("/cases/{case_id}/overrides")
