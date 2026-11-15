@@ -18,7 +18,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 - Keep `AGENTS.md` and the skill installation at the repository root. Frontend files, dependencies, build output and docs live in `frontend/`; backend code, dependencies and docs live in `backend/`; the case generator lives in `generator/`.
 - Run Make from the repository root (`make help` lists every target). Do not add nested Makefiles.
 - Frontend: Bun 1.4.4, run from `frontend/`. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Test with `bun run --bun test` (Vitest, not `bun test`), build with `bun run --bun build`, and run `bun run --bun format` after changes. Docker uses the same pinned Bun image.
-- Backend: Python 3.11+ with `backend/requirements.txt`; `make backend-install` creates `backend/.venv` with uv and Python 3.12. Run `make backend-test` after backend changes.
+- Backend: a uv project in `backend/` (`pyproject.toml`, committed `uv.lock`, `.python-version` 3.12; Python 3.11+). It is not an installable package: run commands from `backend/` with `uv run` (the Make targets do). `make backend-install` runs `uv sync --locked` into `backend/.venv`. Add dependencies with `uv add <pkg>` (or `uv add --dev <pkg>` for test-only tools) from `backend/` and commit `uv.lock`; never hand-edit the lock or reintroduce `requirements.txt`. Run `make backend-test` after backend changes.
 - Docker and `compose.yaml` are optional. Do not start Docker, run Compose or rebuild images for routine work unless the user asks.
 
 ## Backend authority and evidence

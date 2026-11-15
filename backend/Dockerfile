@@ -12,13 +12,16 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     UV_COMPILE_BYTECODE=1 \
     UV_NO_CACHE=1 \
+    UV_PYTHON_DOWNLOADS=never \
+    UV_PROJECT_ENVIRONMENT=/opt/venv \
     VIRTUAL_ENV=/opt/venv \
     PATH=/opt/venv/bin:$PATH
 
 COPY --from=uv /uv /usr/local/bin/uv
 
-COPY backend/requirements.txt /app/backend/requirements.txt
-RUN uv venv /opt/venv && uv pip install --python /opt/venv/bin/python -r /app/backend/requirements.txt
+# Locked runtime dependencies only (no dev group), into /opt/venv with the image's Python 3.12.
+COPY backend/pyproject.toml backend/uv.lock backend/.python-version /app/backend/
+RUN cd /app/backend && uv sync --locked --no-dev
 
 # Case data (uploads, ingestion runs, analysis versions, jobs) lives on a volume owned by the
 # non-root user. Code, the demo snapshot and the recorded LLM cache stay root-owned and read-only.

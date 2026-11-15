@@ -7,8 +7,9 @@
 PYTHON ?= python3
 UV ?= uv
 GENERATOR := generator/generate.py
-# Backend commands run with uv in backend/.venv (created by make backend-install)
-BACKEND_PY := $(UV) run --no-project python
+# Backend commands run in the uv project at backend/ (pyproject.toml + uv.lock), from backend/.
+# --locked fails if uv.lock is out of date with pyproject.toml instead of silently re-resolving.
+BACKEND_PY := $(UV) run --locked python
 API ?= http://127.0.0.1:8000
 
 help:
@@ -22,7 +23,7 @@ help:
 	@echo "make data-generate     Regenerate the synthetic Kestrel case in cases/kestrel/"
 	@echo "make data-verify       Rebuild the case in a temp dir and check every file hash"
 	@echo "make data-truth        Write the answer key to .truth/kestrel/ (git-ignored; scoring only)"
-	@echo "make backend-install   Create backend/.venv with uv (Python 3.12) and install backend dependencies"
+	@echo "make backend-install   Sync backend/.venv from backend/uv.lock with uv (Python 3.12, dev group included)"
 	@echo "make backend-test      Run backend tests, including a full Kestrel ingestion"
 	@echo "make backend-ingest-kestrel  Ingest the Kestrel upload ZIP into backend/runs/kestrel/"
 	@echo "make backend-analyze-kestrel Run the reasoning pipeline on backend/runs/kestrel/"
@@ -67,7 +68,7 @@ data-truth:
 	$(UV) run --locked --script $(GENERATOR) --truth-out .truth/kestrel
 
 backend-install:
-	cd backend && $(UV) venv --allow-existing -p 3.12 .venv && $(UV) pip install -r requirements.txt
+	cd backend && $(UV) sync --locked
 
 backend-test:
 	cd backend && $(BACKEND_PY) -m pytest -q tests
