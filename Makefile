@@ -1,10 +1,12 @@
 .DEFAULT_GOAL := help
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
-	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel \n	backend-analyze-kestrel backend-serve
+	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel \
+	backend-analyze-kestrel backend-serve backend-seed-kestrel dev
 
 PYTHON ?= python3
 UV ?= uv
 GENERATOR := generator/generate.py
+API ?= http://127.0.0.1:8000
 
 help:
 	@echo "make frontend-install  Install locked dependencies"
@@ -22,6 +24,8 @@ help:
 	@echo "make backend-ingest-kestrel  Ingest the Kestrel upload ZIP into backend/runs/kestrel/"
 	@echo "make backend-analyze-kestrel Run the reasoning pipeline on backend/runs/kestrel/"
 	@echo "make backend-serve     Start the API at http://127.0.0.1:8000"
+	@echo "make backend-seed-kestrel  Upload the Kestrel ZIP to the running API and wait for analysis (API=...)"
+	@echo "make dev               Start the API and Vite together (the frontend proxies /api to the API)"
 
 frontend-install:
 	cd frontend && bun install --frozen-lockfile
@@ -67,3 +71,20 @@ backend-analyze-kestrel:
 
 backend-serve:
 	cd backend && $(PYTHON) -m uvicorn mapletrace_api.app:app --host 127.0.0.1 --port 8000
+
+backend-seed-kestrel:
+	@job=$$(curl -sf -F file=@cases/kestrel/kestrel_case_upload.zip -F case_name=Kestrel $(API)/upload \
+		| $(PYTHON) -c "import json,sys; print(json.load(sys.stdin)['jobId'])") || \
+		{ echo "Upload failed: is the API running? (make backend-serve)"; exit 1; }; \
+	echo "Analysing Kestrel (job $$job)..."; \
+	for i in $$(seq 1 120); do \
+		status=$$(curl -sf $(API)/status/$$job | $(PYTHON) -c "import json,sys; j=json.load(sys.stdin); print(j['status'], j.get('caseId', ''))"); \
+		case "$$status" in \
+			ready*) echo "Ready: http://127.0.0.1:5173/cases/$${status#ready }"; exit 0;; \
+			failed*) echo "Analysis failed; see GET $(API)/status/$$job"; exit 1;; \
+		esac; \
+		sleep 1; \
+	done; echo "Timed out waiting for analysis"; exit 1
+
+dev:
+	$(MAKE) -j2 backend-serve frontend-dev

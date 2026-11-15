@@ -54,10 +54,18 @@ Sections with no UI: `contradictions`, `explanations`, `timeline`, `missingPerio
 - `GET /cases/{caseId}/records?evidenceId=&limit=&offset=`: `{total, items: [{id, recordType, fields, citations: [{evidenceId, locator, sourceId?}]}]}`.
 - `GET /cases/{caseId}/audit-chain`: ingestion + analysis audit entries with hashes, and `{verified, head}`.
 
-## Order of work
+## Status
 
-1. Connect: real `CaseApi` adapter selected by `VITE_API_BASE_URL` (mock remains the fallback), Vite proxy for dev, case by ID, `failed` status and `caseId`, project name sent as `case_name`, backend error format, adapter-aware disclaimers, project list from `GET /cases`.
-2. Correct what is shown: certainty from the API, scores relabelled, layout for real node counts, local time display, directed edges, node citations.
-3. Richer data: structured insights, gap type/status, contradictions, competing explanations, original file download, evidence file list.
-4. Optional views: timeline with missing periods and uncertain times, ML signals, overrides, add evidence, chat.
-5. Adapter tests, a root `make` target to run both servers, and `AGENTS.md` updates.
+Done on this branch:
+1. Connect: live `CaseApi` adapter (`src/api/http.ts`) selected by `VITE_API_BASE_URL`, Vite `/api` proxy, cases by ID, `failed` status and `caseId`, project name sent as `case_name`, backend error envelope, adapter-aware disclosures, project list from `GET /cases`, original file download.
+2. Correct what is shown: certainty from the API, computed scores relabelled, insight confidence as a label, case-local times, banded layout for backend graphs, directed edges, node citations, gap ↔ node links.
+3. Richer data: structured insights (observations vs inference), gap type/status/missing/direction, suggestions with every gap they address, edge basis, normalized records browser with file inventory, verified audit chain, competing explanations with verdict, contradictions.
+4. Backend: contract additions above, `whyItMatters` on gaps, and unique citation IDs (a shared event code no longer merges records).
+5. `make dev`, `make backend-seed-kestrel`, adapter and presentation tests, `AGENTS.md` and README updates.
+
+Not done:
+- Timeline view (`timeline`, `missingPeriods`, `uncertainTimes`), ML `signals` and `sourceGroups`.
+- Investigator overrides, adding evidence to a case, and version `changes`.
+- Chat: the backend has no endpoint matching `frontend/CHAT.md`; chat shows its unavailable state.
+- The Docker image serves the mock build; the backend is not containerised.
+- Backend `test_deep_agent_loop_records_cited_insights` needs the optional LLM packages installed.
