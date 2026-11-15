@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import type { Certainty } from "../api/types";
+import type { Certainty, Origin } from "../api/types";
 import { relationshipKind, type RelationshipKind } from "./relationships";
 
 /**
@@ -146,4 +146,47 @@ function luminance(hex: string) {
 export function contrastRatio(a: string, b: string) {
   const [high, low] = [luminance(a), luminance(b)].sort((x, y) => y - x);
   return (high + 0.05) / (low + 0.05);
+}
+
+/**
+ * Pipeline origin of a card or thread. Origin never changes hue: it is shown
+ * by a graphite stamp chip (icon plus word), a hatched strip on the card and
+ * the same icon on thread labels. `record` and `rules` stay unmarked so the
+ * board is not noisy; the graphite ink is neutral (not red, amber or blue).
+ */
+export const ORIGIN_INK = "#33373d";
+export const MARKED_ORIGINS = ["ml", "agent", "llm"] as const;
+export type MarkedOrigin = (typeof MARKED_ORIGINS)[number];
+
+export const originMarks: Record<
+  MarkedOrigin,
+  { chip: string; label: string; pattern: string }
+> = {
+  ml: { chip: "ML", label: "Traditional ML", pattern: "dotted" },
+  agent: { chip: "Agent", label: "Agent investigator", pattern: "hatched" },
+  llm: { chip: "LLM", label: "LLM claim extraction", pattern: "ruled" },
+};
+
+export function markedOrigin(origin?: Origin): MarkedOrigin | undefined {
+  return (MARKED_ORIGINS as readonly string[]).includes(origin ?? "")
+    ? (origin as MarkedOrigin)
+    : undefined;
+}
+
+/** Full wording for inspectors and tags, including the stage when known. */
+export function originLabel(origin?: Origin, stage?: string, method?: string) {
+  const base: Record<Origin, string> = {
+    record: "Ingested record",
+    rules: "Deterministic rules",
+    ml: "Traditional ML",
+    llm: "LLM claim extraction",
+    agent: "Deepagents investigator (Claude)",
+  };
+  if (!origin) return undefined;
+  return [
+    base[origin] + (method ? ` (${method})` : ""),
+    stage && `stage ${stage}`,
+  ]
+    .filter(Boolean)
+    .join(" · ");
 }

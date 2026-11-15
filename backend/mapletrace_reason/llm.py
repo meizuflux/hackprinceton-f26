@@ -156,11 +156,14 @@ class LLMRun:
         self._chat = cfg.get("chat_model")          # tests can inject a fake model
         self._verifier_chat = cfg.get("verifier_chat_model")
         self.cache = None
+        self.trace = cfg.get("trace")               # optional TraceWriter (presentation telemetry only)
+        self._extracting = False
         mode = cfg.get("cache_mode", "record")
         if mode in ("record", "replay"):
             from .llm_cache import CACHE_DIR, ReplayCache, cache_path
             archive = case.info.get("source_archive_sha256", "unknown")
             self.cache = ReplayCache(cache_path(archive, Path(cfg.get("cache_dir") or CACHE_DIR)), mode)
+            self.cache.listener = self._on_model_call
         if self._chat is None and mode != "replay" and not os.environ.get("ANTHROPIC_API_KEY"):
             raise RuntimeError("LLM mode needs the ANTHROPIC_API_KEY environment variable (or run without --llm)")
 
@@ -171,12 +174,30 @@ class LLMRun:
             return self._chat
         model = self.cfg.get("verifier_model" if verifier else "model", DEFAULT_MODEL)
         # Replay needs no key: the cache answers every request, and a miss raises before anything is sent.
-        m = make_chat_model(model, self.cache, "medium" if verifier else "high")
+        cache = self.cache.tagged("verifier" if verifier else "investigator") if self.cache else None
+        m = make_chat_model(model, cache, "medium" if verifier else "high")
         if verifier:
             self._verifier_chat = m
         else:
             self._chat = m
         return m
+
+    def _on_model_call(self, info: dict) -> None:
+        """Cache listener: one `llm_call` trace event per model response, replayed or live."""
+        from .llm_cache import call_stats
+        tr = self.trace
+        if tr is None:
+            return
+        purpose = "claim_extraction" if self._extracting else (info["tag"] or "investigator")
+        model = self.cfg.get("verifier_model" if purpose == "verifier" else "model") or DEFAULT_MODEL
+        if info["replayed"]:
+            stats = call_stats(info["generations"], info["latency_ms"])
+            start, end = tr.replayed_call(stats["durationMs"])
+            tr.llm_call(purpose, model, stats, True, end, start)
+        else:
+            stats = call_stats(info["generations"], info["latency_ms"], "live")
+            end = tr.now_ms()
+            tr.llm_call(purpose, model, stats, False, end, max(end - stats["durationMs"], 0))
 
     def _log(self, stage: str, model: str, inp, out) -> None:
         entry = {"stage": stage, "model": model, "input_sha256": _h(inp), "output_sha256": _h(out)}
@@ -196,6 +217,7 @@ class LLMRun:
         model = self.chat().with_structured_output(ExtractedClaims, method="json_schema")
         ep_day = parse_ts(episodes[0].data["start"]).astimezone(tz) if episodes else None
         out = []
+        self._extracting = True
         for fid, recs in by_file.items():
             recs.sort(key=lambda r: r.locator.get("char_start", 0))
             speaker = next((case.name(p) for p, _, _ in ctx.persons_for(recs[0])), "unknown")
@@ -232,6 +254,7 @@ class LLMRun:
                                       "assumptions": assumptions, "extraction": f"llm:{self.cfg.get('model', 'injected')}",
                                       "quote": rec.content}))
                 have.add((c.record_id, c.claim_type))
+        self._extracting = False
         self.claims_added = len(out)
         return out
 
@@ -285,6 +308,8 @@ class LLMRun:
             it = Item("insight", stable_key("agent-ins", title, [c["id"] for c in cites]), title[:120], text,
                       certainty="inferred", score=0.6, citations=cites, data=data)
             created.append(it)
+            if self.trace:
+                self.trace.emit("agent", "insight_recorded", id=None, key=it.key, title=it.title)
             return log("record_insight", {"title": title}, {"ok": True, "citations": [c["id"] for c in cites]})
 
         def answer_question(gap_id: str, answer: str, record_ids: list[int]) -> str:
@@ -333,6 +358,8 @@ class LLMRun:
         with self._lock:
             self.audit.write("agent_tool", name, {"args": args, "result_sha256": _h(result)})
             self.calls.append({"stage": "tool", "tool": name})
+            if self.trace:
+                self.trace.agent_tool(name, args, len(out))
         return out
 
     def summary(self) -> dict:

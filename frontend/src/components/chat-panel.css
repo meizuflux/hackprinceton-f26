@@ -394,3 +394,65 @@
     padding: 12px;
   }
 }
+
+/* ---------------------------------------------------------------- answer steps */
+.chat-steps {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+.chat-steps summary {
+  cursor: pointer;
+  color: var(--muted);
+}
+.chat-steps ol,
+.chat-steps.is-playing {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.chat-step {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  animation: chat-step-in 0.18s ease-out;
+}
+.chat-step svg {
+  flex: none;
+  color: var(--brand-text);
+}
+.chat-step-title {
+  color: #d1dde8;
+}
+.chat-step-detail {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.chat-skip {
+  margin-left: auto;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 11px;
+  cursor: pointer;
+}
+@keyframes chat-step-in {
+  from {
+    opacity: 0;
+    transform: translateY(3px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chat-step {
+    animation: none;
+  }
+}

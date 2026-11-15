@@ -4,12 +4,17 @@ import {
   ChatRequestError,
   type ChatMessage,
   type ChatStatus,
+  type ChatStep,
 } from "../api/chat";
+import { subscribeQueue, takeQueuedQuestion } from "./chat-handoff";
 
 /** How an answer was produced: replayed from the recorded cache, or a live (billed) model call. */
 export type ChatEntry = ChatMessage & {
   origin?: "suggested" | "typed";
   replayed?: boolean;
+  steps?: ChatStep[];
+  /** A reply that just arrived: the thread plays its steps and types the answer once. */
+  animate?: boolean;
 };
 
 export type ChatFailure = {
@@ -19,7 +24,11 @@ export type ChatFailure = {
 };
 
 /** Shared state for the /chat page and the board's floating "Ask a question" widget. */
-export function useCaseChat(caseId: string) {
+export function useCaseChat(
+  caseId: string,
+  /** Only the chat tab asks questions queued from the mind map; the map widget must not take them. */
+  { takeQueued = false }: { takeQueued?: boolean } = {},
+) {
   const [status, setStatus] = useState<ChatStatus | null>(null);
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [threadId, setThreadId] = useState<string>();
@@ -75,6 +84,8 @@ export function useCaseChat(caseId: string) {
             ...reply.message,
             origin: reply.suggested ? "suggested" : origin,
             replayed: reply.replayed,
+            steps: reply.steps,
+            animate: true,
           },
         ]);
       } catch (cause) {
@@ -114,6 +125,30 @@ export function useCaseChat(caseId: string) {
     },
     [pending, status, send],
   );
+
+  // A question queued from the mind map widget is asked here, where the answer plays out.
+  const [queueTick, setQueueTick] = useState(0);
+  useEffect(
+    () =>
+      takeQueued ? subscribeQueue(() => setQueueTick((n) => n + 1)) : undefined,
+    [takeQueued],
+  );
+  useEffect(() => {
+    if (!takeQueued || !status?.available || pending) return;
+    const question = takeQueuedQuestion(caseId);
+    if (!question) return;
+    const recorded = status.suggestions?.some(
+      (s) => s.question === question && s.recorded,
+    );
+    if (status.live === false && !recorded) {
+      setFailure({
+        message: "This answer has not been recorded.",
+        code: "needs_api_key",
+      });
+      return;
+    }
+    ask(question);
+  }, [takeQueued, caseId, status, pending, queueTick, ask]);
 
   const retry = useCallback(() => {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");

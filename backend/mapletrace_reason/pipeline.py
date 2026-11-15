@@ -37,7 +37,7 @@ def _hash(obj) -> str:
 
 
 def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: str | Path | None = None,
-            overrides_path: str | Path | None = None, llm: dict | None = None, progress=None) -> dict:
+            overrides_path: str | Path | None = None, llm: dict | None = None, progress=None, trace=None) -> dict:
     run_dir = Path(run_dir)
     out_root = Path(out_root) if out_root else run_dir / "analysis"
     version, out = history.next_version_dir(out_root)
@@ -61,16 +61,25 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
     R = Results()
     ctx = analytics.Context(case, R)
 
+    last = [trace.now_ms() if trace else 0]
+
     def stage(name, items, pct):
         for it in items:
             R.add(it)
+        if trace:
+            _trace_stage(trace, name, items, last[0])
+            last[0] = trace.now_ms()
         audit.write("analysis", name, {"items": len(items), "output_sha256": _hash([i.to_dict() for i in items])})
         say(name, pct)
         return items
 
     # Stage 0: ML signals are leads for the board and the investigator agent. They are their own kind and are not
     # passed to the later stages, so findings, explanations, gaps and next steps stay exactly as rules compute them.
+    if trace:
+        trace.phase("ml", "Traditional ML signals")
     stage("ml_signals", ml.run(ctx), 5)
+    if trace:
+        trace.phase("rules", "Connections, findings and key events")
     stage("connections", analytics.credential_and_alias_links(ctx), 10)
     findings = stage("findings", analytics.colocation(ctx) + analytics.access_anomalies(ctx) + analytics.concurrent_presence(ctx)
                      + analytics.communication_patterns(ctx), 25)
@@ -82,11 +91,16 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
     stage("missing_periods", missing, 45)
     claims = claims_mod.extract_claims(ctx, episodes)
     llm_run = None
+    if llm and trace:
+        llm = {**llm, "trace": trace}
+        trace.phase("llm", "Extracting claims with the language model")
     if llm:
         from . import llm as llm_mod
         llm_run = llm_mod.LLMRun(case, ctx, llm, audit)
         claims += llm_run.extract_claims(episodes, existing=claims)
     stage("claims", claims, 55)
+    if trace:
+        trace.phase("rules", "Contradictions, explanations, gaps and next steps")
     contradictions = stage("contradictions", contra_mod.claim_conflicts(ctx, claims)
                            + contra_mod.record_conflicts(ctx, findings, ind.items), 62)
     hyps, verdicts = hyp_mod.explanations(ctx, episodes, findings, contradictions, ind)
@@ -96,8 +110,12 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
     stage("next_steps", recommend.rank(case, gap_items, verdicts, present), 84)
     stage("insights", insights_mod.build(ctx, ind, findings, contradictions, hyps, verdicts, episodes), 88)
     if llm_run:
+        if trace:
+            trace.phase("agent", "Investigator agent")
         stage("agent_insights", llm_run.investigate(R, verdicts), 92)
 
+    if trace:
+        trace.phase("output", "Verifying and writing the board")
     for kind in list(R.items):
         R.renumber(kind, lambda i: -i.score)
     verification = Verifier(case).check(R)
@@ -137,6 +155,10 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
     brd = board_mod.build_board(case, ctx, R, verdicts, timeline, changes, applied,
                                 {"analysed_at": analysed_at, "audit": audit_rows})
     graph = {"nodes": brd["nodes"], "edges": brd["edges"]}
+    if trace:
+        trace.totals.update({"records": len(case.records), "nodes": len(brd["nodes"]), "edges": len(brd["edges"]),
+                             "gaps": len(brd["gaps"]), "insights": len(brd["insights"]),
+                             "signals": len(brd["signals"])})
     outputs = {"analysis.json": analysis, "board.json": brd, "graph.json": graph}
     for name, obj in outputs.items():
         (out / name).write_text(json.dumps(obj, indent=1, default=str, ensure_ascii=False), encoding="utf-8")
@@ -150,3 +172,23 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
                "dropped_by_verifier": len(verification["items_dropped"]), "llm": analysis["llm"]}
     (out / "summary.json").write_text(json.dumps(summary, indent=1), encoding="utf-8")
     return summary
+
+
+_STAGE_LABELS = {"ml_signals": "ML signals", "connections": "Identity connections", "findings": "Findings",
+                 "key_events": "Key events", "source_independence": "Source independence",
+                 "uncertain_times": "Uncertain times", "missing_periods": "Missing periods", "claims": "Claims",
+                 "contradictions": "Contradictions", "explanations": "Competing explanations", "gaps": "Gaps",
+                 "next_steps": "Suggested evidence", "insights": "Insights", "agent_insights": "Agent insights"}
+
+
+def _trace_stage(trace, name: str, items, started_ms: int) -> None:
+    """Telemetry for one finished stage. ML signals get their final `ML-xx` ids (the same -score order the
+    renumbering at the end of the run uses), so the trace matches the board."""
+    if name == "ml_signals":
+        for n, it in enumerate(sorted(items, key=lambda i: -i.score), 1):
+            trace.emit("ml", "ml_signal", id=f"ML-{n:02d}", signalType=it.data.get("signal_type"), title=it.title,
+                       method=(it.data.get("method") or {}).get("name"))
+    counts: dict[str, int] = {}
+    for it in items:
+        counts[it.kind] = counts.get(it.kind, 0) + 1
+    trace.stage_finished(name, _STAGE_LABELS.get(name, name), counts or {"items": 0}, started_ms)

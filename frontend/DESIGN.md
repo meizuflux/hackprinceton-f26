@@ -212,6 +212,10 @@ Colour on the board comes only from the API's type and certainty, through the in
 - **Open questions:** an amber outline and a question flag on the card.
 - **Legend:** collapsible, at the bottom left, listing only the types present in the case. The minimap mirrors the colours.
 
+### Origin marks
+
+Provenance (traditional ML, agent, LLM) is encoded without hue: a graphite `#33373d` stamp chip with icon and word, a faint dotted (ML), hatched (agent) or ruled (LLM) strip along the card bottom, the icon on thread labels, a minimap tab and an Origin legend row. Rules and record items stay unmarked.
+
 ## Typography
 
 **Display / Document Font:** Newsreader (with Georgia, serif fallback)

@@ -1,3 +1,5 @@
+import { OriginIcon } from "./OriginBadge";
+import { originLabel } from "./board-colors";
 import {
   ArrowLeft,
   ArrowUpRight,
@@ -31,6 +33,12 @@ type InspectorProps = {
   onOpenSource?: (sourceId: string) => void;
   onFocusOnBoard?: (selection: Selection) => void;
 };
+
+/** Method name an ML signal reports, when the item is (or is keyed like) one. */
+function methodFor(item: unknown): string | undefined {
+  const method = (item as { method?: { name?: string } }).method;
+  return method?.name;
+}
 
 export function Inspector({
   selection,
@@ -144,6 +152,13 @@ export function Inspector({
           suggestion.gapIds?.includes(entry.id),
       )
     : [];
+  const producedOrigin = (item as { origin?: import("../api/types").Origin })
+    .origin;
+  const producedBy = originLabel(
+    producedOrigin,
+    (item as { stage?: string }).stage,
+    methodFor(item),
+  );
   const citeButtons = (citations: string[]) =>
     citations.length > 0 && (
       <span className="cite-list">
@@ -234,6 +249,14 @@ export function Inspector({
             </button>
           )}
         </div>
+        {producedBy && (
+          <p className="inspector-provenance">
+            <OriginIcon origin={producedOrigin} size={13} />
+            <span>
+              <strong>Produced by</strong> {producedBy}
+            </span>
+          </p>
+        )}
         {gap?.whyItMatters ? (
           <p className="inspector-description">{gap.whyItMatters}</p>
         ) : structuredInsight ? null : (

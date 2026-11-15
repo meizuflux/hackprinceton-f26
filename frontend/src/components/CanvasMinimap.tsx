@@ -8,6 +8,8 @@ import {
   type Edge,
   type Node,
 } from "@xyflow/react";
+import type { Origin } from "../api/types";
+import { markedOrigin } from "./board-colors";
 import { relationshipKind } from "./relationships";
 import { PIN_WIDTH, PIN_HEIGHT, threadHandles } from "./board-layout";
 import { paperOutline } from "./paper-note";
@@ -32,7 +34,7 @@ import {
 
 export { clampViewToContent } from "./minimap-geometry";
 
-function nodeSize(node: Node) {
+export function nodeSize(node: Node) {
   return {
     width: node.measured?.width ?? node.width ?? PIN_WIDTH,
     height: node.measured?.height ?? node.height ?? PIN_HEIGHT,
@@ -57,23 +59,25 @@ function useFlowView(): Bounds & { zoom: number } {
 /**
  * Overview of the pins. The map frames the pins alone, so its scale holds still
  * while the view moves; the viewport rectangle tracks pan and zoom, and dragging
- * it moves the board as if holding the rectangle.
+ * it moves the board as if holding the rectangle. `frameNodes` (every pin of the
+ * case) keeps the scale fixed while a replay reveals pins one by one.
  */
-export function CanvasMinimap() {
+export function CanvasMinimap({ frameNodes }: { frameNodes?: Node[] } = {}) {
   const rawId = useId();
   const markerId = `minimap-arrow-${rawId.replace(/:/g, "")}`;
   const nodes = useStore((state) => state.nodes);
   const edges = useStore((state) => state.edges);
   const view = useFlowView();
   const { setViewport } = useReactFlow();
+  const framed = frameNodes?.length ? frameNodes : nodes;
   const frame = useMemo(
     () =>
       frameContent(
         boundsOf(
-          nodes.map((node) => ({ ...node.position, ...nodeSize(node) })),
+          framed.map((node) => ({ ...node.position, ...nodeSize(node) })),
         ),
       ),
-    [nodes],
+    [framed],
   );
   const latest = useRef({ frame, view });
   latest.current = { frame, view };
@@ -236,6 +240,15 @@ export function CanvasMinimap() {
                 className={`board-minimap-pin ${node.data.gapId ? "is-gap" : ""} ${node.data.certainty === "inferred" ? "is-inferred" : ""} ${isFocused ? "is-active" : ""}`}
                 vectorEffect="non-scaling-stroke"
               />
+              {markedOrigin(node.data?.origin as Origin | undefined) && (
+                <rect
+                  className="board-minimap-origin"
+                  x={x + width * frame.scale - Math.max(3, 14 * frame.scale)}
+                  y={y + height * frame.scale - Math.max(2, 6 * frame.scale)}
+                  width={Math.max(3, 14 * frame.scale)}
+                  height={Math.max(2, 6 * frame.scale)}
+                />
+              )}
               <circle
                 className="board-minimap-pushpin"
                 cx={x + (width * frame.scale) / 2}
