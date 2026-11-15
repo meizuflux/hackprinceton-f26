@@ -64,6 +64,7 @@ import {
 } from "./components/presentation";
 import {
   getFocusFitOptions,
+  getFocusPadding,
   getNodesForSelection,
   getNodesForTab,
   type Tab,
@@ -73,6 +74,8 @@ import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
 import { CaseWorkspace } from "./components/CaseWorkspace";
 import { AskWidget } from "./components/AskWidget";
 import { AnalysisEntries } from "./components/AnalysisEntries";
+import { HeadlinePanel } from "./components/HeadlinePanel";
+import { resolveHeadline } from "./components/headline";
 
 /** A request from another section to open the board's review dock. */
 export type ReviewRequest = { panel: Tab | "audit"; id: number };
@@ -105,25 +108,33 @@ function BoardCanvas({
   const { fitView } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
   const [tab, setTab] = useState<Tab>("gaps");
+  // The backend's headline finding opens in the dock when the case loads.
+  const headline = useMemo(() => resolveHeadline(data), [data]);
   const [dockMode, setDockMode] = useState<
-    "closed" | "analysis" | "inspector" | "audit"
-  >("closed");
+    "closed" | "overview" | "analysis" | "inspector" | "audit"
+  >(() => (headline ? "overview" : "closed"));
   const auditChain = useQuery({
     queryKey: ["audit-chain", data.id],
     queryFn: () => api.getAuditChain(data.id),
     enabled: !isMock && dockMode === "audit",
   });
-  const [returnMode, setReturnMode] = useState<"closed" | "analysis" | "audit">(
-    "analysis",
-  );
-  const [auditReturnMode, setAuditReturnMode] = useState<"closed" | "analysis">(
-    "closed",
-  );
+  const [returnMode, setReturnMode] = useState<
+    "closed" | "overview" | "analysis" | "audit"
+  >("analysis");
+  const [auditReturnMode, setAuditReturnMode] = useState<
+    "closed" | "overview" | "analysis"
+  >("closed");
   const [search, setSearch] = useState("");
   const [boardView, setBoardView] = useState<"graph" | "list">("graph");
   const dockRef = useRef<HTMLElement>(null);
   const analysisRef = useRef<HTMLElement>(null);
+  const previousDockMode = useRef(dockMode);
   useEffect(() => {
+    // The headline opens with the case; on narrow screens it waits below the
+    // board instead of scrolling the page away from it. Only a change of mode
+    // scrolls (a ref, not a mount flag, so StrictMode's rerun is a no-op).
+    if (previousDockMode.current === dockMode) return;
+    previousDockMode.current = dockMode;
     if (
       dockMode !== "closed" &&
       window.matchMedia("(max-width: 900px)").matches
@@ -251,10 +262,12 @@ function BoardCanvas({
         return;
       }
       setAuditReturnMode(
-        dockMode === "analysis" ||
-          (dockMode === "inspector" && returnMode === "analysis")
-          ? "analysis"
-          : "closed",
+        dockMode === "analysis" || dockMode === "overview"
+          ? dockMode
+          : dockMode === "inspector" &&
+              (returnMode === "analysis" || returnMode === "overview")
+            ? returnMode
+            : "closed",
       );
       setDockMode("audit");
     },
@@ -263,6 +276,32 @@ function BoardCanvas({
   const analysisShown =
     dockMode === "analysis" ||
     (dockMode === "inspector" && returnMode === "analysis");
+  /** One tab strip serves the headline ("Key finding") and the analysis lists. */
+  const dockTabs = useMemo(
+    () =>
+      [
+        ...(headline ? [["overview", "Key finding", null] as const] : []),
+        ["gaps", "Gaps", data.gaps.length] as const,
+        ["insights", "Insights", data.insights.length] as const,
+        ["suggestions", "Next evidence", data.suggestions.length] as const,
+      ] as ReadonlyArray<readonly [Tab | "overview", string, number | null]>,
+    [headline, data],
+  );
+  const activeDockTab: Tab | "overview" =
+    dockMode === "overview" ? "overview" : tab;
+  const selectDockTab = useCallback(
+    (next: Tab | "overview") => {
+      setSelection(null);
+      if (next === "overview") {
+        setDockMode("overview");
+        return;
+      }
+      setDockMode("analysis");
+      setTab(next);
+      focusTarget(getNodesForTab(next, data), { dockOpen: true });
+    },
+    [data, focusTarget],
+  );
 
   useEffect(() => {
     if (!reviewRequest || !active) return;
@@ -365,6 +404,13 @@ function BoardCanvas({
     [setNodes],
   );
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  // Fit the board beside the dock when it is open, including the headline on load.
+  const fitPadding = getFocusPadding({
+    isNarrow:
+      typeof window !== "undefined" &&
+      window.matchMedia("(max-width: 900px)").matches,
+    dockOpen: dockMode !== "closed",
+  });
   const normalizedSearch = search.trim().toLowerCase();
   const matchingNodes = useMemo(
     () =>
@@ -594,12 +640,7 @@ function BoardCanvas({
                 }}
                 fitView
                 fitViewOptions={{
-                  padding: {
-                    top: "90px",
-                    bottom: "100px",
-                    left: "90px",
-                    right: "60px",
-                  },
+                  padding: fitPadding,
                   minZoom: 0.5,
                   maxZoom: 1.1,
                 }}
@@ -622,12 +663,7 @@ function BoardCanvas({
                   position="bottom-right"
                   showInteractive={false}
                   fitViewOptions={{
-                    padding: {
-                      top: "90px",
-                      bottom: "100px",
-                      left: "90px",
-                      right: "60px",
-                    },
+                    padding: fitPadding,
                     minZoom: 0.5,
                     maxZoom: 1.1,
                   }}
@@ -688,6 +724,81 @@ function BoardCanvas({
               </button>
             </div>
           )}
+          <div
+            className="analysis-tabs"
+            role="tablist"
+            aria-label="Case analysis"
+            hidden={dockMode !== "analysis" && dockMode !== "overview"}
+          >
+            {dockTabs.map(([id, label, count]) => (
+              <button
+                key={id}
+                role="tab"
+                id={`tab-${id}`}
+                aria-controls={`panel-${id}`}
+                aria-selected={activeDockTab === id}
+                tabIndex={activeDockTab === id ? 0 : -1}
+                onKeyDown={(event) => {
+                  const ids = dockTabs.map(([entry]) => entry);
+                  const offset =
+                    event.key === "ArrowRight"
+                      ? 1
+                      : event.key === "ArrowLeft"
+                        ? -1
+                        : 0;
+                  if (offset || event.key === "Home" || event.key === "End") {
+                    event.preventDefault();
+                    const next =
+                      event.key === "Home"
+                        ? ids[0]
+                        : event.key === "End"
+                          ? ids[ids.length - 1]
+                          : ids[
+                              (ids.indexOf(activeDockTab) +
+                                offset +
+                                ids.length) %
+                                ids.length
+                            ];
+                    selectDockTab(next);
+                    document.getElementById(`tab-${next}`)?.focus();
+                  }
+                }}
+                className={activeDockTab === id ? "active" : ""}
+                onClick={() => selectDockTab(id)}
+              >
+                {label}
+                {count !== null && <span>{count}</span>}
+              </button>
+            ))}
+          </div>
+          {headline && (
+            <section
+              className="panel-content overview-panel"
+              role="tabpanel"
+              id="panel-overview"
+              aria-labelledby="tab-overview"
+              hidden={dockMode !== "overview"}
+            >
+              <HeadlinePanel
+                headline={headline}
+                data={data}
+                onInspectSource={(sourceId) =>
+                  inspect(headline.kind, headline.id, sourceId)
+                }
+                onReviewSources={() => {
+                  inspect(headline.kind, headline.id);
+                  // Land on the full source list rather than the item summary.
+                  requestAnimationFrame(() =>
+                    requestAnimationFrame(() =>
+                      dockRef.current
+                        ?.querySelector(".inspector .sources-section")
+                        ?.scrollIntoView({ block: "start" }),
+                    ),
+                  );
+                }}
+              />
+            </section>
+          )}
           <aside
             className="analysis-panel"
             ref={analysisRef}
@@ -695,64 +806,6 @@ function BoardCanvas({
             aria-label="Analysis"
             hidden={dockMode !== "analysis"}
           >
-            <div
-              className="analysis-tabs"
-              role="tablist"
-              aria-label="Case analysis"
-            >
-              {(
-                [
-                  ["gaps", "Gaps", data.gaps.length],
-                  ["insights", "Insights", data.insights.length],
-                  ["suggestions", "Next evidence", data.suggestions.length],
-                ] as const
-              ).map(([id, label, count]) => (
-                <button
-                  key={id}
-                  role="tab"
-                  id={`tab-${id}`}
-                  aria-controls={`panel-${id}`}
-                  aria-selected={tab === id}
-                  tabIndex={tab === id ? 0 : -1}
-                  onKeyDown={(event) => {
-                    const tabs: Tab[] = ["gaps", "insights", "suggestions"];
-                    const offset =
-                      event.key === "ArrowRight"
-                        ? 1
-                        : event.key === "ArrowLeft"
-                          ? -1
-                          : 0;
-                    if (offset || event.key === "Home" || event.key === "End") {
-                      event.preventDefault();
-                      const next =
-                        event.key === "Home"
-                          ? "gaps"
-                          : event.key === "End"
-                            ? "suggestions"
-                            : tabs[
-                                (tabs.indexOf(tab) + offset + tabs.length) %
-                                  tabs.length
-                              ];
-                      setTab(next);
-                      setSelection(null);
-                      const targetNodes = getNodesForTab(next, data);
-                      focusTarget(targetNodes, { dockOpen: true });
-                      document.getElementById(`tab-${next}`)?.focus();
-                    }
-                  }}
-                  className={tab === id ? "active" : ""}
-                  onClick={() => {
-                    setTab(id);
-                    setSelection(null);
-                    const targetNodes = getNodesForTab(id, data);
-                    focusTarget(targetNodes, { dockOpen: true });
-                  }}
-                >
-                  {label}
-                  {count !== null && <span>{count}</span>}
-                </button>
-              ))}
-            </div>
             <div
               className="panel-content"
               role="tabpanel"
@@ -860,13 +913,15 @@ function BoardCanvas({
             backLabel={
               returnMode === "audit"
                 ? "Back to audit"
-                : returnMode === "closed"
-                  ? "Back to board"
-                  : tab === "gaps"
-                    ? "Back to gaps"
-                    : tab === "insights"
-                      ? "Back to insights"
-                      : "Back to next evidence"
+                : returnMode === "overview"
+                  ? "Back to key finding"
+                  : returnMode === "closed"
+                    ? "Back to board"
+                    : tab === "gaps"
+                      ? "Back to gaps"
+                      : tab === "insights"
+                        ? "Back to insights"
+                        : "Back to next evidence"
             }
           />
           <section className="audit-panel" hidden={dockMode !== "audit"}>

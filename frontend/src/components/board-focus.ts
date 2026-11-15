@@ -3,7 +3,7 @@ import type { Selection } from "./Inspector";
 
 export type Tab = "gaps" | "insights" | "suggestions";
 
-/** Returns the node IDs relevant to a selection (gap, insight, node, edge, suggestion, or source). */
+/** Returns the node IDs relevant to a selection (gap, insight, contradiction, node, edge, suggestion, or source). */
 export function getNodesForSelection(
   selection: Selection,
   data: CaseData,
@@ -74,6 +74,18 @@ export function getNodesForSelection(
         }
         for (const n of data.nodes) {
           if (n.citations.some((c) => suggestion.citations.includes(c))) {
+            ids.add(n.id);
+          }
+        }
+      }
+      break;
+    }
+
+    case "contradiction": {
+      const item = data.contradictions?.find((c) => c.id === selection.id);
+      if (item) {
+        for (const n of data.nodes) {
+          if (n.citations.some((c) => item.citations.includes(c))) {
             ids.add(n.id);
           }
         }

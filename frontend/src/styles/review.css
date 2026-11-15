@@ -203,6 +203,11 @@
   border-color: #75613b;
   background: #453a25;
 }
+.kind-badge.kind-contradiction {
+  color: #f4aeb2;
+  border-color: #b3262fcc;
+  background: #b3262f2e;
+}
 .inspector-body p {
   color: #c3cdd8;
   font-size: 13px;
