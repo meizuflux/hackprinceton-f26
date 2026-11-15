@@ -737,7 +737,15 @@ export default function App() {
       setOpeningCase(false);
     }
   }
-  if (route.kind === "welcome") return <Landing navigate={navigate} />;
+  if (route.kind === "welcome")
+    return (
+      <Landing
+        navigate={navigate}
+        onDemo={() => void openCase()}
+        opening={openingCase}
+        caseData={caseQuery.data}
+      />
+    );
   const projectRoute =
     route.kind === "projects" || route.kind === "new-project";
   return (

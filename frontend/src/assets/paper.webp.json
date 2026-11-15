@@ -1,0 +1,5 @@
+{
+  "tool": "image_gen",
+  "purpose": "Faint paper canvas texture; user requested the paper background while retaining surrounding UI.",
+  "prompt": "Use case: stylized-concept. Asset type: seamless repeating paper texture for the canvas of an evidence-review web app. Primary request: a faint warm ivory paper surface, nearly uniform, with extremely subtle natural paper fibers and a little fine pulp grain. Flat overhead material scan, evenly lit from edge to edge. Warm off-white around #e8dfce, with very low contrast so handwritten evidence cards and red connecting threads remain the focus. No objects, text, marks, handwriting, stains, folds, torn edges, borders, vignette, shadows, speckles, or large color variation. Fill the entire square image with just the paper material. Tileable and calm."
+}
