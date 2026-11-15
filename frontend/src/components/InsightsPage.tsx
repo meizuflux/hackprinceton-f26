@@ -1,3 +1,4 @@
+import { OriginIcon } from "./OriginBadge";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   ArrowUpRight,
@@ -668,6 +669,7 @@ function InferencesPanel({
                   <span className="item-kind inferred-kind">
                     Lead · {humanize(signal.type)}
                   </span>
+                  <OriginTag origin="ml" />
                   <span className="item-id">{signal.id}</span>
                   <span className="item-score">
                     Model score {signal.score.toFixed(2)}
@@ -801,6 +803,24 @@ function ReasonList({
   );
 }
 
+const tagText = {
+  ml: "Traditional ML",
+  agent: "Agent insight",
+  llm: "LLM claim",
+  rules: "Rules",
+  record: "Record",
+} as const;
+
+/** Names who produced an inference: icon plus words, never colour alone. */
+function OriginTag({ origin }: { origin: keyof typeof tagText }) {
+  return (
+    <span className={`origin-tag origin-${origin}`}>
+      <OriginIcon origin={origin} size={11} />
+      {tagText[origin]}
+    </span>
+  );
+}
+
 function InferenceCard({ item, ctx }: { item: Insight; ctx: PanelContext }) {
   const observations = item.observations ?? [];
   const caveats = [
@@ -817,6 +837,7 @@ function InferenceCard({ item, ctx }: { item: Insight; ctx: PanelContext }) {
             ? "Inference · observed basis"
             : "Inference"}
         </span>
+        <OriginTag origin={item.origin ?? "rules"} />
         <span className="item-id">{item.id}</span>
         <span className="item-score">{insightStrength(item)}</span>
       </div>

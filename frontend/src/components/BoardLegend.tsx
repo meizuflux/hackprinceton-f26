@@ -8,8 +8,12 @@ import {
   cardKind,
   threadCategory,
   threadColors,
+  MARKED_ORIGINS,
+  originMarks,
+  markedOrigin,
 } from "./board-colors";
 import { relationshipKind } from "./relationships";
+import { OriginIcon } from "./OriginBadge";
 import { cardIcons } from "./EvidenceNode";
 
 /**
@@ -52,6 +56,9 @@ export function BoardLegend({
     edges.map((edge) => relationshipKind(edge.type, edge.certainty)),
   );
   const hasInferredCard = nodes.some((node) => node.certainty === "inferred");
+  const origins = new Set(
+    [...nodes, ...edges].map((item) => markedOrigin(item.origin)),
+  );
   const hasQuestion = nodes.some((node) => node.gapId);
   return (
     <section
@@ -129,6 +136,23 @@ export function BoardLegend({
             )}
           </ul>
         </div>
+        {MARKED_ORIGINS.some((origin) => origins.has(origin)) && (
+          <div className="board-legend-row">
+            <h3>Origin</h3>
+            <ul>
+              {MARKED_ORIGINS.filter((origin) => origins.has(origin)).map(
+                (origin) => (
+                  <li key={origin} className={`legend-origin origin-${origin}`}>
+                    <i className="legend-origin-mark" aria-hidden="true">
+                      <OriginIcon origin={origin} size={11} />
+                    </i>
+                    {originMarks[origin].label}
+                  </li>
+                ),
+              )}
+            </ul>
+          </div>
+        )}
       </div>
     </section>
   );

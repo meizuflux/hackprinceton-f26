@@ -328,6 +328,7 @@ function BoardCanvas({
             badge: threadBadge(e.type, e.certainty),
             label: e.label,
             directed: e.directed === true,
+            origin: e.origin,
             onInspect: () => inspect("edge", e.id),
           },
           ariaLabel: `${threadColors[category].label}: ${e.label}. Inspect relationship and sources`,

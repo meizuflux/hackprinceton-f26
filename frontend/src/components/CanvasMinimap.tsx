@@ -8,6 +8,8 @@ import {
   type Edge,
   type Node,
 } from "@xyflow/react";
+import type { Origin } from "../api/types";
+import { markedOrigin } from "./board-colors";
 import { relationshipKind } from "./relationships";
 import { PIN_WIDTH, PIN_HEIGHT, threadHandles } from "./board-layout";
 import { paperOutline } from "./paper-note";
@@ -236,6 +238,15 @@ export function CanvasMinimap() {
                 className={`board-minimap-pin ${node.data.gapId ? "is-gap" : ""} ${node.data.certainty === "inferred" ? "is-inferred" : ""} ${isFocused ? "is-active" : ""}`}
                 vectorEffect="non-scaling-stroke"
               />
+              {markedOrigin(node.data?.origin as Origin | undefined) && (
+                <rect
+                  className="board-minimap-origin"
+                  x={x + width * frame.scale - Math.max(3, 14 * frame.scale)}
+                  y={y + height * frame.scale - Math.max(2, 6 * frame.scale)}
+                  width={Math.max(3, 14 * frame.scale)}
+                  height={Math.max(2, 6 * frame.scale)}
+                />
+              )}
               <circle
                 className="board-minimap-pushpin"
                 cx={x + (width * frame.scale) / 2}
