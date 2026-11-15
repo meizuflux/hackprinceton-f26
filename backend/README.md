@@ -225,7 +225,7 @@ Errors are always `{"error": {"code", "message"}}`. Case data lives under `$MAPL
 - **`edges[].directed`:** `true` for person → statement "stated", statement → event "conflicts with", event → place "occurred at" and person → event "recorded at"; `false` for communication, co-location and identity. `source` → `target` follows the direction.
 - **`gaps[].nodeIds`:** board nodes the gap concerns (its affected hypotheses, findings, contradictions and missing periods resolved to episode, person, statement and record nodes, plus event/statement nodes citing the gap's records). **`nodes[].gapId`** is the highest-scoring gap that concerns the node.
 - **`timezone`:** the case's IANA time zone (`case_info.assumed_timezone`), or `UTC`.
-- **`gaps[]`:** `gapType`, `status`, `direction`, `missing`, `answer`, `previousStatus`, `key`.
+- **`gaps[]`:** `gapType`, `status`, `direction`, `missing`, `whyItMatters`, `answer`, `previousStatus`, `key`.
 - **`insights[]`:** `certainty`, `confidence`, `observations[]` (each cited), `inference`, `unknowns`, `counterevidence`, `assumptions`, `limitations`, and `explanations` for verdict insights.
 - **`suggestions[]`:** `gapIds`, `artifact`, `score`.
 - **Top-level:** `contradictions`, `explanations`, `timeline`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `changes`, `overrides`, `signals` (ML leads: `type`, `method`, `score`, `certainty`, `citations`).

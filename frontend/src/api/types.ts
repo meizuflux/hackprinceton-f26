@@ -60,6 +60,7 @@ export interface EvidenceGap {
   status?: string;
   previousStatus?: string | null;
   missing?: string;
+  whyItMatters?: string;
   direction?: string;
   answer?: string | null;
   /** Board node IDs the gap concerns. */

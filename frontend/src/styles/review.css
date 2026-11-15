@@ -394,3 +394,30 @@
     box-shadow: none;
   }
 }
+.inspector-structured p {
+  margin: 0 0 12px;
+  color: #c0c9b5;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.cite-list {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+.cite-chip {
+  padding: 1px 6px;
+  border: 1px solid #5d6a55;
+  border-radius: 3px;
+  background: #2a3127;
+  color: #b9c9a3;
+  font: 11px/1.5 var(--mono, ui-monospace, monospace);
+  cursor: pointer;
+}
+.cite-chip:hover,
+.cite-chip:focus-visible {
+  border-color: var(--green);
+  color: #e3edd2;
+}
