@@ -16,7 +16,7 @@ Mapletrace serves people reviewing evidence across domains, including insurance 
 
 Help reviewers explore case evidence, inspect relationships, identify gaps, and decide what evidence to seek next while keeping the original sources accessible.
 
-Demo success means a clear, reliable path from selecting a synthetic ZIP through staged ingestion progress to an inspectable evidence board, ranked gaps, suggested evidence, source inspection, and an audit trail.
+Demo success means a clear, reliable path from the landing page's single demo action through the replayed analysis run of the fictional Kestrel case to an inspectable evidence board, ranked gaps, suggested evidence, source inspection, and an audit trail. ZIP uploads are switched off for the HackPrinceton demo: upload entries stay visible but disabled, with the reason beside them.
 
 ## Operating Context
 
@@ -78,7 +78,7 @@ Conceptual data includes nodes with identifier/type/label/citations and optional
 
 ## Demo Success
 
-- A judge can follow the synthetic ZIP-to-board path in under three minutes.
+- A judge can follow the path from the landing page to the replayed board in under three minutes.
 - The upload flow visibly identifies itself as simulated and completes reliably.
 - The board is legible and usable on a laptop with pan, zoom, fit view, and minimap.
 - Reviewers can open gaps, insights, relationships, suggestions, and audit entries and reach their cited source material.

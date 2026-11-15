@@ -118,6 +118,7 @@ import { ReplayedCase } from "./replay/ReplayedCase";
 import { replayRequested, requestReplay } from "./replay/intent";
 import { RUN_PANEL_EVENT } from "./replay/ReplayHud";
 import { UploadConfirm, type AnalysisMode } from "./onboarding/UploadConfirm";
+import { UPLOADS_ENABLED, UPLOADS_OFF_REASON } from "./config";
 
 /** A request from another section to open the board's review dock. */
 export type ReviewRequest = { panel: Tab | "audit"; id: number };
@@ -2296,28 +2297,33 @@ export default function App() {
               <Upload size={24} />
             </div>
             <h2 id="upload-title">Add a new project</h2>
-            <p>Name your project and select a ZIP archive.</p>
-            <label className="project-name-field">
+            <p>
+              {UPLOADS_ENABLED
+                ? "Name your project and select a ZIP archive."
+                : `${UPLOADS_OFF_REASON} Open the fictional Kestrel case instead.`}
+            </p>
+            <label className="project-name-field" hidden={!UPLOADS_ENABLED}>
               Project name <span>(optional)</span>
               <input
                 maxLength={80}
                 placeholder="e.g. Inventory review"
                 value={projectName}
-                disabled={uploading}
+                disabled={uploading || !UPLOADS_ENABLED}
                 onChange={(e) => setProjectName(e.target.value)}
               />
             </label>
             <div
-              className={`dropzone ${dragging ? "dragging" : ""}`}
+              className={`dropzone ${dragging ? "dragging" : ""} ${UPLOADS_ENABLED ? "" : "is-off"}`}
+              aria-disabled={UPLOADS_ENABLED ? undefined : true}
               onDragOver={(e) => {
                 e.preventDefault();
-                setDragging(true);
+                if (UPLOADS_ENABLED) setDragging(true);
               }}
               onDragLeave={() => setDragging(false)}
               onDrop={(e) => {
                 e.preventDefault();
                 setDragging(false);
-                if (!uploading) {
+                if (!uploading && UPLOADS_ENABLED) {
                   setFile(e.dataTransfer.files[0] ?? null);
                   setError("");
                 }
@@ -2327,17 +2333,22 @@ export default function App() {
               <strong>
                 {file
                   ? file.name
-                  : api.mode === "live"
-                    ? "Choose a ZIP of case evidence"
-                    : "Choose a ZIP to preview the workspace"}
+                  : !UPLOADS_ENABLED
+                    ? "ZIP uploads are off"
+                    : api.mode === "live"
+                      ? "Choose a ZIP of case evidence"
+                      : "Choose a ZIP to preview the workspace"}
               </strong>
               <span>
                 {file
                   ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
-                  : "ZIP archive"}
+                  : UPLOADS_ENABLED
+                    ? "ZIP archive"
+                    : "The demo case shows a finished analysis."}
               </span>
               <button
-                disabled={uploading}
+                disabled={uploading || !UPLOADS_ENABLED}
+                hidden={!UPLOADS_ENABLED}
                 className="text-button"
                 onClick={() => inputRef.current?.click()}
               >
@@ -2389,25 +2400,37 @@ export default function App() {
             )}
             <button
               className="button button-primary full-width"
-              disabled={!file || (uploading && !ready) || openingCase}
+              disabled={
+                UPLOADS_ENABLED
+                  ? !file || (uploading && !ready) || openingCase
+                  : openingCase
+              }
               onClick={
-                ready
-                  ? () =>
-                      void openCase(
-                        statusQuery.data?.caseId ?? uploadedCaseId ?? undefined,
-                      )
-                  : api.mode === "live"
-                    ? () => {
-                        setError("");
-                        setConfirmOpen(true);
-                      }
-                    : () => void upload()
+                !UPLOADS_ENABLED
+                  ? () => void openCase()
+                  : ready
+                    ? () =>
+                        void openCase(
+                          statusQuery.data?.caseId ??
+                            uploadedCaseId ??
+                            undefined,
+                        )
+                    : api.mode === "live"
+                      ? () => {
+                          setError("");
+                          setConfirmOpen(true);
+                        }
+                      : () => void upload()
               }
             >
               {openingCase ? (
                 <>
                   <LoaderCircle size={16} className="spin" /> Opening evidence
                   board
+                </>
+              ) : !UPLOADS_ENABLED ? (
+                <>
+                  Explore the demo case <ArrowRight size={16} />
                 </>
               ) : ready ? (
                 <>
@@ -2428,7 +2451,8 @@ export default function App() {
                 </>
               )}
             </button>
-            {api.mode === "live" ? (
+            {!UPLOADS_ENABLED && api.mode === "live" ? null : api.mode ===
+              "live" ? (
               <p className="upload-disclosure">
                 The ZIP is uploaded to the case service, which hashes every file
                 and keeps read-only copies. Evidence is never modified. Limit
