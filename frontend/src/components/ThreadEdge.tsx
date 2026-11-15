@@ -17,6 +17,7 @@ export type ThreadData = {
   label: string;
   directed: boolean;
   isFocused?: boolean;
+  isDimmed?: boolean;
   onInspect: () => void;
 };
 
@@ -44,7 +45,7 @@ export const ThreadEdge = memo(function ThreadEdge(
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`thread-label nodrag nopan ${data.kind} thread-${data.category} ${props.selected || data.isFocused ? "is-selected" : ""}`}
+          className={`thread-label nodrag nopan ${data.kind} thread-${data.category} ${props.selected || data.isFocused ? "is-selected" : ""} ${data.isDimmed ? "is-dimmed" : ""}`}
           style={{
             transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
             maxWidth: labelWidth,

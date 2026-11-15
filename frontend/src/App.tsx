@@ -437,6 +437,7 @@ function BoardCanvas({
           ? {
               ...edge.data,
               isFocused,
+              isDimmed: Boolean(isDimmed),
               onInspect: () => inspect("edge", edge.id),
             }
           : undefined,
