@@ -145,7 +145,11 @@ def test_ml_stage_does_not_change_other_results(tmp_path, monkeypatch):
     assert _without_signals(on) == _without_signals(off)
     b_on = json.loads((Path(s_on["out_dir"]) / "board.json").read_text(encoding="utf-8"))
     b_off = json.loads((Path(s_off["out_dir"]) / "board.json").read_text(encoding="utf-8"))
-    for section in ("nodes", "gaps", "insights", "suggestions", "contradictions", "explanations", "timeline"):
+
+    def _rules_nodes(b):  # ML leads are extra board nodes; every other node is unchanged apart from layout
+        return [{k: v for k, v in n.items() if k != "position"} for n in b["nodes"] if n.get("origin") != "ml"]
+    assert _rules_nodes(b_on) == _rules_nodes(b_off)
+    for section in ("gaps", "insights", "suggestions", "contradictions", "explanations", "timeline"):
         assert b_on[section] == b_off[section], section
     assert "signals" in b_on and all(set(x["citations"]) <= {s["id"] for s in b_on["sources"]} for x in b_on["signals"])
 
