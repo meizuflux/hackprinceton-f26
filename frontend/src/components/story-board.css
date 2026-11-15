@@ -1,0 +1,528 @@
+/*
+ * Story view: compact pinned cards around a hero, group stacks at the edge,
+ * and cards that expand in place. Inks come from board-coding.css; amber still
+ * means "under review" and dashes still mean inferred.
+ */
+.story-node {
+  position: relative;
+}
+.story-card {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 15px 15px 10px;
+  color: #383c31;
+  isolation: isolate;
+  cursor: pointer;
+  interpolate-size: allow-keywords;
+  transition:
+    width 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    left 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    height 0.34s cubic-bezier(0.16, 1, 0.3, 1),
+    filter 0.34s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.story-card .pin-outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: -1;
+  pointer-events: none;
+  fill: var(--pin-tint, #faf8f1);
+  stroke: #766d56;
+  stroke-width: 0.7;
+  stroke-opacity: 0.3;
+  vector-effect: non-scaling-stroke;
+  filter: drop-shadow(0 3px 4px #4e443b26);
+}
+.story-card.is-inferred .pin-outline {
+  stroke: var(--pin-ink);
+  stroke-opacity: 0.85;
+  stroke-width: 1.5;
+  stroke-dasharray: 7 5;
+}
+.story-card.has-gap .pin-outline {
+  stroke: var(--question-ink);
+  stroke-opacity: 1;
+  stroke-width: 2;
+  stroke-dasharray: none;
+}
+.story-card.has-gap.is-inferred .pin-outline {
+  stroke-dasharray: 7 5;
+}
+.story-card .pushpin {
+  top: 5px;
+  left: calc(50% - 4.5px);
+  width: 9px;
+  height: 9px;
+  background: var(--pin-ink, #ad604a);
+  box-shadow:
+    0 1px 2px #3d302840,
+    inset 0 -1px 0 #00000026;
+}
+.story-card .pin-gap-flag {
+  top: -9px;
+  right: 12px;
+}
+
+/* Collapsed face: icon, title, one line. */
+.story-card-toggle {
+  display: grid;
+  gap: 5px;
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 3px;
+}
+.story-card-toggle:focus-visible {
+  outline: 2px solid #2f3a2b;
+  outline-offset: 4px;
+}
+.story-card-type {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-width: 0;
+  font-size: 11px;
+  text-transform: capitalize;
+  color: #5b604f;
+}
+.story-card-type .pin-kind-chip {
+  white-space: nowrap;
+}
+.story-card-title {
+  font:
+    400 18px/1.16 "Excalifont",
+    "DM Sans",
+    sans-serif;
+  color: #2f332a;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.story-card-meta {
+  font-size: 11.5px;
+  line-height: 1.35;
+  color: #595e4e;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.story-card.is-hero {
+  padding: 18px 20px 12px;
+}
+.story-card.is-hero .story-card-title {
+  font-size: 24px;
+  line-height: 1.12;
+}
+.story-card.is-hero .story-card-meta {
+  font:
+    400 14.5px/1.35 "Excalifont",
+    "DM Sans",
+    sans-serif;
+  color: #454a3d;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.story-card.is-hero .pushpin {
+  top: 6px;
+  left: calc(50% - 6px);
+  width: 12px;
+  height: 12px;
+}
+.story-card.is-hero .pin-outline {
+  filter: drop-shadow(0 6px 10px #4e443b33);
+}
+
+/* Expanded: the paper grows in place and overlays its neighbours. */
+.story-card.is-expanded {
+  left: calc(50% - 168px);
+  width: 336px;
+  height: auto;
+  min-height: 100%;
+  cursor: default;
+  filter: drop-shadow(0 16px 28px #3b2f2440);
+}
+.story-card.is-expanded .story-card-title {
+  -webkit-line-clamp: unset;
+  display: block;
+}
+.story-card.is-hero.is-expanded {
+  left: calc(50% - 184px);
+  width: 368px;
+}
+.story-card-body {
+  display: grid;
+  gap: 8px;
+  margin-top: 8px;
+  cursor: auto;
+  animation: story-body-in 0.26s 0.08s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes story-body-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+}
+.story-card-when {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font:
+    400 11px/1.3 "IBM Plex Mono",
+    monospace;
+  color: #59513b;
+}
+.story-card-summary {
+  font:
+    400 15px/1.4 "Excalifont",
+    "DM Sans",
+    sans-serif;
+  color: #3f4338;
+  overflow-wrap: anywhere;
+}
+.story-card-excerpts {
+  display: grid;
+  gap: 6px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+.story-card-excerpts li {
+  display: grid;
+  gap: 2px;
+  padding: 6px 8px 7px;
+  border-radius: 2px;
+  background: var(--paper);
+}
+.story-card-excerpts span {
+  font:
+    400 10.5px/1.3 "IBM Plex Mono",
+    monospace;
+  color: #5b604f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.story-card-excerpts q {
+  font:
+    400 13.5px/1.4 Newsreader,
+    Georgia,
+    serif;
+  color: #2b2d26;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+}
+.story-card-count {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: #50573e;
+}
+.story-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding-top: 2px;
+}
+.story-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid #b9b09c;
+  border-radius: 4px;
+  background: #fffdf7;
+  color: #36452b;
+  font:
+    600 12px/1 "DM Sans",
+    sans-serif;
+  cursor: pointer;
+  transition:
+    background-color 0.16s,
+    border-color 0.16s;
+}
+.story-action:hover:not(:disabled) {
+  background: #f1ecdf;
+  border-color: #9e957f;
+}
+.story-action:focus-visible {
+  outline: 2px solid #2f3a2b;
+  outline-offset: 2px;
+}
+.story-action:disabled {
+  cursor: default;
+  color: #6c6a5f;
+  border-style: dashed;
+  background: transparent;
+}
+.story-action.primary {
+  border-color: #1d2833;
+  background: #1d2833;
+  color: #f4f1e8;
+}
+.story-action.primary:hover {
+  background: #2a3846;
+  border-color: #2a3846;
+}
+.story-action.question {
+  color: #6b440f;
+  border-color: color-mix(in srgb, var(--question-ink) 55%, transparent);
+}
+.story-action.icon {
+  justify-content: center;
+  width: 30px;
+  padding: 0;
+  margin-left: auto;
+}
+
+/* Group stack: a labelled pile of paper, not a card of evidence. */
+.story-group {
+  position: absolute;
+  inset: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #383c31;
+  text-align: left;
+  cursor: pointer;
+}
+.story-group-sheet,
+.story-group-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 3px;
+  border: 1px solid color-mix(in srgb, var(--pin-ink) 32%, #b4ab9a);
+  background: #f6f2e8;
+  transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.story-group-sheet:nth-child(1) {
+  transform: translate(9px, 8px) rotate(1.4deg);
+  background: #ece6d8;
+}
+.story-group-sheet:nth-child(2) {
+  transform: translate(4px, 4px) rotate(-0.8deg);
+  background: #f1ecdf;
+}
+.story-group-face {
+  display: grid;
+  align-content: start;
+  gap: 5px;
+  padding: 12px 14px 10px;
+  background: var(--pin-tint, #faf8f1);
+  box-shadow: 0 3px 5px #4e443b26;
+}
+.story-group:hover .story-group-sheet:nth-child(1) {
+  transform: translate(12px, 10px) rotate(2deg);
+}
+.story-group:hover .story-group-sheet:nth-child(2) {
+  transform: translate(6px, 5px) rotate(-1.2deg);
+}
+.story-group.is-open .story-group-sheet {
+  transform: none;
+  opacity: 0;
+}
+.story-group.is-open .story-group-face {
+  background: #faf8f1cc;
+  border-style: dashed;
+  box-shadow: none;
+}
+.story-group:focus-visible {
+  outline: 2px solid #2f3a2b;
+  outline-offset: 6px;
+  border-radius: 4px;
+}
+.story-group-count {
+  min-width: 22px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  background: var(--pin-ink);
+  color: #fffdf7;
+  font:
+    500 11px/1.4 "IBM Plex Mono",
+    monospace;
+  text-align: center;
+}
+
+/* Review focus keeps the board's amber rule. */
+.focused-node .story-card,
+.story-card.is-focused,
+.story-card.active,
+.focused-node .story-group-face,
+.story-group.is-focused .story-group-face {
+  outline: 3px solid var(--amber);
+  outline-offset: 3px;
+}
+.focused-node .story-card,
+.story-card.is-focused {
+  filter: drop-shadow(0 8px 24px rgba(212, 173, 106, 0.45));
+}
+
+/* Revealed cards travel out of the card or group that held them. */
+.story-node.is-arriving .story-card,
+.story-node.is-arriving .story-group {
+  animation: story-arrive 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@keyframes story-arrive {
+  from {
+    opacity: 0;
+    transform: translate(var(--arrive-x, 0), var(--arrive-y, 0)) scale(0.45);
+  }
+}
+
+/* Labels: story threads always; others on hover, focus or selection. */
+.thread-label.is-quiet {
+  opacity: 0;
+  pointer-events: none;
+}
+.thread-label.is-quiet:is(.is-hovered, .is-selected, :focus-visible) {
+  opacity: 1;
+  pointer-events: all;
+}
+.thread-label.is-hovered:not(.observed) > span {
+  display: block;
+  margin-top: 3px;
+}
+.thread-label.is-aggregate {
+  opacity: 1;
+  pointer-events: all;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 2px;
+  border-radius: 999px;
+  box-shadow: none;
+  font-size: 13.5px;
+}
+.thread-label.is-aggregate > span {
+  display: none;
+  padding-right: 6px;
+  white-space: nowrap;
+}
+.thread-label.is-aggregate:is(.is-hovered, .is-selected, :focus-visible)
+  > span {
+  display: block;
+  margin: 0;
+}
+.thread-label .thread-count {
+  display: inline-block;
+  min-width: 24px;
+  padding: 1px 7px;
+  border-radius: 999px;
+  border: 1.5px solid var(--thread-ink, #6b5d4f);
+  background: #faf8f1;
+  font:
+    500 11px/1.4 "IBM Plex Mono",
+    monospace;
+  text-align: center;
+}
+.thread-label.is-aggregate.inference .thread-count,
+.thread-label.is-aggregate.claim .thread-count {
+  border-style: dashed;
+}
+.aggregate-edge path.react-flow__edge-path {
+  stroke-opacity: 0.6;
+}
+
+/* View switch: floats over the top of the canvas, beside the review dock. */
+.board-view-switch {
+  position: absolute;
+  z-index: 6;
+  top: calc(var(--topbar-clearance-y, 68px) + 2px);
+  left: calc((100% - var(--dock-offset, 0px)) / 2);
+  transform: translateX(-50%);
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  transition: left 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.board-view-switch button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--muted);
+  font:
+    550 12px/1 "DM Sans",
+    sans-serif;
+  cursor: pointer;
+  transition:
+    color 0.16s,
+    background-color 0.16s;
+}
+.board-view-switch button:hover {
+  color: var(--text);
+  background: #ffffff0d;
+}
+.board-view-switch button[aria-pressed="true"] {
+  color: var(--brand-text);
+  background: var(--brand-selected);
+  box-shadow: inset 0 0 0 1px var(--brand-border);
+}
+.board-view-count {
+  font:
+    400 11px/1 "IBM Plex Mono",
+    monospace;
+  font-variant-numeric: tabular-nums;
+  color: inherit;
+  opacity: 0.8;
+}
+
+/* No minimap in the story view: zoom controls take its place at the edge. */
+.canvas-wrap.is-story {
+  --minimap-width: 0px;
+  --zoom-gap: 0px;
+}
+.case-board-panel:has(.canvas-wrap.is-story) {
+  --minimap-height: 132px;
+}
+.search-feedback-action {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--brand-text);
+  font: inherit;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .story-card,
+  .story-group-sheet,
+  .story-group-face,
+  .board-view-switch {
+    transition: none;
+  }
+  .story-card-body,
+  .story-node.is-arriving .story-card,
+  .story-node.is-arriving .story-group {
+    animation: none;
+  }
+}

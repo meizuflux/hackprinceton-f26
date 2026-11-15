@@ -208,9 +208,10 @@ export interface UncertainTime {
   citations: CitationId[];
 }
 
-/** The backend's opening view: a selection of existing board nodes plus one headline finding. */
+/** The backend's opening view: a selection of existing board nodes, never new facts. */
 export interface BoardStory {
   centerId: string;
+  /** Centre first; at most 12. */
   nodeIds: string[];
   headline: { kind: "contradiction" | "gap" | "insight"; id: string } | null;
   reason: string;
@@ -237,7 +238,7 @@ export interface CaseData {
   uncertainTimes?: UncertainTime[];
   /** IANA time zone the case is displayed in. Times on the wire are ISO 8601. */
   timezone?: string;
-  /** Opening story; absent with the mock adapter and older snapshots. */
+  /** Opening story chosen by the backend; absent from the mock adapter. */
   story?: BoardStory | null;
 }
 
