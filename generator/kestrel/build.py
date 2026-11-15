@@ -160,7 +160,7 @@ def build(root: str, seed: str = common.DEFAULT_SEED, truth_dir: str | None = No
                           "imageio-ffmpeg": imageio_ffmpeg.__version__,
                           "ffmpeg": imageio_ffmpeg.get_ffmpeg_version()},
             "note": "Text, CSV and JSON outputs are byte-stable across platforms. JPEG, MP4 and ZIP bytes are stable "
-                    "for the pinned library versions in generator/requirements.txt.",
+                    "for the pinned library versions in the PEP 723 block of generator/generate.py.",
             "files": files}
     out.json("BUILD_INFO.json", info)
     return info

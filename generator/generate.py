@@ -1,4 +1,13 @@
-"""Entry point: python generator/generate.py [--out DIR] [--verify]"""
+# /// script
+# requires-python = ">=3.12"
+# dependencies = [
+#   "numpy==2.5.4",
+#   "pillow==13.0.0",
+#   "piexif==1.1.3",
+#   "imageio-ffmpeg==0.8.1",
+# ]
+# ///
+"""Entry point: uv run generator/generate.py [--out DIR] [--verify]"""
 import os
 import sys
 

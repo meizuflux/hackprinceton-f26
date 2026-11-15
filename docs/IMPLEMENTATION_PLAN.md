@@ -60,7 +60,7 @@ criteria use the local one from `make data-truth` (`.truth/kestrel/`, git-ignore
   - red herrings cleared
   - bias trap RH-03 not flagged
   - citation validity
-- Training variants: `python generator/generate.py --seed <s> --out <dir>` (same facts, different noise).
+- Training variants: `uv run --locked --script generator/generate.py --seed <s> --out <dir>` (same facts, different noise).
 
 ### WS1 Ingestion service (`backend/`, FastAPI, Python 3.11+)
 - `POST /upload` returns `jobId`; the work runs as a background task. The frontend mock does not enforce a size cap. A production limit is still an open backend decision; 100 MB is a reasonable starting proposal, not a current frontend contract.

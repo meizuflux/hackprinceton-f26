@@ -36,7 +36,7 @@ def norm_col(c: str) -> str:
 ROLE_SYNONYMS: dict[str, list[str]] = {
     "timestamp": ["timestamp", "datetime", "datetimeutc", "timestamputc", "timestampms", "timems", "epochms",
                   "unixms", "timestamplocal", "time", "date", "sentat", "sent", "createdat",
-                  "starttime", "start", "timeutc", "recordedat", "capturedat", "ts", "epoch", "unixtime", "when",
+                  "starttime", "startutc", "starttimeutc", "startlocal", "start", "timeutc", "timecreatedutc", "timecreated", "recordedat", "capturedat", "ts", "epoch", "unixtime", "when",
                   "occurredat", "eventtime", "receivedat", "datesent", "messagedate", "calldate", "loggedat"],
     "date_only": ["date", "day", "eventdate"],
     "time_only": ["time", "clock", "eventtime"],
@@ -56,11 +56,12 @@ ROLE_SYNONYMS: dict[str, list[str]] = {
     "device": ["device", "deviceid", "imei", "handset", "owner", "subject", "sourcedevice", "account",
                "tracker", "vehicle", "camera", "cameraid"],
     "name": ["name", "contactname", "fullname", "displayname", "contact", "cardholder", "holder", "user",
-             "username", "employee", "person", "operator", "staff"],
+             "username", "employee", "person", "staff", "officer", "guard", "visitorname", "visitor",
+             "subjectname", "suspect", "witness"],
     "phone": ["phone", "phonenumber", "number", "mobile", "cell", "tel", "telephone", "msisdn"],
     "email": ["email", "emailaddress", "mail"],
     "event": ["event", "eventtype", "activity", "action", "description", "detection", "label", "observation"],
-    "location_name": ["location", "place", "address", "site", "area", "zone"],
+    "location_name": ["location", "place", "address", "site", "area", "zone", "door", "checkpoint", "room", "building"],
     "sample": ["sample", "sampleid", "specimen", "specimenid", "item", "itemid", "exhibit", "samplename"],
     "locus": ["locus", "marker", "locusname", "markername"],
     "allele": ["allele", "allele1", "allele2", "allele3", "alleles", "a1", "a2"],
@@ -237,7 +238,7 @@ def _detect_time_column(columns: list[str], rows: list[dict], cmap: dict) -> Non
     best, best_rate = None, 0.0
     for c in columns:
         n = norm_col(c)
-        if c in used or not any(k in n for k in ("time", "date", "ts", "epoch", "when", "at")):
+        if c in used or not any(k in n for k in ("time", "date", "ts", "epoch", "when", "at", "utc", "start", "local")):
             continue
         vals = [r.get(c) for r in rows[:50] if r.get(c) not in (None, "")]
         if not vals:
@@ -320,7 +321,10 @@ def classify_text(path: Path, text: str) -> TypeDecision:
         scores["messages"] = 3 + min(chat / n, 1)
         reasons["messages"] = f"{chat} chat-export lines (date, time, sender: message)"
 
-    speakers = [s.strip().lower() for s in _SPEAKER_LINE.findall(text)]
+    header_keys = {"date", "time", "case", "case number", "interviewer", "interviewee", "subject", "location", "present",
+                   "recorded", "date of incident", "incident date", "date and time", "name", "witness", "statement of",
+                   "taken by", "address", "officer", "role", "analyst", "lab case", "date of statement", "suspect"}
+    speakers = [s.strip().lower() for s in _SPEAKER_LINE.findall(text) if s.strip().lower() not in header_keys]
     distinct = set(speakers)
     repeat_speakers = sum(1 for s in distinct if speakers.count(s) >= 2)
     # a dialogue has speakers who talk more than once; a form ("Reported by: ...") does not

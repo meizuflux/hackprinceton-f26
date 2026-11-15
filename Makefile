@@ -1,8 +1,10 @@
 .DEFAULT_GOAL := help
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
-	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel
+	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel \n	backend-analyze-kestrel backend-serve
 
 PYTHON ?= python3
+UV ?= uv
+GENERATOR := generator/generate.py
 
 help:
 	@echo "make frontend-install  Install locked dependencies"
@@ -11,13 +13,15 @@ help:
 	@echo "make frontend-test     Run contract tests"
 	@echo "make frontend-preview  Preview the production build"
 	@echo "make frontend-format   Format source files"
-	@echo "make data-install      Install pinned case-generator dependencies (PYTHON=python3)"
+	@echo "make data-install      Install generator dependencies with uv (UV=uv)"
 	@echo "make data-generate     Regenerate the synthetic Kestrel case in cases/kestrel/"
 	@echo "make data-verify       Rebuild the case in a temp dir and check every file hash"
 	@echo "make data-truth        Write the answer key to .truth/kestrel/ (git-ignored; scoring only)"
 	@echo "make backend-install   Install backend ingestion dependencies (PYTHON=python3)"
 	@echo "make backend-test      Run backend tests, including a full Kestrel ingestion"
 	@echo "make backend-ingest-kestrel  Ingest the Kestrel upload ZIP into backend/runs/kestrel/"
+	@echo "make backend-analyze-kestrel Run the reasoning pipeline on backend/runs/kestrel/"
+	@echo "make backend-serve     Start the API at http://127.0.0.1:8000"
 
 frontend-install:
 	cd frontend && bun install --frozen-lockfile
@@ -38,16 +42,16 @@ frontend-format:
 	cd frontend && bun run --bun format
 
 data-install:
-	$(PYTHON) -m pip install -r generator/requirements.txt
+	$(UV) sync --locked --script $(GENERATOR)
 
 data-generate:
-	$(PYTHON) generator/generate.py
+	$(UV) run --locked --script $(GENERATOR)
 
 data-verify:
-	$(PYTHON) generator/generate.py --verify
+	$(UV) run --locked --script $(GENERATOR) --verify
 
 data-truth:
-	$(PYTHON) generator/generate.py --truth-out .truth/kestrel
+	$(UV) run --locked --script $(GENERATOR) --truth-out .truth/kestrel
 
 backend-install:
 	$(PYTHON) -m pip install -r backend/requirements.txt
@@ -57,3 +61,9 @@ backend-test:
 
 backend-ingest-kestrel:
 	cd backend && $(PYTHON) -m mapletrace_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel --overwrite
+
+backend-analyze-kestrel:
+	cd backend && $(PYTHON) -m mapletrace_reason analyze runs/kestrel
+
+backend-serve:
+	cd backend && $(PYTHON) -m uvicorn mapletrace_api.app:app --host 127.0.0.1 --port 8000
