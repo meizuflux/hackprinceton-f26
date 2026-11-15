@@ -5,7 +5,6 @@ import {
   FolderOpen,
   PanelLeftClose,
   PanelLeftOpen,
-  Plus,
 } from "lucide-react";
 import { casePath } from "../routing";
 import type { SessionProject } from "../onboarding/Onboarding";
@@ -75,12 +74,6 @@ export function WorkspaceNavigation({
             </button>
           ))}
         </div>
-        <button
-          className="text-button"
-          onClick={() => navigate("/projects/new")}
-        >
-          <Plus size={16} /> New project
-        </button>
       </div>
     </nav>
   );

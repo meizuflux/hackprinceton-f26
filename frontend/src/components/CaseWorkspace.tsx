@@ -7,7 +7,6 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  Plus,
   ScanText,
 } from "lucide-react";
 import type { CaseData } from "../api/types";
@@ -150,31 +149,25 @@ export function CaseWorkspace({
             className="case-toolbar-project-actions"
             aria-label="Project navigation"
           >
-            {[
-              { label: "All projects", path: "/projects", icon: FolderOpen },
-              { label: "New project", path: "/projects/new", icon: Plus },
-            ].map(({ label, path, icon: Icon }) => (
-              <a
-                key={path}
-                href={path}
-                aria-label={label}
-                title={!toolbarExpanded ? label : undefined}
-                onClick={(event) => {
-                  if (
-                    event.metaKey ||
-                    event.ctrlKey ||
-                    event.shiftKey ||
-                    event.altKey
-                  )
-                    return;
-                  event.preventDefault();
-                  navigate(path);
-                }}
-              >
-                <Icon size={16} aria-hidden="true" />
-                <span hidden={!toolbarExpanded}>{label}</span>
-              </a>
-            ))}
+            <a
+              href="/projects"
+              aria-label="All projects"
+              title={!toolbarExpanded ? "All projects" : undefined}
+              onClick={(event) => {
+                if (
+                  event.metaKey ||
+                  event.ctrlKey ||
+                  event.shiftKey ||
+                  event.altKey
+                )
+                  return;
+                event.preventDefault();
+                navigate("/projects");
+              }}
+            >
+              <FolderOpen size={16} aria-hidden="true" />
+              <span hidden={!toolbarExpanded}>All projects</span>
+            </a>
           </nav>
         </div>
       </aside>
