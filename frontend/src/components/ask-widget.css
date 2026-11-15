@@ -24,16 +24,44 @@
 .case-board-panel:has(.review-dock.is-open) > .ask-widget {
   right: 432px; /* dock width 400 + its inset 16 + gap 16 */
 }
+/* Suggestions are hidden until the box is hovered or focused, then rise above it one by one. They sit in their own
+   layer above the box, so revealing them never moves the box. The bottom padding bridges the gap to the box, so the
+   pointer can travel up to a chip without the list closing. */
 .ask-chips {
+  position: absolute;
+  right: 0;
+  bottom: 100%;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
   gap: 6px;
   margin: 0;
-  padding: 0;
+  padding: 0 0 8px;
   list-style: none;
+  pointer-events: none;
+}
+.ask-chips li {
+  opacity: 0;
+  transform: translateY(10px) scale(0.98);
+  transform-origin: bottom right;
+  transition:
+    opacity 0.16s ease-out,
+    transform 0.16s ease-out;
+}
+.ask-widget:hover .ask-chips,
+.ask-widget:focus-within .ask-chips {
+  pointer-events: auto;
+}
+.ask-widget:hover .ask-chips li,
+.ask-widget:focus-within .ask-chips li {
+  opacity: 1;
+  transform: none;
+  transition:
+    opacity 0.22s ease-out var(--chip-delay, 0ms),
+    transform 0.28s cubic-bezier(0.16, 1, 0.3, 1) var(--chip-delay, 0ms);
 }
 .ask-chip {
+  box-shadow: var(--shadow);
   max-width: min(340px, calc(100vw - 32px));
   overflow: hidden;
   padding: 6px 10px;
@@ -47,7 +75,9 @@
   white-space: nowrap;
   cursor: pointer;
 }
-.ask-chip:hover {
+.ask-chip:hover,
+.ask-chip:focus-visible {
+  border-color: var(--brand-border);
   background: var(--raised);
 }
 .ask-box {
@@ -95,8 +125,10 @@
   cursor: default;
 }
 @media (prefers-reduced-motion: reduce) {
-  .ask-widget {
+  .ask-widget,
+  .ask-widget .ask-chips li {
     transition: none;
+    transform: none;
   }
 }
 @media (max-width: 900px) {
