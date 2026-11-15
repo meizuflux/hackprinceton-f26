@@ -108,7 +108,8 @@
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  overflow-wrap: anywhere;
+  /* Break inside a word only when it cannot fit a line alone; underscores get explicit break points. */
+  overflow-wrap: break-word;
 }
 .story-card-meta {
   font-size: 12px;

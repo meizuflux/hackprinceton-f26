@@ -180,7 +180,9 @@ export const StoryCardNode = memo(function StoryCardNode({
               <span className="pin-certainty">Inferred</span>
             )}
           </span>
-          <span className="story-card-title">{data.label}</span>
+          <span className="story-card-title" title={data.label}>
+            {breakableTitle(data.label)}
+          </span>
           {!data.expanded && (
             <span className="story-card-meta">
               {data.hero ? data.summary : meta}
@@ -270,6 +272,13 @@ export const StoryCardNode = memo(function StoryCardNode({
     </div>
   );
 });
+
+/** Lets long identifiers like DOOR_HELD_OPEN wrap after an underscore; the text itself is unchanged. */
+export function breakableTitle(label: string) {
+  return label
+    .split(/(?<=_)/)
+    .flatMap((part, i) => (i ? [<wbr key={i} />, part] : [part]));
+}
 
 /** A labelled stack standing for cards folded out of the story. Not evidence. */
 export const StoryGroupNode = memo(function StoryGroupNode({
