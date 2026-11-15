@@ -23,7 +23,7 @@ export function BoardLegend({
   const [open, setOpen] = useState(
     () =>
       typeof window === "undefined" ||
-      !window.matchMedia("(max-width: 900px)").matches,
+      !window.matchMedia("(max-width: 1199px)").matches,
   );
   const kinds = new Set(nodes.map((node) => cardKind(node.type)));
   const categories = new Set(edges.map((edge) => threadCategory(edge.type)));

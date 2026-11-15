@@ -112,27 +112,6 @@
   min-width: 24px;
   padding: 3px;
 }
-.review-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  border-radius: var(--radius);
-  background: var(--green);
-  color: #252d20;
-  padding: 7px 12px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.review-toggle:hover,
-.review-toggle[aria-expanded="true"] {
-  background: #e1ebc5;
-}
-.review-toggle strong {
-  border-left: 1px solid #75806170;
-  padding-left: 8px;
-  font-size: 12px;
-}
 .workspace-navigation {
   position: absolute;
   inset: 0 auto auto 0;
@@ -434,10 +413,6 @@
   }
   .board-actions > .text-button {
     flex: 1;
-  }
-  .review-toggle {
-    flex: 1;
-    justify-content: center;
   }
   .canvas-wrap {
     --board-inset: 12px;

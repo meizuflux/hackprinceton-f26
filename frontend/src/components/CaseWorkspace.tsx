@@ -8,7 +8,6 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  PanelRightOpen,
   ScanText,
 } from "lucide-react";
 import type { CaseData } from "../api/types";
@@ -19,6 +18,8 @@ import { RecordsBrowser } from "./RecordsBrowser";
 import { InsightsPage } from "./InsightsPage";
 import { ChatPanel } from "./ChatPanel";
 import { Inspector, type Selection } from "./Inspector";
+import { AnalysisEntries } from "./AnalysisEntries";
+import type { Tab } from "./board-focus";
 import "./case-workspace.css";
 
 const views = [
@@ -36,6 +37,7 @@ export function CaseWorkspace({
   sourceId,
   navigate,
   onFocusOnBoard,
+  onOpenReview,
   children,
 }: {
   data: CaseData;
@@ -44,6 +46,8 @@ export function CaseWorkspace({
   sourceId?: string;
   navigate: (path: string) => void;
   onFocusOnBoard?: (selection: Selection) => void;
+  /** Returns to the mind map with the review dock open on this panel. */
+  onOpenReview?: (panel: Tab | "audit") => void;
   children: ReactNode;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -269,22 +273,20 @@ export function CaseWorkspace({
             <button
               type="button"
               className="text-button"
-              onClick={() => {
-                navigate(casePath(data.id));
-              }}
+              onClick={() =>
+                onOpenReview
+                  ? onOpenReview("audit")
+                  : navigate(casePath(data.id))
+              }
             >
               <History size={15} /> Audit trail
             </button>
-            <button
-              type="button"
-              className="review-toggle"
-              onClick={() => {
-                navigate(casePath(data.id));
-              }}
-            >
-              <PanelRightOpen size={15} /> Review gaps{" "}
-              <strong>{data.gaps.length}</strong>
-            </button>
+            <AnalysisEntries
+              data={data}
+              onOpen={(tab) =>
+                onOpenReview ? onOpenReview(tab) : navigate(casePath(data.id))
+              }
+            />
           </div>
         </header>
       )}
