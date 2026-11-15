@@ -127,6 +127,7 @@ class DeployTests(unittest.TestCase):
                 bucket, config = deploy.prepare_object_storage(args, state)
             self.assertEqual(bucket, 'mapletrace-abc123')
             self.assertIn(b'endpoint = https://ewr1.vultrobjects.com', config)
+            self.assertIn(b'provider = Other', config)
             self.assertEqual(api.call_args_list[-1].args, ('POST', '/object-storage/abc123/bucket', {'name': bucket}))
             self.assertNotIn('secret', json.dumps(state.data))
 

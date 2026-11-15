@@ -212,7 +212,7 @@ def backup_config(endpoint_url, bucket, access, secret):
     if not re.fullmatch(r"[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]", bucket) or ".." in bucket:
         raise ValueError("Invalid backup bucket name")
     config = configparser.RawConfigParser()
-    config["vultr"] = {"type": "s3", "provider": "Vultr", "env_auth": "false", "access_key_id": access,
+    config["vultr"] = {"type": "s3", "provider": "Other", "env_auth": "false", "access_key_id": access,
                        "secret_access_key": secret, "endpoint": endpoint_url, "acl": "private"}
     out = io.StringIO()
     config.write(out)
