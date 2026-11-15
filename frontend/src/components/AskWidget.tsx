@@ -1,5 +1,5 @@
 import { ArrowUp, MessageSquareText } from "lucide-react";
-import { useState } from "react";
+import { useState, type CSSProperties } from "react";
 import { queueQuestion } from "./chat-handoff";
 import { useCaseChat } from "./useCaseChat";
 import "./chat-panel.css";
@@ -21,7 +21,8 @@ export function submitToChat(
 
 /**
  * Small "Ask a question" box on the mind map. It renders no answers: submitting opens the chat tab, which asks the
- * question and plays the answer there. Sits above the minimap and zoom controls, clear of the legend.
+ * question and plays the answer there. Sits above the minimap and zoom controls, clear of the legend. Suggested
+ * questions stay hidden until the box is hovered or focused, then rise above it without moving it.
  */
 export function AskWidget({
   caseId,
@@ -53,8 +54,16 @@ export function AskWidget({
     >
       {available && recorded.length > 0 && (
         <ul className="ask-chips" aria-label="Suggested questions">
-          {recorded.slice(0, 3).map((s) => (
-            <li key={s.question}>
+          {recorded.slice(0, 3).map((s, i, all) => (
+            // Nearest the box rises first.
+            <li
+              key={s.question}
+              style={
+                {
+                  "--chip-delay": `${(all.length - 1 - i) * 45}ms`,
+                } as CSSProperties
+              }
+            >
               <button
                 type="button"
                 className="ask-chip"

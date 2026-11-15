@@ -116,6 +116,7 @@ import { HeadlinePanel } from "./components/HeadlinePanel";
 import { resolveHeadline } from "./components/headline";
 import { ReplayedCase } from "./replay/ReplayedCase";
 import { replayRequested, requestReplay } from "./replay/intent";
+import { RUN_PANEL_EVENT } from "./replay/ReplayHud";
 import { UploadConfirm, type AnalysisMode } from "./onboarding/UploadConfirm";
 
 /** A request from another section to open the board's review dock. */
@@ -602,6 +603,14 @@ function BoardCanvas({
       }
     });
   }, [fitView, storyPadding]);
+  // The story fit leaves room for an open run panel; refit when it opens or collapses so the story uses the space.
+  useEffect(() => {
+    const refit = () => {
+      if (storyModeRef.current) resetBoardView();
+    };
+    window.addEventListener(RUN_PANEL_EVENT, refit);
+    return () => window.removeEventListener(RUN_PANEL_EVENT, refit);
+  }, [resetBoardView]);
 
   const inspect = useCallback(
     (kind: Selection["kind"], id: string, sourceId?: string) => {

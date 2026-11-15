@@ -6,8 +6,11 @@ import {
   SkipForward,
   Activity,
 } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import type { ReplayState } from "./useReplay";
+
+/** Fired on `window` when the run panel opens or collapses. */
+export const RUN_PANEL_EVENT = "mapletrace:run-panel";
 import {
   describeEvent,
   feedRows,
@@ -29,26 +32,33 @@ function timingLabel(replay: ReplayState) {
 
 /** Floating run panel on the mind map: phases, counters, cost and an event feed. */
 export function ReplayHud({ replay }: { replay: ReplayState }) {
+  // A finished run opens as the compact "Run summary" chip so it never crowds the board; it stays open while a run
+  // plays, and can always be expanded.
   const [expanded, setExpanded] = useState(
     () =>
-      typeof window === "undefined" ||
-      !window.matchMedia("(max-width: 900px)").matches,
+      !replay.finished &&
+      (typeof window === "undefined" ||
+        !window.matchMedia("(max-width: 900px)").matches),
   );
   const [dismissedFinish, setDismissedFinish] = useState(false);
   const { progress: p } = replay;
   const live = replay.timing === "live" && replay.status === "processing";
   const open = expanded && !(replay.finished && dismissedFinish);
+  // The story view leaves room for this panel; tell the board when it opens or closes so it can refit.
+  useEffect(() => {
+    window.dispatchEvent(new Event(RUN_PANEL_EVENT));
+  }, [open]);
   const title = live
     ? "Live run"
     : replay.finished
       ? "Run summary"
       : "Replay of recorded run";
 
-  // Collapse to the summary chip once a watched run completes.
+  // Collapse to the summary chip once the run is over, whether it was watched or opened after it finished.
   const [wasFinished, setWasFinished] = useState(replay.finished);
   if (replay.finished !== wasFinished) {
     setWasFinished(replay.finished);
-    if (replay.finished && replay.completedWatching) setExpanded(false);
+    if (replay.finished) setExpanded(false);
     if (!replay.finished) {
       setExpanded(true);
       setDismissedFinish(false);

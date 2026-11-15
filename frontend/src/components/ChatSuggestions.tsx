@@ -2,21 +2,53 @@ import { KeyRound, RotateCw } from "lucide-react";
 import type { ChatStatus } from "../api/chat";
 import type { ChatFailure } from "./useCaseChat";
 
-/** Suggested questions: recorded answers replay without a model call; others need a live (billed) call. */
+/**
+ * Suggested questions: recorded answers replay without a model call; others need a live (billed) call.
+ * Before the first question they are the full list; once a conversation exists, `compact` shows the questions not yet
+ * asked as a short row above the composer, so they never push the conversation down.
+ */
 export function ChatSuggestions({
   status,
   live,
   disabled,
   onAsk,
+  compact = false,
+  asked = [],
 }: {
   status: ChatStatus;
   live: boolean;
   disabled: boolean;
   onAsk: (question: string) => void;
+  compact?: boolean;
+  asked?: readonly string[];
 }) {
-  const suggestions = status.suggestions ?? [];
+  const suggestions = (status.suggestions ?? []).filter(
+    (s) => !compact || !asked.includes(s.question),
+  );
   if (!suggestions.length) return null;
   const anyRecorded = suggestions.some((s) => s.recorded);
+  if (compact) {
+    return (
+      <div className="chat-next" aria-label="More suggested questions">
+        <span className="chat-next-label">Ask next</span>
+        <ul>
+          {suggestions.map((s) => (
+            <li key={s.question}>
+              <button
+                type="button"
+                className="chat-next-chip"
+                title={s.question}
+                disabled={disabled || !(s.recorded || live)}
+                onClick={() => onAsk(s.question)}
+              >
+                {s.question}
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    );
+  }
   return (
     <div className="chat-suggestions">
       <h3 id="chat-suggestions-heading">Suggested questions</h3>
