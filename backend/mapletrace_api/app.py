@@ -11,6 +11,9 @@ Run:  uvicorn mapletrace_api.app:app --reload --port 8000      (from backend/)
                                          timeline | audit | changes | sources | signals
     GET  /cases/{caseId}/source?id=...   one cited record in full (source inspector)
     GET  /cases/{caseId}/evidence/{evidenceId}   original evidence file (read-only copy)
+    GET  /cases/{caseId}/files           evidence inventory from the latest ingestion (hash, format, parse status, ...)
+    GET  /cases/{caseId}/records?evidenceId=&limit=&offset=   normalized ingestion records, read-only, with citations
+    GET  /cases/{caseId}/audit-chain     ingestion + analysis audit entries with hashes, re-verified
     POST /cases/{caseId}/evidence        add a ZIP of new evidence -> new version, compared with the previous one
     GET  /cases/{caseId}/overrides       investigator corrections
     POST /cases/{caseId}/overrides       record a correction -> re-analysis job
@@ -24,6 +27,7 @@ import hashlib
 import json
 import os
 import re
+import sqlite3
 import threading
 import traceback
 import uuid
@@ -37,9 +41,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from mapletrace_ingest.verify import verify_run
+from mapletrace_ingest.db import GENESIS_HASH, verify_audit_chain
 from mapletrace_ingest.pipeline import ingest_zip
 from mapletrace_reason import history
 from mapletrace_reason.pipeline import analyze
+from mapletrace_reason.store import PROTECTED_KEYS, citation_id, locator_label
 
 DATA = Path(os.environ.get("MAPLETRACE_DATA", Path(__file__).resolve().parents[1] / "data"))
 MAX_UPLOAD = int(os.environ.get("MAPLETRACE_MAX_UPLOAD_MB", "100")) * 1024 * 1024
@@ -184,6 +191,33 @@ def _board(case_id: str) -> dict:
     return board
 
 
+def _latest_dirs(case_id: str) -> tuple[Path, Path]:
+    """(ingest run dir, analysis dir) of the latest finished version."""
+    case_dir = _case_dir(case_id)
+    meta = _read_json(case_dir / "case.json")
+    if meta.get("latest") is None:
+        raise ApiError(409, "not_ready", "the case has no finished analysis yet")
+    v = meta["versions"][meta["latest"]]
+    return case_dir / v["ingest_dir"], case_dir / v["analysis_dir"]
+
+
+def _ro(db: Path) -> sqlite3.Connection:
+    """Read-only connection: the API never writes to case.db or analysis.db."""
+    if not db.exists():
+        raise ApiError(404, "db_not_found", f"{db.name} is missing for this case")
+    con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    return con
+
+
+def _evidence_id(row) -> str:
+    return row["external_id"] or f"FILE-{row['file_id']}"
+
+
+def _scalar(v) -> bool:
+    return v is None or isinstance(v, (str, int, float, bool))
+
+
 # --------------------------------------------------------------------------- routes
 @app.get("/health")
 def health():
@@ -277,6 +311,116 @@ def get_evidence(case_id: str, evidence_id: str):
     if not row:
         raise ApiError(404, "evidence_not_found", f"no evidence {evidence_id}")
     return FileResponse(ingest_dir / row[0], filename=Path(row[1].split("::")[-1]).name)
+
+
+@app.get("/cases/{case_id}/files")
+def get_files(case_id: str):
+    ingest_dir, _ = _latest_dirs(case_id)
+    con = _ro(ingest_dir / "case.db")
+    try:
+        counts = dict(con.execute("SELECT file_id, COUNT(*) FROM records GROUP BY file_id").fetchall())
+        out = []
+        for f in con.execute("SELECT * FROM evidence_files ORDER BY file_id"):
+            m = json.loads(f["manifest_json"]) if f["manifest_json"] else {}
+            listed = (m.get("sha256") or "").lower()
+            ext = (f["extension"] or "").lstrip(".")
+            out.append({"evidenceId": _evidence_id(f), "fileId": f["file_id"], "path": f["original_path"],
+                        "filename": Path(f["original_path"].split("::")[-1]).name, "sha256": f["sha256"],
+                        "bytes": f["size_bytes"], "format": m.get("format") or ext or f["sniffed_format"] or "",
+                        "sniffedFormat": f["sniffed_format"], "evidenceType": f["evidence_type"],
+                        "parseStatus": f["parse_status"], "recordCount": counts.get(f["file_id"], 0),
+                        "manifestMatch": (listed == f["sha256"]) if listed else None, "origin": f["origin"],
+                        "title": m.get("title")})
+    finally:
+        con.close()
+    return out
+
+
+_RECORD_FIELDS = ("ts_utc", "ts_start_utc", "ts_end_utc", "ts_raw", "ts_precision", "actor", "target", "lat", "lon",
+                  "content", "reliability", "duplicate_of")
+
+
+@app.get("/cases/{case_id}/records")
+def get_records(case_id: str, evidenceId: Optional[str] = None, limit: int = 100, offset: int = 0):  # noqa: N803
+    if limit < 1 or limit > 500 or offset < 0:
+        raise ApiError(400, "bad_paging", "limit must be 1-500 and offset >= 0")
+    ingest_dir, analysis_dir = _latest_dirs(case_id)
+    board = _read_json(analysis_dir / "board.json")
+    source_ids = {s["id"] for s in board.get("sources", [])}
+    con = _ro(ingest_dir / "case.db")
+    try:
+        where, args = "", []
+        if evidenceId:
+            f = con.execute("SELECT file_id FROM evidence_files WHERE external_id=? OR 'FILE-' || file_id = ?",
+                            (evidenceId, evidenceId)).fetchone()
+            if not f:
+                raise ApiError(404, "evidence_not_found", f"no evidence {evidenceId}")
+            where, args = " WHERE r.file_id = ?", [f["file_id"]]
+        total = con.execute(f"SELECT COUNT(*) FROM records r{where}", args).fetchone()[0]
+        rows = con.execute(f"SELECT r.*, f.external_id FROM records r JOIN evidence_files f ON f.file_id = r.file_id"
+                           f"{where} ORDER BY r.record_id LIMIT ? OFFSET ?", args + [limit, offset]).fetchall()
+        items = []
+        for r in rows:
+            attrs = {k: v for k, v in json.loads(r["attributes_json"] or "{}").items() if not PROTECTED_KEYS.search(k)}
+            fields = {k: r[k] for k in _RECORD_FIELDS if r[k] is not None}
+            flags = json.loads(r["ts_flags"] or "[]")
+            if flags:
+                fields["ts_flags"] = ", ".join(flags)
+            fields.update({k: v for k, v in attrs.items() if _scalar(v) and v is not None and k not in fields})
+            ev = r["external_id"] or f"FILE-{r['file_id']}"
+            label = locator_label(json.loads(r["locator_json"] or "{}"), attrs)
+            cit = {"evidenceId": ev, "locator": label}
+            if citation_id(ev, label) in source_ids:
+                cit["sourceId"] = citation_id(ev, label)
+            items.append({"id": r["record_id"], "recordType": r["record_type"], "fields": fields, "citations": [cit]})
+    finally:
+        con.close()
+    return {"total": total, "limit": limit, "offset": offset, "items": items}
+
+
+@app.get("/cases/{case_id}/audit-chain")
+def get_audit_chain(case_id: str):
+    ingest_dir, analysis_dir = _latest_dirs(case_id)
+    checks = []
+    try:
+        ingest = verify_run(ingest_dir)
+        checks += [{"source": "ingest", **c} for c in ingest["checks"]]
+        ingest_head = ingest["head"]
+    except (OSError, KeyError, ValueError) as exc:
+        checks.append({"source": "ingest", "ok": False, "message": f"ingestion run could not be verified: {exc}"})
+        ingest_head = GENESIS_HASH
+
+    def rows(db: Path, source: str) -> list[dict]:
+        con = _ro(db)
+        try:
+            return [{"seq": r["seq"], "time": r["ts_utc"], "stage": r["stage"], "action": r["action"],
+                     "fileId": r["file_id"], "detail": json.loads(r["detail_json"] or "{}"), "hash": r["entry_hash"],
+                     "prevHash": r["prev_hash"], "source": source}
+                    for r in con.execute("SELECT * FROM audit_log ORDER BY seq")]
+        finally:
+            con.close()
+
+    entries = rows(ingest_dir / "case.db", "ingest")
+    if (analysis_dir / "analysis.db").exists():
+        con = _ro(analysis_dir / "analysis.db")
+        try:
+            ok, msg = verify_audit_chain(con, start=ingest_head)
+        finally:
+            con.close()
+        checks.append({"source": "analysis", "ok": ok, "message": "analysis audit log: " + msg})
+        analysis = rows(analysis_dir / "analysis.db", "analysis")
+        written = next((e for e in reversed(analysis) if e["action"] == "outputs_written"), None)
+        if written:
+            for name, sha in written["detail"].items():
+                p = analysis_dir / name
+                same = p.exists() and hashlib.sha256(p.read_bytes()).hexdigest() == sha
+                checks.append({"source": "analysis", "ok": same,
+                               "message": f"{name} {'matches' if same else 'does not match'} the hash in the audit log"})
+        entries += analysis
+    else:
+        checks.append({"source": "analysis", "ok": False, "message": "analysis.db is missing"})
+    return {"verified": all(c["ok"] for c in checks), "head": entries[-1]["hash"] if entries else GENESIS_HASH,
+            "checks": checks, "entries": entries}
 
 
 @app.get("/cases/{case_id}/overrides")

@@ -211,6 +211,9 @@ uvicorn mapletrace_api.app:app --port 8000      # CORS allows http://localhost:5
 | GET | `/cases/{caseId}/{section}` | `graph`, `gaps`, `insights`, `suggestions`, `contradictions`, `explanations`, `timeline`, `audit`, `changes`, `sources`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `signals` |
 | GET | `/cases/{caseId}/source?id=EV-071:seq=40162` | One cited record in full (source inspector) |
 | GET | `/cases/{caseId}/evidence/{evidenceId}` | The original evidence file (read-only copy) |
+| GET | `/cases/{caseId}/files` | Evidence inventory from the latest ingestion: `[{evidenceId, fileId, path, filename, sha256, bytes, format, sniffedFormat, evidenceType, parseStatus, recordCount, manifestMatch (bool or null when the manifest lists no hash), origin, title}]` |
+| GET | `/cases/{caseId}/records?evidenceId=&limit=&offset=` | Normalized ingestion records, read-only: `{total, limit, offset, items: [{id, recordType, fields, citations: [{evidenceId, locator, sourceId?}]}]}`. `fields` holds flat scalars (`ts_utc`, `ts_start_utc`/`ts_end_utc`, `ts_raw`, `ts_precision`, `ts_flags`, `actor`, `target`, `lat`, `lon`, `content`, `reliability`, `duplicate_of`, then scalar attributes; protected attributes are never returned). `sourceId` is present only when the record is cited on the board. `limit` 1–500 (default 100) |
+| GET | `/cases/{caseId}/audit-chain` | `{verified, head, checks: [{source, ok, message}], entries: [{seq, time, stage, action, fileId, detail, hash, prevHash, source: ingest \| analysis}]}`. `verified` re-runs `mapletrace_ingest verify` (database hash, chain, evidence hashes), checks the analysis chain continues from the ingestion head, and checks the board/analysis outputs against their logged hashes |
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
 | GET / POST | `/cases/{caseId}/overrides` | Read or record investigator corrections (`dismiss`, `confirm`, `set_status`, `set_label`, `note`, `reject_link`) |
 
@@ -218,6 +221,10 @@ Errors are always `{"error": {"code", "message"}}`. Case data lives under `$MAPL
 
 ### Board fields beyond the current `CaseData` type
 - **`nodes[].certainty` / `edges[].certainty`** (`observed` | `inferred`), plus `edges[].basis`.
+- **`nodes[].citations`** are never empty: entity and place nodes cite the records behind their threads (or, failing that, records that name them), up to 12.
+- **`edges[].directed`:** `true` for person → statement "stated", statement → event "conflicts with", event → place "occurred at" and person → event "recorded at"; `false` for communication, co-location and identity. `source` → `target` follows the direction.
+- **`gaps[].nodeIds`:** board nodes the gap concerns (its affected hypotheses, findings, contradictions and missing periods resolved to episode, person, statement and record nodes, plus event/statement nodes citing the gap's records). **`nodes[].gapId`** is the highest-scoring gap that concerns the node.
+- **`timezone`:** the case's IANA time zone (`case_info.assumed_timezone`), or `UTC`.
 - **`gaps[]`:** `gapType`, `status`, `direction`, `missing`, `answer`, `previousStatus`, `key`.
 - **`insights[]`:** `certainty`, `confidence`, `observations[]` (each cited), `inference`, `unknowns`, `counterevidence`, `assumptions`, `limitations`, and `explanations` for verdict insights.
 - **`suggestions[]`:** `gapIds`, `artifact`, `score`.

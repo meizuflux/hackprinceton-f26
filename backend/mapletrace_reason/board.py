@@ -10,11 +10,16 @@ from __future__ import annotations
 
 import math
 
+from .analytics import case_tz
 from .store import iso
 
 NODE_TYPE = {"person": "person", "phone": "device", "email": "device", "device": "device", "account": "device",
              "sample": "device"}
 COLUMNS = {"event": 0, "person": 1, "device": 2, "location": 3, "statement": 4}
+NODE_CITATIONS = 12
+# Relations with a real direction (source -> target). Everything else (communication, co-location, identity) is
+# symmetric and drawn without an arrowhead.
+DIRECTED = {("claim", "stated"), ("contradicts", "conflicts with"), ("spatial", "occurred at"), ("temporal", "recorded at")}
 
 
 def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) -> dict:
@@ -49,7 +54,7 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
             if time:
                 nodes[nid]["time"] = time
         else:
-            nodes[nid]["citations"] = list(dict.fromkeys(nodes[nid]["citations"] + citations))[:12]
+            nodes[nid]["citations"] = list(dict.fromkeys(nodes[nid]["citations"] + citations))[:NODE_CITATIONS]
         return nid
 
     def ent_node(eid):
@@ -60,7 +65,8 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
         eid = f"{etype}:{a}:{b}"
         if eid not in edges and a in nodes and b in nodes and a != b:
             edges[eid] = {"id": eid, "source": a, "target": b, "type": etype, "label": label[:60],
-                          "citations": citations[:8], "certainty": certainty, "basis": basis[:200]}
+                          "citations": citations[:8], "certainty": certainty, "basis": basis[:200],
+                          "directed": (etype, label) in DIRECTED}
 
     # key events and the places/people in them
     for ep in R.get("episode"):
@@ -95,7 +101,7 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
             a, b = f.data["pair"]
             edge(ent_node(a), ent_node(b), "communication", f"{f.data['count']} messages/calls", cites(f), "observed", f.text)
         elif f.title.startswith("Unidentified"):
-            ent_node(f.data["entity"])
+            node(ent_node(f.data["entity"]), "device", "", cites(f))
             nodes[f"ent-{f.data['entity']}"]["summary"] = f.text
     for c in R.get("connection"):
         d = c.data
@@ -125,12 +131,25 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
                 target = node(f"rec-{r.id}", "event", r.content[:60], [src(case.cite(r.id))], r.content, "record", iso(r.ts))
             if target:
                 edge(sn, target, "contradicts", "conflicts with", cites(x), "inferred", x.text)
+    _cite_from_edges(nodes, edges)
+    # entities and places no edge cites: the records that name them (never an invented citation)
+    for nid, n in nodes.items():
+        if n["citations"]:
+            continue
+        if nid.startswith("ent-"):
+            eid = int(nid[4:])
+            rids = [r.id for r in case.timed if any(e == eid for e, _ in r.entities)][:NODE_CITATIONS] or \
+                   sorted(r.id for r in case.records.values() if any(e == eid for e, _ in r.entities))[:NODE_CITATIONS]
+        elif nid.startswith("loc-"):
+            rids = [r.id for r in case.timed if r.place == nid[4:]][:NODE_CITATIONS]
+        else:
+            rids = []
+        n["citations"] = [src(case.cite(r)) for r in rids]
     # gaps hang off the nodes they concern
-    for g in R.get("gap"):
-        for k in g.data.get("affected", []):
-            hit = next((nid for nid, n in nodes.items() if n.get("key") == k), None)
-            if hit and "gapId" not in nodes[hit]:
-                nodes[hit]["gapId"] = g.id
+    gap_nodes = _gap_nodes(case, R, nodes)
+    for g in sorted(R.get("gap"), key=lambda g: -g.score):
+        for nid in gap_nodes[g.id]:
+            nodes[nid].setdefault("gapId", g.id)
     _layout(nodes)
 
     item_title = {it.key: f"{it.id} {it.title}" for b in R.items.values() for it in b}
@@ -138,12 +157,14 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
         "id": case.info.get("case_name", "case").lower().replace(" ", "-")[:60],
         "title": case.info.get("case_name", "Case"),
         "subtitle": f"{len(case.files)} files · {len(case.records)} records · analysed {extras['analysed_at']}",
+        "timezone": getattr(case_tz(case), "key", "UTC"),
         "timeRange": {"start": timeline[0]["time"] if timeline else "", "end": timeline[-1]["time"] if timeline else ""},
         "nodes": list(nodes.values()),
         "edges": list(edges.values()),
         "gaps": [{"id": g.id, "title": g.title,
                   "description": f"{g.data['why_it_matters']} Missing: {g.data['missing']}. Next: {g.data['direction']}",
                   "score": g.score, "affectedClaims": [item_title.get(k, k) for k in g.data.get("affected", [])],
+                  "nodeIds": gap_nodes[g.id],
                   "suggestedEvidence": [a["artifact"] for a in g.data["artifacts"]], "citations": cites(g),
                   "gapType": g.data["gap_type"], "status": g.status, "direction": g.data["direction"],
                   "missing": g.data["missing"], "answer": g.data.get("answer"), "key": g.key,
@@ -190,6 +211,57 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
         a["citations"] = [src(c) if isinstance(c, dict) else c for c in a.get("citations", [])]
     board["sources"] = list(sources.values())
     return board
+
+
+def _cite_from_edges(nodes: dict, edges: dict) -> None:
+    """Entity and place nodes cite the records behind the threads that put them on the board."""
+    for n in nodes.values():
+        if n["id"].startswith(("ent-", "loc-")):
+            extra = [c for e in edges.values() if n["id"] in (e["source"], e["target"]) for c in e["citations"]]
+            n["citations"] = list(dict.fromkeys(n["citations"] + extra))[:NODE_CITATIONS]
+
+
+def _gap_nodes(case, R, nodes: dict) -> dict[str, list[str]]:
+    """Board node ids each gap concerns. A gap's `affected` keys name hypotheses, findings, contradictions and
+    missing periods; each resolves to the episode, person, statement or record nodes it is about. Event and statement
+    nodes that cite the same records as the gap are included too."""
+    by_key = {it.key: it for b in R.items.values() for it in b}
+    ep_of_record: dict[int, str] = {}
+    for ep in R.get("episode"):
+        for rid in ep.data.get("record_ids", []):
+            ep_of_record.setdefault(rid, f"ev-{ep.key}")
+
+    def resolve(key: str, depth: int = 0) -> list[str]:
+        it = by_key.get(key)
+        out = [nid for nid, n in nodes.items() if n.get("key") == key]
+        if not it or depth > 2:
+            return out
+        d = it.data
+        if it.kind == "hypothesis":
+            out.append(f"ev-{d.get('episode')}")
+        for k in ("subject", "person", "entity"):
+            if isinstance(d.get(k), int):
+                out.append(f"ent-{d[k]}")
+        for k in ("subjects", "pair"):
+            out += [f"ent-{e}" for e in d.get(k) or [] if isinstance(e, int)]
+        if d.get("statement_record"):
+            out.append(f"st-{d['statement_record']}")
+        for rid in d.get("conflicting_records", []):
+            out += [ep_of_record.get(rid, ""), f"rec-{rid}"]
+        if d.get("episode") and it.kind != "hypothesis":
+            out.append(f"ev-{d['episode']}")
+        for k in ("finding", "claim"):
+            if d.get(k):
+                out += resolve(d[k], depth + 1)
+        return out
+
+    result = {}
+    for g in R.get("gap"):
+        ids = [nid for k in g.data.get("affected", []) for nid in resolve(k)]
+        cited = {c["id"] for c in g.citations}
+        ids += [nid for nid, n in nodes.items() if n["type"] in ("event", "statement") and cited & set(n["citations"])]
+        result[g.id] = [nid for nid in dict.fromkeys(ids) if nid in nodes]
+    return result
 
 
 def _layout(nodes: dict) -> None:

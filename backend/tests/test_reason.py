@@ -55,6 +55,48 @@ def test_board_matches_frontend_contract(sample):
         assert s["path"] and len(s["hash"]) == 64 and "evidence_id" in s["metadata"]
 
 
+DIRECTED_RELATIONS = {("claim", "stated"), ("contradicts", "conflicts with"), ("spatial", "occurred at"),
+                      ("temporal", "recorded at")}
+
+
+def _check_board_links(board):
+    nodes = {n["id"]: n for n in board["nodes"]}
+    source_ids = {s["id"] for s in board["sources"]}
+    assert all(n["citations"] and set(n["citations"]) <= source_ids for n in nodes.values()), "every node is cited"
+    for e in board["edges"]:
+        assert isinstance(e["directed"], bool)
+        assert e["directed"] == ((e["type"], e["label"]) in DIRECTED_RELATIONS)
+        if e["directed"]:
+            want = {"stated": ("person", "statement"), "conflicts with": ("statement", "event"),
+                    "occurred at": ("event", "location"), "recorded at": (None, "event")}[e["label"]]
+            assert nodes[e["target"]]["type"] == want[1]
+            assert want[0] is None or nodes[e["source"]]["type"] == want[0]
+    gaps = {g["id"]: g for g in board["gaps"]}
+    assert all(set(g["nodeIds"]) <= set(nodes) for g in gaps.values())
+    for n in nodes.values():
+        if "gapId" in n:
+            concerning = [g for g in gaps.values() if n["id"] in g["nodeIds"]]
+            assert n["gapId"] == max(concerning, key=lambda g: g["score"])["id"]
+    return nodes, gaps
+
+
+def test_board_links_citations_direction_and_gaps(sample):
+    tmp, _, _, _, board = sample
+    nodes, gaps = _check_board_links(board)
+    import sqlite3
+    con = sqlite3.connect(tmp / "run" / "case.db")
+    assert board["timezone"] == con.execute("SELECT value FROM case_info WHERE key='assumed_timezone'").fetchone()[0]
+    con.close()
+    assert any(e["directed"] for e in board["edges"])
+    assert any(g["nodeIds"] for g in gaps.values()) and any("gapId" in n for n in nodes.values())
+
+
+def test_silence_interval_wording():
+    from mapletrace_reason.timeline import _interval
+    assert [_interval(0), _interval(12), _interval(14 * 60), _interval(3 * 3600)] == \
+        ["under a second", "12 s", "14 min", "3.0 h"]
+
+
 def test_statement_contradicted_by_records(sample):
     _, _, _, a, _ = sample
     x = [c for c in a["contradictions"] if c["data"]["kind"] == "statement_vs_record"]
@@ -222,6 +264,35 @@ def test_api_end_to_end(sample, tmp_path, monkeypatch):
     assert r.status_code == 200 and client.get(f"/status/{r.json()['jobId']}").json()["status"] == "ready"
     assert next(g for g in client.get(f"/cases/{case_id}/gaps").json() if g["key"] == key)["status"] == "resolved"
     assert client.get("/cases/nope-000000").json()["error"]["code"] == "case_not_found"
+
+    # evidence inventory, normalized records and the audit chain (not shadowed by /cases/{id}/{section})
+    files = client.get(f"/cases/{case_id}/files").json()
+    assert files and {"evidenceId", "fileId", "path", "filename", "sha256", "bytes", "format", "evidenceType",
+                      "parseStatus", "recordCount", "manifestMatch", "origin"} <= set(files[0])
+    assert all(len(f["sha256"]) == 64 and f["manifestMatch"] in (True, False, None) for f in files)
+    board = client.get(f"/cases/{case_id}").json()
+    ev = board["sources"][0]["metadata"]["evidence_id"]
+    f = next(f for f in files if f["evidenceId"] == ev)
+    recs = client.get(f"/cases/{case_id}/records", params={"evidenceId": ev, "limit": 500}).json()
+    assert recs["total"] == f["recordCount"] and len(recs["items"]) == min(500, f["recordCount"])
+    item = recs["items"][0]
+    assert {"id", "recordType", "fields", "citations"} <= set(item)
+    assert all(not isinstance(v, (dict, list)) for v in item["fields"].values())
+    assert item["citations"][0]["evidenceId"] == ev
+    source_ids = {s["id"] for s in board["sources"]}
+    linked = [c["sourceId"] for i in recs["items"] for c in i["citations"] if "sourceId" in c]
+    assert linked and set(linked) <= source_ids
+    assert board["sources"][0]["id"] in linked
+    page = client.get(f"/cases/{case_id}/records", params={"limit": 1, "offset": 1}).json()
+    assert len(page["items"]) == 1 and page["total"] > 1
+    assert client.get(f"/cases/{case_id}/records", params={"limit": 501}).json()["error"]["code"] == "bad_paging"
+    assert client.get(f"/cases/{case_id}/records", params={"evidenceId": "EV-NOPE"}).status_code == 404
+    chain = client.get(f"/cases/{case_id}/audit-chain").json()
+    assert chain["verified"] is True, chain["checks"]
+    srcs = [e["source"] for e in chain["entries"]]
+    assert srcs[0] == "ingest" and srcs[-1] == "analysis" and chain["head"] == chain["entries"][-1]["hash"]
+    for prev, cur in zip(chain["entries"], chain["entries"][1:]):
+        assert cur["prevHash"] == prev["hash"], "one unbroken chain from upload to board"
     bad = client.post("/upload", files={"file": ("x.txt", b"hello", "text/plain")})
     assert bad.status_code == 400 and bad.json()["error"]["code"] == "not_a_zip"
 
@@ -240,6 +311,12 @@ def test_kestrel_reasoning(tmp_path):
     assert any("Halvorsen" in x["title"] for x in a["contradictions"] if x["data"]["kind"] == "statement_vs_record")
     assert any(f["title"].startswith("Unidentified party: +14085550147") for f in a["findings"])
     assert a["suggestions"][0]["data"]["artifact"] in ("cctv_review", "media_analysis", "forensic_lab", "phone_location")
+    board = json.loads((Path(s["out_dir"]) / "board.json").read_text(encoding="utf-8"))
+    nodes, gaps = _check_board_links(board)
+    assert board["timezone"] == "America/Los_Angeles"
+    assert all(g["nodeIds"] for g in gaps.values()), "every Kestrel gap resolves to board nodes"
+    assert any("gapId" in n for n in nodes.values())
+    assert not any("every 0 min" in m["text"] for m in board["missingPeriods"])
 
 
 def test_deep_agent_loop_records_cited_insights(sample):

@@ -214,8 +214,10 @@ class AuditLog:
         return entry_hash
 
 
-def verify_audit_chain(conn: sqlite3.Connection) -> tuple[bool, str]:
-    prev = GENESIS_HASH
+def verify_audit_chain(conn: sqlite3.Connection, start: str = GENESIS_HASH) -> tuple[bool, str]:
+    """Recompute every entry hash. `start` is the hash the chain continues from (the analysis log in analysis.db
+    continues from the ingestion head)."""
+    prev = start
     count = 0
     for row in conn.execute("SELECT * FROM audit_log ORDER BY seq"):
         if row["prev_hash"] != prev:

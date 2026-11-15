@@ -41,6 +41,35 @@ def haversine_m(lat1, lon1, lat2, lon2) -> float:
     return 2 * r * math.asin(math.sqrt(a))
 
 
+def locator_label(locator: dict, attrs: dict) -> str:
+    """The human-readable locator used in citation ids (`EV-071:seq=40162`). `attrs` must already have protected
+    attributes removed (see PROTECTED_KEYS)."""
+    for k in _ID_KEYS:
+        if k in locator and k not in ("char_start",):
+            return f"{k}={locator[k]}"
+    for k in _ID_KEYS:
+        if attrs.get(k) not in (None, ""):
+            return f"{k}={attrs[k]}"
+    loc = locator
+    if "doc_line" in loc:
+        return f"line={loc['doc_line']}"
+    if "row" in loc:
+        return f"row={loc['row']}"
+    if "page" in loc:
+        return f"page={loc['page']}" + (f" line={loc['line']}" if "line" in loc else "")
+    if "paragraph" in loc:
+        return f"paragraph={loc['paragraph']}"
+    if "line" in loc:
+        return f"line={loc['line']}"
+    if "json_path" in loc:
+        return loc["json_path"]
+    return ",".join(f"{k}={v}" for k, v in loc.items()) or "file"
+
+
+def citation_id(evidence_id: str, label: str) -> str:
+    return f"{evidence_id}:{label}"
+
+
 @dataclass
 class Record:
     id: int
@@ -143,33 +172,14 @@ class Case:
 
     # ------------------------------------------------------------ citations
     def locator_label(self, rec: Record) -> str:
-        for k in _ID_KEYS:
-            if k in rec.locator and k not in ("char_start",):
-                return f"{k}={rec.locator[k]}"
-        for k in _ID_KEYS:
-            if rec.attrs.get(k) not in (None, ""):
-                return f"{k}={rec.attrs[k]}"
-        loc = rec.locator
-        if "doc_line" in loc:
-            return f"line={loc['doc_line']}"
-        if "row" in loc:
-            return f"row={loc['row']}"
-        if "page" in loc:
-            return f"page={loc['page']}" + (f" line={loc['line']}" if "line" in loc else "")
-        if "paragraph" in loc:
-            return f"paragraph={loc['paragraph']}"
-        if "line" in loc:
-            return f"line={loc['line']}"
-        if "json_path" in loc:
-            return loc["json_path"]
-        return ",".join(f"{k}={v}" for k, v in loc.items()) or "file"
+        return locator_label(rec.locator, rec.attrs)
 
     def cite(self, rid: int) -> dict:
         rec = self.records[rid]
         f = self.files[rec.file_id]
         ev = f["external_id"] or f"FILE-{rec.file_id}"
         label = self.locator_label(rec)
-        return {"id": f"{ev}:{label}", "evidence_id": ev, "locator": label, "record_id": rid,
+        return {"id": citation_id(ev, label), "evidence_id": ev, "locator": label, "record_id": rid,
                 "path": f["original_path"], "sha256": f["sha256"]}
 
     def origin_of(self, rid: int) -> str:

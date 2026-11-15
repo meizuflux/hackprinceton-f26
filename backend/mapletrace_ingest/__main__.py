@@ -11,9 +11,8 @@ import json
 import sys
 from pathlib import Path
 
-from .db import connect, verify_audit_chain
-from .intake import hash_file
 from .pipeline import IngestOptions, Ingestor
+from .verify import verify_run
 
 
 def cmd_ingest(a) -> int:
@@ -33,27 +32,10 @@ def cmd_ingest(a) -> int:
 
 
 def cmd_verify(a) -> int:
-    run = Path(a.run_dir)
-    manifest = json.loads((run / "run_manifest.json").read_text(encoding="utf-8"))
-    ok = True
-    db_sha, _ = hash_file(run / "case.db")
-    if db_sha != manifest["database_sha256"]:
-        print("FAIL database changed since ingestion")
-        ok = False
-    conn = connect(run / "case.db")
-    chain_ok, msg = verify_audit_chain(conn)
-    print(("OK   " if chain_ok else "FAIL ") + "audit log: " + msg)
-    ok &= chain_ok
-    bad = 0
-    for f in conn.execute("SELECT file_id, original_path, stored_path, sha256 FROM evidence_files"):
-        p = run / f["stored_path"]
-        if not p.exists() or hash_file(p)[0] != f["sha256"]:
-            print(f"FAIL evidence file altered or missing: {f['original_path']}")
-            bad += 1
-    n = conn.execute("SELECT COUNT(*) FROM evidence_files").fetchone()[0]
-    print(("OK   " if not bad else "FAIL ") + f"evidence hashes: {n - bad}/{n} match")
-    conn.close()
-    return 0 if ok and not bad else 1
+    result = verify_run(Path(a.run_dir))
+    for c in result["checks"]:
+        print(("OK   " if c["ok"] else "FAIL ") + c["message"])
+    return 0 if result["ok"] else 1
 
 
 def main(argv=None) -> int:
