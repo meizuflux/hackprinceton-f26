@@ -32,7 +32,7 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { api } from "./api/client";
+import { api, isMock } from "./api/client";
 import { isApiError } from "./api/http";
 import type { CaseData } from "./api/types";
 import { CanvasMinimap } from "./components/CanvasMinimap";
@@ -46,6 +46,12 @@ import {
 } from "./components/board-layout";
 import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
+import {
+  formatCaseTime,
+  insightKind,
+  insightStrength,
+  scoreLabel,
+} from "./components/presentation";
 import {
   getFocusFitOptions,
   getNodesForSelection,
@@ -212,6 +218,7 @@ function BoardCanvas({
             height: dim.height,
             data: {
               ...n,
+              timeZone: data.timezone,
               width: dim.width,
               height: dim.height,
               onInspect: () => inspect("node", n.id),
@@ -231,7 +238,7 @@ function BoardCanvas({
         source: e.source,
         target: e.target,
         data: {
-          kind: relationshipKind(e.type),
+          kind: relationshipKind(e.type, e.certainty),
           label: e.label,
           directed: e.directed === true,
           onInspect: () => inspect("edge", e.id),
@@ -252,7 +259,9 @@ function BoardCanvas({
           strokeWidth: 3,
           strokeLinecap: "round",
           strokeDasharray:
-            relationshipKind(e.type) === "observed" ? undefined : "8 7",
+            relationshipKind(e.type, e.certainty) === "observed"
+              ? undefined
+              : "8 7",
         },
       })),
     [data],
@@ -485,9 +494,10 @@ function BoardCanvas({
                   .map((e) => (
                     <button key={e.id} onClick={() => inspect("edge", e.id)}>
                       <span className="list-record-type">
-                        {relationshipKind(e.type) === "observed"
+                        {relationshipKind(e.type, e.certainty) === "observed"
                           ? "Observed"
-                          : relationshipKind(e.type) === "inference"
+                          : relationshipKind(e.type, e.certainty) ===
+                              "inference"
                             ? "Inference"
                             : "Claim"}
                       </span>
@@ -697,7 +707,9 @@ function BoardCanvas({
               <div className="panel-section-label">
                 <span>
                   {tab === "gaps"
-                    ? "Priority order · illustrative scores"
+                    ? isMock
+                      ? "Priority order · illustrative scores"
+                      : "Priority order · computed rank scores"
                     : tab === "insights"
                       ? "Inferences · require verification"
                       : "Suggested evidence to request"}
@@ -714,7 +726,7 @@ function BoardCanvas({
                     <div className="card-topline">
                       <span className="card-index">0{i + 1}</span>
                       <span className="priority-badge">
-                        <span>Illustrative</span> {Math.round(g.score * 100)}
+                        {scoreLabel(g.score, "rank")}
                       </span>
                     </div>
                     <h3>{g.title}</h3>
@@ -738,8 +750,8 @@ function BoardCanvas({
                     onClick={() => inspect("insight", g.id)}
                   >
                     <div className="insight-label">
-                      <Lightbulb size={13} /> Inference · illustrative{" "}
-                      {Math.round(g.score * 100)}%
+                      <Lightbulb size={13} /> {insightKind(g)} ·{" "}
+                      {insightStrength(g)}
                     </div>
                     <h3>{g.title}</h3>
                     <p>{g.text}</p>
@@ -807,7 +819,9 @@ function BoardCanvas({
               {data.audit.map((a) => (
                 <div className="audit-step" key={a.id}>
                   <Check size={13} />
-                  <time>{a.time}</time>
+                  <time dateTime={a.time}>
+                    {formatCaseTime(a.time, data.timezone)}
+                  </time>
                   <h3>{a.title}</h3>
                   <p>{a.description}</p>
                   {a.citations.map((id) => (

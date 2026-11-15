@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Download, FileSearch, Files, Search, ShieldAlert } from "lucide-react";
 import { api } from "../api/client";
+import { formatCaseTime } from "./presentation";
 import type { CaseData } from "../api/types";
 import { listEvidenceFiles, type NormalizedEvidenceRecord } from "../api/files";
 import "./evidence-browser.css";
@@ -260,7 +261,13 @@ export function EvidenceBrowser({
                   </div>
                   <div>
                     <dt>Timestamp</dt>
-                    <dd>{selected.timestamp}</dd>
+                    <dd>
+                      {formatCaseTime(
+                        selected.timestamp,
+                        data.timezone,
+                        "full",
+                      )}
+                    </dd>
                   </div>
                   <div>
                     <dt>

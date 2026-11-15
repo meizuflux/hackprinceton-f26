@@ -9,6 +9,7 @@ import {
   Target,
 } from "lucide-react";
 import type { CaseData } from "../api/types";
+import { insightKind, insightStrength, scoreLabel } from "./presentation";
 import type { Selection } from "./Inspector";
 import "./insights-page.css";
 
@@ -114,9 +115,9 @@ export function InsightsPage({
                   onClick={() => onInspect({ kind: "insight", id: item.id })}
                 >
                   <div className="insight-card-label">
-                    <span>Inference</span>
+                    <span>{insightKind(item)}</span>
                     <span className="illustrative-score">
-                      Illustrative · {Math.round(item.score * 100)}%
+                      {insightStrength(item)}
                     </span>
                   </div>
                   <h3>{item.title}</h3>
@@ -188,7 +189,7 @@ export function InsightsPage({
                   <div className="insight-card-label">
                     <span>Question to verify</span>
                     <span className="illustrative-score">
-                      Illustrative · {Math.round(item.score * 100)}%
+                      {scoreLabel(item.score, "rank")}
                     </span>
                   </div>
                   <h3>{item.title}</h3>

@@ -3,6 +3,9 @@ export type CitationId = string;
 
 export type NodeType = "person" | "location" | "device" | "event" | "statement";
 
+/** Backend label: `observed` comes straight from records, `inferred` is analysis. */
+export type Certainty = "observed" | "inferred";
+
 export interface EvidenceNode {
   id: string;
   type: NodeType;
@@ -14,6 +17,10 @@ export interface EvidenceNode {
   time?: string;
   gapId?: string;
   size?: { width: number; height: number };
+  certainty?: Certainty;
+  /** Backend stable key; investigator overrides target it. */
+  key?: string;
+  score?: number;
 }
 
 export interface EvidenceEdge {
@@ -25,6 +32,9 @@ export interface EvidenceEdge {
   citations: CitationId[];
   /** Arrowheads require an explicit direction from the adapter. */
   directed?: boolean;
+  certainty?: Certainty;
+  /** Why the backend drew this relationship. */
+  basis?: string;
 }
 
 export interface SourceRecord {
@@ -45,6 +55,21 @@ export interface EvidenceGap {
   affectedClaims: string[];
   suggestedEvidence: string[];
   citations: CitationId[];
+  gapType?:
+    "missing" | "failed_extraction" | "conflicting" | "uncertain" | string;
+  status?: string;
+  previousStatus?: string | null;
+  missing?: string;
+  direction?: string;
+  answer?: string | null;
+  /** Board node IDs the gap concerns. */
+  nodeIds?: string[];
+  key?: string;
+}
+
+export interface CitedText {
+  text: string;
+  citations: CitationId[];
 }
 
 export interface Insight {
@@ -53,6 +78,17 @@ export interface Insight {
   text: string;
   score: number;
   citations: CitationId[];
+  certainty?: Certainty;
+  /** A label set by independent sources; never a probability. */
+  confidence?: "low" | "medium" | "high" | string;
+  status?: string;
+  observations?: CitedText[];
+  inference?: string;
+  unknowns?: string[];
+  counterevidence?: string[];
+  assumptions?: string[];
+  limitations?: string[];
+  key?: string;
 }
 
 export interface EvidenceSuggestion {
@@ -63,6 +99,10 @@ export interface EvidenceSuggestion {
   query: string;
   citations: CitationId[];
   gapId: string;
+  gapIds?: string[];
+  artifact?: string;
+  score?: number;
+  key?: string;
 }
 
 export interface AuditRecord {
@@ -94,6 +134,8 @@ export interface CaseData {
   sources: SourceRecord[];
   audit: AuditRecord[];
   normalizedRecords?: NormalizedEvidenceRecord[];
+  /** IANA time zone the case is displayed in. Times on the wire are ISO 8601. */
+  timezone?: string;
 }
 
 export type IngestionStatus = "processing" | "ready" | "failed";

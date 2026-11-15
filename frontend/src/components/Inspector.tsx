@@ -3,6 +3,12 @@ import { useEffect, useRef } from "react";
 import { isMock } from "../api/client";
 import type { CaseData } from "../api/types";
 import { relationshipLabel } from "./relationships";
+import {
+  formatCaseTime,
+  insightKind,
+  insightStrength,
+  scoreLabel,
+} from "./presentation";
 
 export type Selection = {
   kind: "node" | "edge" | "gap" | "insight" | "suggestion" | "source";
@@ -155,18 +161,23 @@ export function Inspector({
             {selection.kind === "gap"
               ? "Question to verify"
               : selection.kind === "insight"
-                ? "Inference"
+                ? insightKind(item as CaseData["insights"][number])
                 : selection.kind === "suggestion"
                   ? "Suggested next step"
                   : selection.kind === "node"
                     ? "Evidence record"
                     : selection.kind === "edge"
-                      ? relationshipLabel(edge!.type)
+                      ? relationshipLabel(edge!.type, edge!.certainty)
                       : "Source excerpt"}
           </span>
           {score !== undefined && (
             <span className="detail-score">
-              Illustrative score · {Math.round(score * 100)}%
+              {selection.kind === "insight"
+                ? insightStrength(item as CaseData["insights"][number])
+                : scoreLabel(
+                    score,
+                    selection.kind === "gap" ? "rank" : "percent",
+                  )}
             </span>
           )}
           {onFocusOnBoard && (
@@ -212,7 +223,8 @@ export function Inspector({
                     </button>
                   )}
                   <p>
-                    <strong>Recorded:</strong> {source.timestamp}
+                    <strong>Recorded:</strong>{" "}
+                    {formatCaseTime(source.timestamp, data.timezone, "full")}
                   </p>
                   <p>
                     <strong>
