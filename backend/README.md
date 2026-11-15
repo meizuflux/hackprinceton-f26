@@ -17,16 +17,18 @@ upload.zip ──► mapletrace_ingest ──► case.db ──► mapletrace_re
 
 ## Quick start
 
-Requires Python 3.11+. From the repository root, `make backend-install` creates `backend/.venv` with uv (Python 3.12), and `make backend-test`, `make backend-ingest-kestrel`, `make backend-analyze-kestrel` and `make backend-serve` run the steps below. `make dev` also starts the frontend.
+Requires [uv](https://docs.astral.sh/uv/) and Python 3.11+ (3.12 pinned in `.python-version`). The backend is a uv project: dependencies live in `pyproject.toml` (test tools in the `dev` group) and are locked in `uv.lock`. From the repository root, `make backend-install` runs `uv sync --locked` into `backend/.venv`, and `make backend-test`, `make backend-ingest-kestrel`, `make backend-analyze-kestrel` and `make backend-serve` run the steps below. `make dev` also starts the frontend.
 
-By hand, from `backend/` with the virtual environment active:
+By hand, from `backend/` (`uv run` uses the locked environment; the `python -m ...` commands below work the same with `uv run` in front, or with `.venv` activated):
 
 ```sh
-python -m mapletrace_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel
-python -m mapletrace_reason analyze runs/kestrel            # writes runs/kestrel/analysis/v1/{board,analysis,graph}.json
-uvicorn mapletrace_api.app:app --port 8000                  # then POST /upload, GET /cases/{id}
-python -m mapletrace_ingest verify runs/kestrel             # re-check evidence hashes, DB hash, audit chain
-python -m pytest -q tests
+uv sync                                                     # install from uv.lock (dev group included)
+uv run python -m mapletrace_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel
+uv run python -m mapletrace_reason analyze runs/kestrel     # writes runs/kestrel/analysis/v1/{board,analysis,graph}.json
+uv run uvicorn mapletrace_api.app:app --port 8000           # then POST /upload, GET /cases/{id}
+uv run python -m mapletrace_ingest verify runs/kestrel      # re-check evidence hashes, DB hash, audit chain
+uv run pytest -q                                            # testpaths = tests
+uv add <package>                                            # add a dependency (uv add --dev for test tools); commit uv.lock
 ```
 
 Options for `ingest`:

@@ -12,7 +12,7 @@ Requires Bun 1.4.4, [uv](https://docs.astral.sh/uv/) and Python 3.12. From the r
 
 ```sh
 make frontend-install
-make backend-install     # creates backend/.venv with uv
+make backend-install     # uv sync: backend/.venv from backend/uv.lock
 make dev                 # API on 127.0.0.1:8000 and Vite on 127.0.0.1:5173
 ```
 
