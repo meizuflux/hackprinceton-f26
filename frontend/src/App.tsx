@@ -499,10 +499,7 @@ function BoardCanvas({
           <div className="board-toolbar">
             <div className="board-title">
               <h1>{projectName || data.title}</h1>
-              <span>
-                {formatCaseSubtitle(data.subtitle, data.timezone)} ·{" "}
-                {data.nodes.length} pins · {data.edges.length} connections
-              </span>
+              <span>{formatCaseSubtitle(data.subtitle, data.timezone)}</span>
             </div>
             <div className="board-actions">
               <label className="board-search">
