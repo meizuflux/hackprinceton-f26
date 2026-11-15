@@ -1,7 +1,7 @@
 .onboarding {
   min-height: 100vh;
-  background: var(--surface, #171a19);
-  color: var(--text, #e8e8df);
+  background: var(--surface);
+  color: var(--text);
 }
 
 .onboarding-nav {
@@ -12,7 +12,7 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  border-bottom: 1px solid var(--line, #3a4238);
+  border-bottom: 1px solid var(--line);
 }
 
 .onboarding-brand {
@@ -25,7 +25,7 @@
 }
 
 .onboarding-brand svg {
-  color: var(--green, #d3dfaf);
+  color: var(--brand-text);
 }
 
 .onboarding-main {
@@ -55,17 +55,17 @@
 .landing-copy p {
   max-width: 440px;
   margin: 24px 0 30px;
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
   font-size: 16px;
   line-height: 1.75;
 }
 
 .source-preview {
   overflow: hidden;
-  border: 1px solid var(--line, #3a4238);
+  border: 1px solid var(--line);
   border-radius: var(--radius, 6px);
-  background: var(--panel, #222821);
-  box-shadow: var(--shadow, 0 18px 44px #0003);
+  background: var(--panel);
+  box-shadow: var(--shadow);
 }
 
 .source-preview-header,
@@ -79,7 +79,7 @@
 .source-preview-header {
   min-height: 50px;
   padding: 0 18px;
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
   font-size: 12px;
 }
 
@@ -87,7 +87,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--text, #e8e8df);
+  color: var(--text);
 }
 
 .source-preview-ref,
@@ -101,12 +101,12 @@
 .source-preview-paper {
   margin: 0 12px;
   padding: clamp(24px, 4vw, 36px);
-  background: var(--paper, #e8e4d5);
-  color: #343a2f;
+  background: var(--paper);
+  color: #2a323b;
 }
 
 .source-paper-meta {
-  color: #68705e;
+  color: #5a6470;
 }
 
 .source-preview-paper blockquote {
@@ -123,8 +123,8 @@
   justify-content: space-between;
   gap: 16px;
   padding-top: 13px;
-  border-top: 1px solid #343a2f33;
-  color: #5f6657;
+  border-top: 1px solid #2a323b33;
+  color: #56606b;
   font-size: 11px;
 }
 
@@ -139,7 +139,7 @@
   height: 9px;
   flex: 0 0 auto;
   border-radius: 50%;
-  background: var(--amber, #d4ad6a);
+  background: var(--amber);
 }
 
 .source-preview-link > div {
@@ -153,13 +153,13 @@
 }
 
 .source-preview-link span:not(.source-link-point) {
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
   font-size: 11px;
 }
 
 .source-preview-link > svg {
   margin-left: auto;
-  color: var(--green, #d3dfaf);
+  color: var(--brand-text);
 }
 
 .project-main {
@@ -190,14 +190,14 @@
 
 .project-heading p {
   margin-top: 8px;
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
   font-size: 13px;
 }
 
 .project-toolbar {
   min-height: 48px;
   padding-bottom: 12px;
-  border-bottom: 1px solid var(--line, #3a4238);
+  border-bottom: 1px solid var(--line);
 }
 
 .project-toolbar h2 {
@@ -209,7 +209,7 @@
 }
 
 .project-toolbar h2 span {
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
   font:
     11px "IBM Plex Mono",
     monospace;
@@ -222,8 +222,8 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  color: var(--muted, #b0b8a6);
-  border: 1px solid var(--line, #3a4238);
+  color: var(--muted);
+  border: 1px solid var(--line);
   border-radius: var(--radius, 6px);
 }
 
@@ -233,12 +233,12 @@
   border: 0;
   outline: 0;
   background: transparent;
-  color: var(--text, #e8e8df);
+  color: var(--text);
   font-size: 12px;
 }
 
 .project-search:focus-within {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
@@ -247,11 +247,11 @@
   min-width: 24px;
   padding: 3px;
   background: transparent;
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
 }
 
 .project-search .icon-button:hover {
-  color: var(--text, #e8e8df);
+  color: var(--text);
 }
 
 .project-list {
@@ -266,8 +266,8 @@
   align-items: center;
   gap: 15px;
   text-align: left;
-  color: var(--text, #e8e8df);
-  border-bottom: 1px solid var(--line, #3a4238);
+  color: var(--text);
+  border-bottom: 1px solid var(--line);
   background: transparent;
 }
 
@@ -282,8 +282,8 @@
   place-items: center;
   flex: 0 0 auto;
   border-radius: 5px;
-  background: #d3dfaf12;
-  color: var(--green, #d3dfaf);
+  background: var(--brand-selected);
+  color: var(--brand-text);
 }
 
 .project-card-content {
@@ -300,20 +300,20 @@
 
 .project-card-detail,
 .project-card-kind {
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
   font-size: 11px;
 }
 
 .project-card-kind {
   margin-left: auto;
   padding: 4px 8px;
-  border: 1px solid var(--line, #3a4238);
+  border: 1px solid var(--line);
   border-radius: 4px;
   white-space: nowrap;
 }
 
 .project-card > svg:last-child {
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
 }
 
 .project-empty {
@@ -334,7 +334,7 @@
 
 .project-empty p,
 .fictional-case p {
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
   font-size: 13px;
 }
 
@@ -345,7 +345,7 @@
   align-items: center;
   justify-content: space-between;
   gap: 24px;
-  border-top: 1px solid var(--line, #3a4238);
+  border-top: 1px solid var(--line);
 }
 
 .fictional-case p {
@@ -354,7 +354,7 @@
 
 .project-no-results {
   padding: 28px 0;
-  color: var(--muted, #b0b8a6);
+  color: var(--muted);
 }
 
 @media (max-width: 800px) {

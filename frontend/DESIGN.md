@@ -2,13 +2,20 @@
 name: MapleTrace
 description: A calm, evidence-first workspace for inspecting case material.
 colors:
-  primary: "#d3dfaf"
-  workspace: "#171a19"
+  primary: "#78cbff"
+  primary-deep: "#3d92e3"
+  primary-text: "#9cd6ff"
+  primary-ink: "#04203a"
+  focus: "#8ed5ff"
+  workspace: "#10151c"
+  panel: "#18202a"
+  raised: "#202a36"
+  chrome-border: "#33414f"
   question: "#d4ad6a"
   paper: "#e8e4d5"
   paper-card: "#faf8f1"
-  text: "#e8e8df"
-  text-muted: "#b0b8a6"
+  text: "#e6ecf2"
+  text-muted: "#a3b2c2"
   thread: "#a1372f"
   pushpin: "#ad604a"
 typography:
@@ -77,13 +84,13 @@ spacing:
 components:
   button-primary:
     backgroundColor: "{colors.primary}"
-    textColor: "#252d20"
+    textColor: "{colors.primary-ink}"
     rounded: "{rounded.button}"
     padding: "12px 18px"
     height: "44px"
   button-secondary:
     backgroundColor: "transparent"
-    textColor: "#d9ded1"
+    textColor: "{colors.text}"
     rounded: "{rounded.button}"
     padding: "12px 18px"
     height: "44px"
@@ -95,32 +102,49 @@ components:
 
 **Creative North Star: “The Evidence Pinboard”**
 
-MapleTrace pairs a dark moss workspace with a faint warm paper canvas and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.
+MapleTrace pairs a cool ink workspace with a faint warm paper canvas and paper evidence cards. Glassy blue, taken from the logo, marks the main action, selection and focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.
 
 Typography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.
 
 **Key Characteristics:**
-- Dark moss workspace with a faint warm paper evidence surface.
+- Cool ink workspace chrome with glassy blue accents and a faint warm paper evidence surface.
 - Paper-toned pinned cards with restrained accent colors.
 - Sources and uncertainty are visible parts of the review flow.
 
+## Brand
+
+The mark is two overlapping chevrons: an off-white chevron (`#f4f2ec`) pointing right, behind a glassy blue chevron pointing left. The blue gradients run from light sky at the tip (`#9cdcff`) to `#3b96ee` on the upper arm and dip to `#3d92e3` on the lower arm. `public/mapletrace-mark.svg` is the canonical artwork; `src/components/BrandMark.tsx` renders the same geometry inline (`<BrandMark size={20} />`, where size is the height in px; decorative unless `title` is set). Favicons are `public/favicon.svg` (the mark on a dark rounded tile, so it reads on light browser chrome), `favicon-32.png`, `favicon.ico` and `apple-touch-icon.png`, rendered from the SVG.
+
+- Place the mark beside the “MapleTrace” wordmark on dark surfaces only; the off-white chevron disappears on paper or white. Never recolor, outline or rotate it.
+- Do not use lucide or other stock icons as a stand-in logo.
+
 ## Colors
 
-The palette moves between quiet dark greens, warm evidence paper, and two focused accents.
+The palette moves between cool ink neutrals, glassy blue accents, warm evidence paper, and amber for questions. All tokens live in `:root` in `src/styles/base.css`.
 
-### Primary
-- **Soft Sage:** the primary action, selected controls, and keyboard focus.
+### Brand blue
+- **Sky scale:** `--brand-100` #b4e4ff, `--brand-200` #9cdcff, `--brand-300` #78cbff (= `--brand`), `--brand-400` #58b2ff, `--brand-500` #3d92e3.
+- **`--brand-text` #9cd6ff:** accent text, links and icons on dark (10:1 on the workspace).
+- **`--brand-ink` #04203a:** text on brand fills (7.2:1 on #58b2ff).
+- **`--brand-gradient` / `--brand-gradient-hover`:** 135° sky gradient for primary buttons and the review toggle only.
+- **`--brand-selected` #58b2ff1f, `--brand-hover` #58b2ff14, `--brand-border` #58b2ff80:** selected rows, active tabs and toolbar items, hover washes, selected borders. Active toolbar items add a 2px inset `--brand-400` edge.
+- **`--focus-ring` #8ed5ff:** every keyboard focus outline.
+
+### Glass
+- **`--glass-fill`** is a faint top-lit white gradient layered over a chrome surface (`background: var(--glass-fill), var(--surface)`); **`--glass-edge`** is a 1px inner top highlight. Use glass on chrome (top bar, landing nav, modals, focus buttons) only, never on reading surfaces, source excerpts, evidence cards or the paper canvas. Backdrop blur is reserved for the landing nav and the modal backdrop.
 
 ### Secondary
-- **Question Amber:** open gaps and question-related emphasis.
+- **Question Amber `--amber` #d4ad6a:** open gaps and question-related emphasis.
 
 ### Neutral
-- **Moss Workspace:** the main dark application surface.
-- **Evidence Paper:** pinned records and source-like cards on the board.
-- **Warm Text:** primary reading text against dark surfaces.
-- **Muted Sage Gray:** supporting labels and lower-priority text.
+- **Ink Workspace `--surface` #10151c:** the main dark application surface; `--panel` #18202a, `--raised` #202a36 (hover), `--field` #141b23 (inputs).
+- **Lines:** `--line` #2c3946 for dividers; `--chrome-border` #33414f for floating chrome edges.
+- **Evidence Paper:** pinned records and source-like cards on the board (unchanged warm paper).
+- **Text `--text` #e6ecf2** and **Muted `--muted` #a3b2c2** (8.5:1 on the workspace).
 
-**The Evidence-State Rule.** Use sage for interaction and amber for questions; keep observed records legible on paper-toned cards.
+`--green` remains a legacy alias of `--brand` so unmigrated rules stay on-brand; new code uses the `--brand-*` tokens.
+
+**The Evidence-State Rule.** Use blue for interaction, selection and focus, and amber for questions; keep observed records legible on paper-toned cards. Semantic status colors (recorded or leading green, asserted or disproven red) stay distinct from the brand blue.
 
 ## Typography
 
@@ -148,20 +172,20 @@ Depth combines tonal surface changes with restrained shadows. The paper backgrou
 
 ## Shapes
 
-Controls and workspace panels use gently rounded corners, while evidence cards and gap markers stay nearly square to retain a paper-and-pin character. Focus is shown with a visible sage outline and offset. Badges and status indicators use pill or circular shapes where appropriate.
+Controls and workspace panels use gently rounded corners, while evidence cards and gap markers stay nearly square to retain a paper-and-pin character. Focus is shown with a visible `--focus-ring` blue outline and offset. Badges and status indicators use pill or circular shapes where appropriate.
 
 ## Components
 
 ### Buttons
 - **Character:** compact, direct controls with clear primary emphasis.
 - **Shape:** softly rounded (5px).
-- **Primary:** sage fill, dark text, 12px by 18px padding, and a 44px minimum height.
-- **Hover / Focus:** brighter sage on hover; 2px sage focus outline with 4px offset.
-- **Secondary:** transparent fill with a muted green border and light text.
+- **Primary:** `--brand-gradient` fill with an inner top highlight, `--brand-ink` text, 12px by 18px padding, and a 44px minimum height. Disabled primary buttons use a flat slate fill rather than reduced opacity.
+- **Hover / Focus:** `--brand-gradient-hover` on hover; 2px `--focus-ring` outline with 3px offset.
+- **Secondary:** transparent fill with a slate border and light text; hover adds `--brand-hover` and `--brand-border`.
 
 ### Inputs / Fields
-- **Style:** dark inset search field with a thin green-gray border and 4px corners.
-- **Focus:** shared sage focus outline; search remains visible in the board toolbar.
+- **Style:** dark inset `--field` search field with a thin `--line` border and 4px corners.
+- **Focus:** shared `--focus-ring` outline; search remains visible in the board toolbar.
 
 ### Cards / Containers
 - **Corner Style:** evidence cards use gently varying paper silhouettes; the enclosing workspace uses 7px.
