@@ -21,6 +21,8 @@
   --board-inset: 16px;
   --minimap-width: 240px;
   --zoom-gap: 10px;
+  /* Width the review dock takes from the right of the canvas (dock 400 + gap 16). */
+  --dock-offset: 0px;
   height: 100%;
   background-color: #eee8de;
   background-image:
@@ -188,10 +190,12 @@
 .react-flow__controls {
   left: auto !important;
   right: calc(
-    var(--board-inset) + var(--minimap-width) + var(--zoom-gap)
+    var(--board-inset) + var(--dock-offset) + var(--minimap-width) +
+      var(--zoom-gap)
   ) !important;
   bottom: var(--chrome-bottom, var(--board-inset)) !important;
   margin: 0 !important;
+  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   border: 1px solid var(--chrome-border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -213,7 +217,8 @@
 .board-minimap {
   position: absolute;
   z-index: 5;
-  right: var(--board-inset);
+  right: calc(var(--board-inset) + var(--dock-offset));
+  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   bottom: var(--chrome-bottom, var(--board-inset));
   width: var(--minimap-width);
 }
@@ -234,7 +239,7 @@
   cursor: grabbing;
 }
 .board-minimap-map:focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 .board-minimap-thread {
@@ -336,6 +341,19 @@
   top: auto;
   bottom: 28px;
   left: 100px;
+}
+/* With the review dock open, the minimap, zoom controls and Ask widget sit left of
+   it, so the board's floating chrome never stacks underneath the dock. */
+@media (min-width: 901px) {
+  .workspace:has(> .review-dock.is-open) .canvas-wrap {
+    --dock-offset: 416px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-minimap,
+  .react-flow__controls {
+    transition: none;
+  }
 }
 @media (max-width: 1100px) {
   .board-toolbar {

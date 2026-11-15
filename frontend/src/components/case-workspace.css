@@ -183,4 +183,10 @@
     width: auto;
     max-height: none;
   }
+  /* The stacked review dock scrolls under the fixed toolbar; clear it the way
+     the section panels do. */
+  .case-board-panel .review-dock {
+    margin-left: var(--toolbar-clearance);
+    border-left: 1px solid var(--line);
+  }
 }

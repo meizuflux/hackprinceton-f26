@@ -56,6 +56,7 @@ import {
 } from "./components/board-colors";
 import { BoardLegend } from "./components/BoardLegend";
 import {
+  formatCaseSubtitle,
   formatCaseTime,
   insightKind,
   insightStrength,
@@ -453,8 +454,8 @@ function BoardCanvas({
             <div className="board-title">
               <h1>{projectName || data.title}</h1>
               <span>
-                {data.subtitle} · {data.nodes.length} pins · {data.edges.length}{" "}
-                connections
+                {formatCaseSubtitle(data.subtitle, data.timezone)} ·{" "}
+                {data.nodes.length} pins · {data.edges.length} connections
               </span>
             </div>
             <div className="board-actions">
@@ -609,6 +610,11 @@ function BoardCanvas({
                 minZoom={0.15}
                 maxZoom={1.8}
                 nodesConnectable={false}
+                // Each card's inspect button and each thread's label button are
+                // the keyboard stops; the wrappers would add a second, unstyled
+                // stop per card and thread.
+                nodesFocusable={false}
+                edgesFocusable={false}
                 deleteKeyCode={null}
                 proOptions={{ hideAttribution: true }}
               >
@@ -639,7 +645,11 @@ function BoardCanvas({
               </div>
             )}
             {boardView === "graph" && (
-              <BoardLegend nodes={data.nodes} edges={data.edges} />
+              <BoardLegend
+                nodes={data.nodes}
+                edges={data.edges}
+                yield={dockMode !== "closed"}
+              />
             )}
           </div>
         </div>
@@ -897,7 +907,7 @@ function BoardCanvas({
                     {formatCaseTime(a.time, data.timezone)}
                   </time>
                   <h3>{a.title}</h3>
-                  <p>{a.description}</p>
+                  <AuditDescription text={a.description} />
                   {a.citations.map((id) => (
                     <button
                       key={id}
@@ -919,6 +929,45 @@ function BoardCanvas({
         </aside>
       </div>
     </>
+  );
+}
+
+/**
+ * Audit entries from the backend carry their step payload as JSON. Show it as
+ * labelled fields with long hashes shortened (full value on hover) instead of a
+ * raw JSON string; anything else is shown as written.
+ */
+function AuditDescription({ text }: { text: string }) {
+  let fields: [string, string][] | null = null;
+  if (text.trim().startsWith("{")) {
+    try {
+      const parsed: unknown = JSON.parse(text);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+        fields = Object.entries(parsed).map(([key, value]) => [
+          key.replace(/_/g, " "),
+          value === null
+            ? "none"
+            : typeof value === "object"
+              ? JSON.stringify(value)
+              : String(value),
+        ]);
+      }
+    } catch {
+      fields = null;
+    }
+  }
+  if (!fields) return <p>{text}</p>;
+  return (
+    <dl className="audit-fields">
+      {fields.map(([key, value]) => (
+        <div key={key}>
+          <dt>{key}</dt>
+          <dd title={value.length > 24 ? value : undefined}>
+            {/^[0-9a-f]{32,}$/i.test(value) ? `${value.slice(0, 16)}…` : value}
+          </dd>
+        </div>
+      ))}
+    </dl>
   );
 }
 

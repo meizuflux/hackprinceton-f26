@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ChevronDown, FileText, HelpCircle } from "lucide-react";
 import type { EvidenceEdge, EvidenceNode } from "../api/types";
 import {
@@ -12,19 +12,40 @@ import {
 import { relationshipKind } from "./relationships";
 import { cardIcons } from "./EvidenceNode";
 
-/** Key to the board's color coding; lists only what this case contains. */
+/**
+ * Key to the board's color coding; lists only what this case contains.
+ * `yield` collapses it while the review dock is open, so the board keeps its
+ * visible area; the reader's own choice returns when the dock closes.
+ */
 export function BoardLegend({
   nodes,
   edges,
+  yield: yieldSpace = false,
 }: {
   nodes: EvidenceNode[];
   edges: EvidenceEdge[];
+  yield?: boolean;
 }) {
   const [open, setOpen] = useState(
     () =>
       typeof window === "undefined" ||
       !window.matchMedia("(max-width: 1199px)").matches,
   );
+  const openRef = useRef(open);
+  useEffect(() => {
+    openRef.current = open;
+  }, [open]);
+  const openBeforeYield = useRef<boolean | null>(null);
+  useEffect(() => {
+    if (yieldSpace) {
+      if (openBeforeYield.current === null)
+        openBeforeYield.current = openRef.current;
+      setOpen(false);
+    } else if (openBeforeYield.current !== null) {
+      setOpen(openBeforeYield.current);
+      openBeforeYield.current = null;
+    }
+  }, [yieldSpace]);
   const kinds = new Set(nodes.map((node) => cardKind(node.type)));
   const categories = new Set(edges.map((edge) => threadCategory(edge.type)));
   const relationKinds = new Set(
