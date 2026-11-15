@@ -15,6 +15,7 @@ import { casePath, type InsightsTab, type WorkspaceView } from "../routing";
 import { isMock } from "../api/client";
 import { EvidenceBrowser } from "./EvidenceBrowser";
 import { RecordsBrowser } from "./RecordsBrowser";
+import { RawEvidence } from "./RawEvidence";
 import { InsightsPage } from "./InsightsPage";
 import { ChatPanel } from "./ChatPanel";
 import { Inspector, type Selection } from "./Inspector";
@@ -305,12 +306,21 @@ export function CaseWorkspace({
           aria-label="Raw evidence"
           hidden={view !== "evidence"}
         >
-          <EvidenceBrowser
-            data={data}
-            mode="raw"
-            selectedSourceId={sourceId}
-            onInspect={openSource}
-          />
+          {isMock ? (
+            <EvidenceBrowser
+              data={data}
+              mode="raw"
+              selectedSourceId={sourceId}
+              onInspect={openSource}
+            />
+          ) : (
+            <RawEvidence
+              data={data}
+              sourceId={sourceId}
+              onOpen={openSource}
+              onInspectSource={(id) => inspect({ kind: "source", id })}
+            />
+          )}
         </section>
         <section
           className="case-content-panel"
@@ -329,6 +339,7 @@ export function CaseWorkspace({
               <RecordsBrowser
                 data={data}
                 onInspect={(id) => inspect({ kind: "source", id })}
+                onOpenSource={openSource}
               />
             )
           )}

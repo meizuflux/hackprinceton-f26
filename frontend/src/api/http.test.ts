@@ -131,5 +131,21 @@ describe("HTTP case adapter", () => {
     expect(api.evidenceFileUrl("k-1", "EV-071")).toBe(
       "/api/cases/k-1/evidence/EV-071",
     );
+    expect(api.evidenceFileUrl("k-1", "EV-021", { inline: true })).toBe(
+      "/api/cases/k-1/evidence/EV-021?inline=true",
+    );
+  });
+
+  it("asks the viewer for a file at an encoded citation locator", async () => {
+    const fetchMock = vi.fn(async () => json({ evidenceId: "EV-103" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await api.viewEvidence("k-1", "EV-103", {
+      locator: "message_id=<a@b.example>",
+      limit: 2000,
+    });
+    const [url] = fetchMock.mock.calls[0] as unknown as [string];
+    expect(url).toBe(
+      "/api/cases/k-1/evidence/EV-103/view?locator=message_id%3D%3Ca%40b.example%3E&limit=2000",
+    );
   });
 });
