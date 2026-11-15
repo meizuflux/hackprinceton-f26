@@ -115,7 +115,7 @@ import { AnalysisEntries } from "./components/AnalysisEntries";
 import { HeadlinePanel } from "./components/HeadlinePanel";
 import { resolveHeadline } from "./components/headline";
 import { ReplayedCase } from "./replay/ReplayedCase";
-import { requestReplay } from "./replay/intent";
+import { replayRequested, requestReplay } from "./replay/intent";
 import { UploadConfirm, type AnalysisMode } from "./onboarding/UploadConfirm";
 
 /** A request from another section to open the board's review dock. */
@@ -1195,15 +1195,6 @@ function BoardCanvas({
     },
     [viewMode, selection, data, focusTarget, resetBoardView],
   );
-  // When a replay finishes, the board opens on its story once (it had no story while it grew).
-  const wasGrowing = useRef(growing);
-  useEffect(() => {
-    const finished = wasGrowing.current && !growing;
-    wasGrowing.current = growing;
-    if (!finished || !story) return;
-    if (viewMode === "story") window.setTimeout(resetBoardView, 40);
-    else switchView("story");
-  }, [growing, story, viewMode, switchView, resetBoardView]);
   const onStoryNodesChange = useCallback(
     (changes: NodeChange<Node<StoryNodeState>>[]) => {
       setStoryNodes((current) => {
@@ -1217,16 +1208,24 @@ function BoardCanvas({
     [setStoryNodes],
   );
   // A replay frames the finished layout once, so cards appear in place while the camera holds still.
-  const framedReplay = useRef(false);
+  // An import starts before its layout exists (an empty case), so frame once per layout, and only
+  // when it has cards; otherwise the camera would stay fixed on an empty frame.
+  const framedReplay = useRef<CaseData | null>(null);
   const [flowReady, setFlowReady] = useState(false);
   useEffect(() => {
     if (!growing) {
-      framedReplay.current = false;
+      framedReplay.current = null;
       return;
     }
-    if (framedReplay.current || !flowReady || !active || dockMode !== "closed")
+    if (
+      framedReplay.current === layoutData ||
+      nodes.length === 0 ||
+      !flowReady ||
+      !active ||
+      dockMode !== "closed"
+    )
       return;
-    framedReplay.current = true;
+    framedReplay.current = layoutData;
     const bounds = boundsOf(
       nodes.map((node) => ({ ...node.position, ...nodeSize(node) })),
     );
@@ -1236,7 +1235,7 @@ function BoardCanvas({
       { ...bounds, x: bounds.x - panel, width: bounds.width + panel },
       { padding: 0.08, duration: 400 },
     );
-  }, [growing, flowReady, active, dockMode, fitBounds, nodes]);
+  }, [growing, flowReady, active, dockMode, fitBounds, nodes, layoutData]);
   return (
     <>
       <div className="workspace">
@@ -1443,7 +1442,7 @@ function BoardCanvas({
                 {!storyMode && <CanvasMinimap frameNodes={nodes} />}
               </ReactFlow>
             )}
-            {story && boardView === "graph" && (
+            {story && boardView === "graph" && !growing && (
               <div
                 className="board-view-switch"
                 role="group"
@@ -1924,6 +1923,16 @@ export default function App() {
   const uploadFailed =
     statusQuery.isError || statusQuery.data?.status === "failed";
   const caseNotReady = isApiError(caseQuery.error, "not_ready");
+  // A query with no data goes back to "pending" on every refetch. While an import runs, those
+  // refetches must not swap the board for the opening spinner: that remounts the replay and
+  // restarts it, so the run would never be seen growing. Once a case has answered "not ready"
+  // (or opened to replay), keep the board mounted until its data arrives.
+  const awaitingRunRef = useRef<string | null>(null);
+  if (routeCaseId && (caseNotReady || replayRequested(routeCaseId)))
+    awaitingRunRef.current = routeCaseId;
+  const caseOpening =
+    caseQuery.isPending &&
+    !(routeCaseId && awaitingRunRef.current === routeCaseId);
   const caseNotFound =
     route.kind === "case" &&
     ((caseQuery.data !== undefined && caseQuery.data.id !== route.caseId) ||
@@ -2119,7 +2128,7 @@ export default function App() {
       ) : (
         <div className="app-shell">
           {(route.kind !== "case" ||
-            (!caseQuery.data && !caseNotReady) ||
+            (!caseQuery.data && !caseNotReady && caseOpening) ||
             caseNotFound) && (
             <WorkspaceNavigation
               navigate={navigate}
@@ -2148,7 +2157,7 @@ export default function App() {
                   Go home
                 </button>
               </div>
-            ) : caseQuery.isPending ? (
+            ) : caseOpening ? (
               <div className="center-state">
                 <LoaderCircle className="spin" />
                 <h2>Opening evidence workspace…</h2>
@@ -2216,6 +2225,8 @@ export default function App() {
                     }
                   >
                     <Board
+                      // The story is laid out from complete data, so the board starts afresh when a replay ends.
+                      key={context.growing ? "replay-growing" : "settled"}
                       layoutData={context.layoutData}
                       growing={context.growing}
                       hud={context.hud}
