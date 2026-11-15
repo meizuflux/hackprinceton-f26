@@ -77,12 +77,6 @@ class DeployTests(unittest.TestCase):
             with self.assertRaisesRegex(ValueError, "VULTR_OBJECT"):
                 deploy.backup_config(args)
 
-    def test_enables_daily_instance_backups(self):
-        with patch.object(deploy, "api") as api:
-            deploy.enable_instance_backups("instance-1")
-        self.assertEqual(api.call_args_list[0].args, ("PATCH", "/instances/instance-1", {"backups": "enabled"}))
-        self.assertEqual(api.call_args_list[1].args[2]["type"], "daily")
-
     def test_create_requires_instance_settings_before_api_call(self):
         args = deploy.parser().parse_args(["--domain", "maple.example.org", "--volume-id", "block-1", "--firewall-group-id", "fw-1", "--backup-endpoint", "https://ewr1.vultrobjects.com", "--backup-bucket", "mapletrace-backups"])
         with patch.object(deploy.subprocess, "check_output", side_effect=[b"", "abc\n"]), patch.object(deploy, "backup_config", return_value=b"config"), patch.object(deploy, "api") as api:

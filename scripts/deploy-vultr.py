@@ -144,11 +144,6 @@ def prepare_firewall(args):
     return group
 
 
-def enable_instance_backups(instance_id):
-    api("PATCH", "/instances/" + instance_id, {"backups": "enabled"})
-    api("POST", f"/instances/{instance_id}/backup-schedule", {"type": "daily", "hour": 3, "dow": 1, "dom": 1})
-
-
 def deploy(args):
     # Deploy a committed snapshot: no untracked files or local secrets are uploaded.
     if subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT).strip():
@@ -167,13 +162,11 @@ def deploy(args):
         payload = {"region": args.region, "plan": args.plan, "os_id": args.os_id,
                    "label": args.label, "hostname": args.hostname, "sshkey_id": [args.ssh_key_id]}
         payload["firewall_group_id"] = firewall_id
-        payload["backups"] = "enabled"
         instance_id = api("POST", "/instances", payload)["instance"]["id"]
         print(f"Created billable Vultr instance {instance_id}. Save this ID for retries.", flush=True)
     host = wait_instance(instance_id, args.timeout)
     if args.instance_id:
         api("PATCH", "/instances/" + instance_id, {"firewall_group_id": firewall_id})
-    enable_instance_backups(instance_id)
     volume_id, mount_id, created_volume = prepare_volume(args, instance_id)
     print(f"Using block storage {volume_id} for case data.", flush=True)
     print(f"Instance {instance_id} is active at {host}; point {args.domain} to this IP and connect over SSH.", flush=True)
