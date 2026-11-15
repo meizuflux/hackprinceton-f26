@@ -34,6 +34,8 @@ def _run(llm: bool, vision_record: bool = False) -> tuple[Path, dict]:
     meta = {"caseId": api.DEMO_CASE_ID, "title": "Kestrel", "created": api._now(), "timezone": None, "llm": llm,
             "uploads": [{"filename": api.DEMO_ARCHIVE.name, "sha256": hashlib.sha256(raw).hexdigest(), "bytes": len(raw),
                          "time": api._now(), "stored": "upload_1.zip"}], "versions": [], "latest": None}
+    if vision_record:
+        meta["vision_record"] = True  # replay the analysis cache, record only image descriptions
     api._write_json(case_dir / "case.json", meta)
     api._run_version("0" * 32, api.DEMO_CASE_ID, 1, None)
     job = json.loads((api._jobs() / f"{'0' * 32}.json").read_text(encoding="utf-8"))
