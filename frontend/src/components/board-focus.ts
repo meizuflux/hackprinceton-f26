@@ -148,6 +148,28 @@ export interface FocusFitOptions {
 }
 
 /** Computes padding strings in pixels so ReactFlow (@xyflow/system) doesn't treat padding as percentage ratios. */
+/** Width of the floating case toolbar plus its inset and a margin. */
+const TOOLBAR_CLEARANCE: PaddingPx = "80px";
+
+/**
+ * Story-view fit padding: clear of the view switch at the top, the case
+ * toolbar on the left, and (above 900px) the open review dock plus the zoom
+ * controls beside it on the right.
+ */
+export function getStoryPadding(options: {
+  isNarrow?: boolean;
+  dockOpen?: boolean;
+}): { top: PaddingPx; bottom: PaddingPx; left: PaddingPx; right: PaddingPx } {
+  const besideDock =
+    !(options.isNarrow ?? false) && (options.dockOpen ?? false);
+  return {
+    top: "108px",
+    bottom: "56px",
+    left: TOOLBAR_CLEARANCE,
+    right: besideDock ? "470px" : "72px",
+  };
+}
+
 export function getFocusPadding(options: {
   isNarrow?: boolean;
   dockOpen?: boolean;

@@ -90,6 +90,7 @@ import {
 import {
   getFocusFitOptions,
   getFocusPadding,
+  getStoryPadding,
   getNodesForSelection,
   getNodesForTab,
   type Tab,
@@ -115,6 +116,10 @@ const nodeTypes = {
   storyGroup: StoryGroupNode,
 };
 const edgeTypes = { thread: ThreadEdge };
+
+const isNarrowViewport = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(max-width: 900px)").matches;
 
 /** Story-view node state; card content is read from the case at render. */
 type StoryNodeState = { arriveFrom?: Point };
@@ -202,7 +207,7 @@ function BoardCanvas({
   reviewRequest?: ReviewRequest | null;
   onClearReviewRequest?: () => void;
 }) {
-  const { fitView } = useReactFlow();
+  const { fitView, getViewport, setViewport } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
 
   // Story view: the backend's opening selection, with the rest of the board
@@ -229,8 +234,16 @@ function BoardCanvas({
     story ? "story" : "full",
   );
   const storyMode = viewMode === "story" && story !== null;
-  // Story view keeps cards clear of the view switch at the top of the canvas.
-  const topPad = storyMode ? "124px" : "90px";
+  // The dock state is declared below; story fits read it when they run.
+  const dockOpenRef = useRef(false);
+  const storyPadding = useCallback(
+    () =>
+      getStoryPadding({
+        isNarrow: isNarrowViewport(),
+        dockOpen: dockOpenRef.current,
+      }),
+    [],
+  );
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
   const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
@@ -377,14 +390,9 @@ function BoardCanvas({
             try {
               fitView({
                 nodes: ids.map((id) => ({ id })),
-                padding: {
-                  top: "110px",
-                  bottom: "90px",
-                  left: "90px",
-                  right: "90px",
-                },
+                padding: storyPadding(),
                 duration: 650,
-                minZoom: 0.45,
+                minZoom: 0.4,
                 maxZoom: 1,
               });
             } catch {
@@ -394,7 +402,7 @@ function BoardCanvas({
         delay,
       );
     },
-    [fitView],
+    [fitView, storyPadding],
   );
   /** Fans a group's hidden cards out around it, or folds them all back. */
   const toggleGroup = useCallback(
@@ -515,7 +523,11 @@ function BoardCanvas({
         isNarrow,
         dockOpen: isDockOpen,
       });
-      if (storyModeRef.current) fitOptions.padding.top = "124px";
+      if (storyModeRef.current)
+        fitOptions.padding = getStoryPadding({
+          isNarrow,
+          dockOpen: isDockOpen,
+        });
 
       const fit = () =>
         requestAnimationFrame(() => {
@@ -537,22 +549,31 @@ function BoardCanvas({
   const resetBoardView = useCallback(() => {
     requestAnimationFrame(() => {
       try {
-        fitView({
-          padding: {
-            top: storyModeRef.current ? "124px" : "90px",
-            bottom: "100px",
-            left: "90px",
-            right: "60px",
-          },
-          duration: 650,
-          minZoom: 0.5,
-          maxZoom: 1.1,
-        });
+        fitView(
+          storyModeRef.current
+            ? {
+                padding: storyPadding(),
+                duration: 650,
+                minZoom: 0.3,
+                maxZoom: 1,
+              }
+            : {
+                padding: {
+                  top: "90px",
+                  bottom: "100px",
+                  left: "90px",
+                  right: "60px",
+                },
+                duration: 650,
+                minZoom: 0.5,
+                maxZoom: 1.1,
+              },
+        );
       } catch {
         // Graceful fallback
       }
     });
-  }, [fitView]);
+  }, [fitView, storyPadding]);
 
   const inspect = useCallback(
     (kind: Selection["kind"], id: string, sourceId?: string) => {
@@ -732,12 +753,60 @@ function BoardCanvas({
   );
   const [edges, , onEdgesChange] = useEdgesState(initialEdges);
   // Fit the board beside the dock when it is open, including the headline on load.
-  const fitPadding = getFocusPadding({
-    isNarrow:
-      typeof window !== "undefined" &&
-      window.matchMedia("(max-width: 900px)").matches,
-    dockOpen: dockMode !== "closed",
-  });
+  dockOpenRef.current = dockMode !== "closed";
+  const fitPadding = storyMode
+    ? getStoryPadding({
+        isNarrow: isNarrowViewport(),
+        dockOpen: dockMode !== "closed",
+      })
+    : {
+        ...getFocusPadding({
+          isNarrow: isNarrowViewport(),
+          dockOpen: dockMode !== "closed",
+        }),
+        top: "90px" as const,
+      };
+  // An expanded card must be readable whole: once it has grown, pan the view
+  // (never the layout) so it sits inside the visible canvas.
+  useEffect(() => {
+    if (!expandedId) return;
+    const timer = window.setTimeout(() => {
+      const card = document.querySelector(
+        `.react-flow__node[data-id="${CSS.escape(expandedId)}"] .story-card`,
+      );
+      const wrap = card?.closest(".canvas-wrap");
+      if (!card || !wrap) return;
+      const box = card.getBoundingClientRect();
+      const area = wrap.getBoundingClientRect();
+      const pad = getStoryPadding({
+        isNarrow: isNarrowViewport(),
+        dockOpen: dockOpenRef.current,
+      });
+      const bounds = {
+        top: area.top + parseFloat(pad.top),
+        bottom: area.bottom - parseFloat(pad.bottom),
+        left: area.left + parseFloat(pad.left),
+        right: area.right - parseFloat(pad.right),
+      };
+      let dx = 0;
+      let dy = 0;
+      if (box.bottom > bounds.bottom) dy = bounds.bottom - box.bottom;
+      if (box.top + dy < bounds.top) dy = bounds.top - box.top;
+      if (box.right > bounds.right) dx = bounds.right - box.right;
+      if (box.left + dx < bounds.left) dx = bounds.left - box.left;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      const view = getViewport();
+      void setViewport(
+        { x: view.x + dx, y: view.y + dy, zoom: view.zoom },
+        { duration: 320 },
+      );
+    }, 380);
+    return () => window.clearTimeout(timer);
+  }, [expandedId, getViewport, setViewport]);
+  // The story always fits whole, so its group cards are never cropped.
+  const fitZoom = storyMode
+    ? { minZoom: 0.3, maxZoom: 1 }
+    : { minZoom: 0.5, maxZoom: 1.1 };
   const normalizedSearch = search.trim().toLowerCase();
   const matchingNodes = useMemo(
     () =>
@@ -1248,11 +1317,7 @@ function BoardCanvas({
                   else if (dockMode === "inspector") closeInspector();
                 }}
                 fitView
-                fitViewOptions={{
-                  padding: { ...fitPadding, top: topPad },
-                  minZoom: 0.5,
-                  maxZoom: 1.1,
-                }}
+                fitViewOptions={{ padding: fitPadding, ...fitZoom }}
                 panOnScroll
                 panOnScrollSpeed={1}
                 zoomOnScroll={false}
@@ -1271,11 +1336,7 @@ function BoardCanvas({
                 <Controls
                   position="bottom-right"
                   showInteractive={false}
-                  fitViewOptions={{
-                    padding: { ...fitPadding, top: topPad },
-                    minZoom: 0.5,
-                    maxZoom: 1.1,
-                  }}
+                  fitViewOptions={{ padding: fitPadding, ...fitZoom }}
                 >
                   <ZoomReadout />
                 </Controls>
