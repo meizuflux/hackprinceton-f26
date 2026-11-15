@@ -34,7 +34,7 @@ import {
 
 export { clampViewToContent } from "./minimap-geometry";
 
-function nodeSize(node: Node) {
+export function nodeSize(node: Node) {
   return {
     width: node.measured?.width ?? node.width ?? PIN_WIDTH,
     height: node.measured?.height ?? node.height ?? PIN_HEIGHT,

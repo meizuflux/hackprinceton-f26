@@ -41,7 +41,12 @@ import {
 import { api, isMock } from "./api/client";
 import { isApiError } from "./api/http";
 import type { CaseData } from "./api/types";
-import { CanvasMinimap, ZoomReadout } from "./components/CanvasMinimap";
+import {
+  CanvasMinimap,
+  ZoomReadout,
+  nodeSize,
+} from "./components/CanvasMinimap";
+import { boundsOf } from "./components/minimap-geometry";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
@@ -118,7 +123,7 @@ function BoardCanvas({
   reviewRequest?: ReviewRequest | null;
   onClearReviewRequest?: () => void;
 }) {
-  const { fitView } = useReactFlow();
+  const { fitView, fitBounds } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
   const [tab, setTab] = useState<Tab>("gaps");
   const [dockMode, setDockMode] = useState<
@@ -500,33 +505,27 @@ function BoardCanvas({
         };
       });
   }, [edges, nodes, revealedEdgeIds, focusedNodeIds, selection, inspect]);
-  // Refit gently as a replay adds cards, until the reader moves the view.
-  const userMoved = useRef(false);
+  // A replay frames the finished layout once, so cards appear in place while the camera holds still.
+  const framedReplay = useRef(false);
+  const [flowReady, setFlowReady] = useState(false);
   useEffect(() => {
-    if (!growing) userMoved.current = false;
-  }, [growing]);
-  useEffect(() => {
-    if (!growing || !active || dockMode !== "closed" || userMoved.current)
+    if (!growing) {
+      framedReplay.current = false;
       return;
-    const timer = setTimeout(() => {
-      try {
-        void fitView({
-          padding: {
-            top: "90px",
-            bottom: "100px",
-            left: "90px",
-            right: "60px",
-          },
-          duration: 600,
-          minZoom: 0.5,
-          maxZoom: 1.1,
-        });
-      } catch {
-        // Graceful fallback
-      }
-    }, 450);
-    return () => clearTimeout(timer);
-  }, [growing, active, dockMode, fitView, revealedNodeIds]);
+    }
+    if (framedReplay.current || !flowReady || !active || dockMode !== "closed")
+      return;
+    framedReplay.current = true;
+    const bounds = boundsOf(
+      nodes.map((node) => ({ ...node.position, ...nodeSize(node) })),
+    );
+    // Leave room on the left for the run panel.
+    const panel = bounds.width * 0.3;
+    void fitBounds(
+      { ...bounds, x: bounds.x - panel, width: bounds.width + panel },
+      { padding: 0.08, duration: 400 },
+    );
+  }, [growing, flowReady, active, dockMode, fitBounds, nodes]);
   return (
     <>
       <div className="workspace">
@@ -671,15 +670,13 @@ function BoardCanvas({
                 onEdgesChange={onEdgesChange}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
-                onMoveStart={(event) => {
-                  if (event) userMoved.current = true;
-                }}
                 onNodeClick={(_, n) => inspect("node", n.id)}
                 onEdgeClick={(_, e) => inspect("edge", e.id)}
                 onPaneClick={() => {
                   if (dockMode === "inspector") closeInspector();
                 }}
-                fitView
+                onInit={() => setFlowReady(true)}
+                fitView={!growing}
                 fitViewOptions={{
                   padding: {
                     top: "90px",
