@@ -24,7 +24,11 @@ export type ChatFailure = {
 };
 
 /** Shared state for the /chat page and the board's floating "Ask a question" widget. */
-export function useCaseChat(caseId: string) {
+export function useCaseChat(
+  caseId: string,
+  /** Only the chat tab asks questions queued from the mind map; the map widget must not take them. */
+  { takeQueued = false }: { takeQueued?: boolean } = {},
+) {
   const [status, setStatus] = useState<ChatStatus | null>(null);
   const [messages, setMessages] = useState<ChatEntry[]>([]);
   const [threadId, setThreadId] = useState<string>();
@@ -124,9 +128,13 @@ export function useCaseChat(caseId: string) {
 
   // A question queued from the mind map widget is asked here, where the answer plays out.
   const [queueTick, setQueueTick] = useState(0);
-  useEffect(() => subscribeQueue(() => setQueueTick((n) => n + 1)), []);
+  useEffect(
+    () =>
+      takeQueued ? subscribeQueue(() => setQueueTick((n) => n + 1)) : undefined,
+    [takeQueued],
+  );
   useEffect(() => {
-    if (!status?.available || pending) return;
+    if (!takeQueued || !status?.available || pending) return;
     const question = takeQueuedQuestion(caseId);
     if (!question) return;
     const recorded = status.suggestions?.some(
@@ -140,7 +148,7 @@ export function useCaseChat(caseId: string) {
       return;
     }
     ask(question);
-  }, [caseId, status, pending, queueTick, ask]);
+  }, [takeQueued, caseId, status, pending, queueTick, ask]);
 
   const retry = useCallback(() => {
     const lastUser = [...messages].reverse().find((m) => m.role === "user");

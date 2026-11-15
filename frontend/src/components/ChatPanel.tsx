@@ -117,7 +117,7 @@ export function ChatPanel({
   onOpenSource,
   sourceIds = [],
 }: ChatPanelProps) {
-  const chat = useCaseChat(caseId);
+  const chat = useCaseChat(caseId, { takeQueued: true });
   return (
     <section className="chat-panel" aria-label="Ask about this case">
       <header className="chat-panel-heading">
