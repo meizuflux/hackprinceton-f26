@@ -13,6 +13,7 @@ export interface EvidenceNode {
   subtitle: string;
   time?: string;
   gapId?: string;
+  size?: { width: number; height: number };
 }
 
 export interface EvidenceEdge {

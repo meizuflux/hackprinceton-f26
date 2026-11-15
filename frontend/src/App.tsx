@@ -39,10 +39,9 @@ import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
   arrangePins,
+  getPinDimensions,
   settlePinMoves,
   threadHandles,
-  PIN_WIDTH,
-  PIN_HEIGHT,
 } from "./components/board-layout";
 import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
@@ -201,19 +200,26 @@ function BoardCanvas({
   const initialNodes: Node<PinData>[] = useMemo(
     () =>
       arrangePins(
-        data.nodes.map((n) => ({
-          id: n.id,
-          type: "evidence",
-          ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
-          position: { x: 100 + n.position.x, y: n.position.y * 1.2 },
-          width: PIN_WIDTH,
-          height: PIN_HEIGHT,
-          data: {
-            ...n,
-            onInspect: () => inspect("node", n.id),
-            onInspectGap: n.gapId ? () => inspect("gap", n.gapId!) : undefined,
-          },
-        })),
+        data.nodes.map((n) => {
+          const dim = getPinDimensions(n);
+          return {
+            id: n.id,
+            type: "evidence",
+            ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
+            position: { x: 100 + n.position.x, y: n.position.y * 1.2 },
+            width: dim.width,
+            height: dim.height,
+            data: {
+              ...n,
+              width: dim.width,
+              height: dim.height,
+              onInspect: () => inspect("node", n.id),
+              onInspectGap: n.gapId
+                ? () => inspect("gap", n.gapId!)
+                : undefined,
+            },
+          };
+        }),
       ),
     [data, inspect],
   );

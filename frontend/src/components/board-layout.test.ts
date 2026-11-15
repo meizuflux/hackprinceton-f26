@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   arrangePins,
   freePinPosition,
+  getPinDimensions,
   PIN_HEIGHT,
   PIN_WIDTH,
   threadHandles,
@@ -74,6 +75,71 @@ describe("board geometry", () => {
           settled.filter((other) => other.id !== pin.id),
         ),
       ).toEqual(pin.position);
+    }
+  });
+
+  it("calculates varied card dimensions tailored to evidence roles", () => {
+    // Location hub: wider anchor node
+    expect(getPinDimensions({ type: "location" })).toEqual({
+      width: 276,
+      height: 236,
+    });
+    // Statement memo: taller document aspect ratio
+    expect(getPinDimensions({ type: "statement" })).toEqual({
+      width: 256,
+      height: 252,
+    });
+    // Incident event with open question: extra room for question alert
+    expect(getPinDimensions({ type: "event", gapId: "gap-1" })).toEqual({
+      width: 264,
+      height: 244,
+    });
+    // Device with recording gap
+    expect(getPinDimensions({ type: "device", gapId: "gap-cam" })).toEqual({
+      width: 252,
+      height: 236,
+    });
+    // Standard hardware reader
+    expect(getPinDimensions({ type: "device" })).toEqual({
+      width: 240,
+      height: 216,
+    });
+    // Compact person card
+    expect(getPinDimensions({ type: "person" })).toEqual({
+      width: 236,
+      height: 216,
+    });
+    // Explicit size override
+    expect(
+      getPinDimensions({
+        type: "person",
+        size: { width: 300, height: 260 },
+      }),
+    ).toEqual({
+      width: 300,
+      height: 260,
+    });
+  });
+
+  it("maintains 40px clearance when placing variable-sized cards", () => {
+    const raw = [
+      { id: "loc", position: { x: 0, y: 0 }, width: 276, height: 236 },
+      { id: "stmt", position: { x: 50, y: 50 }, width: 256, height: 252 },
+      { id: "evt", position: { x: 100, y: 100 }, width: 264, height: 244 },
+    ];
+    const placed = arrangePins(raw);
+    for (let i = 0; i < placed.length; i++) {
+      for (let j = i + 1; j < placed.length; j++) {
+        const a = placed[i];
+        const b = placed[j];
+        const overlapX =
+          a.position.x < b.position.x + b.width + 40 &&
+          a.position.x + a.width + 40 > b.position.x;
+        const overlapY =
+          a.position.y < b.position.y + b.height + 40 &&
+          a.position.y + a.height + 40 > b.position.y;
+        expect(overlapX && overlapY).toBe(false);
+      }
     }
   });
 });

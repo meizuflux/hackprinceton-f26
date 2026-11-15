@@ -21,6 +21,8 @@ export type PinData = {
   gapId?: string;
   active?: boolean;
   isFocused?: boolean;
+  width?: number;
+  height?: number;
   onInspect: () => void;
   onInspectGap?: () => void;
 };
@@ -36,9 +38,14 @@ export const EvidenceNode = memo(function EvidenceNode({
   data,
 }: NodeProps<Node<PinData>>) {
   const Icon = icons[data.type as keyof typeof icons] || FileText;
+  const pinStyle = {
+    ...(data.width ? { width: `${data.width}px` } : {}),
+    ...(data.height ? { height: `${data.height}px` } : {}),
+  };
   return (
     <div
       className={`evidence-pin ${data.type} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""} ${data.isFocused ? "is-focused" : ""}`}
+      style={pinStyle}
     >
       <svg
         className="pin-outline"
