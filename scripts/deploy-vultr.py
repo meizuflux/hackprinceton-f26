@@ -52,7 +52,7 @@ class DeploymentState:
 def list_api(path, key):
     cursor = None
     while True:
-        params = {"per_page": 1000}
+        params = {"per_page": 500}
         if cursor:
             params["cursor"] = cursor
         result = api("GET", path + "?" + urlencode(params))

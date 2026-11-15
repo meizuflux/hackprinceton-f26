@@ -20,6 +20,17 @@ class DeployTests(unittest.TestCase):
                          ('ewr', 'vc2-2c-4gb', 2284, '0.0.0.0/0', 40))
         self.assertIsNone(args.domain)
 
+    def test_api_pagination_obeys_vultr_page_limit(self):
+        responses = [
+            {'ssh_keys': [{'id': 'first'}], 'meta': {'links': {'next': 'next+cursor'}}},
+            {'ssh_keys': [{'id': 'second'}], 'meta': {'links': {'next': ''}}},
+        ]
+        with patch.object(deploy, 'api', side_effect=responses) as api:
+            self.assertEqual(list(deploy.list_api('/ssh-keys', 'ssh_keys')),
+                             [{'id': 'first'}, {'id': 'second'}])
+        self.assertEqual(api.call_args_list[0].args, ('GET', '/ssh-keys?per_page=500'))
+        self.assertEqual(api.call_args_list[1].args, ('GET', '/ssh-keys?per_page=500&cursor=next%2Bcursor'))
+
     def test_state_does_not_store_credentials(self):
         with tempfile.TemporaryDirectory() as directory:
             path = Path(directory) / 'deployment.json'
