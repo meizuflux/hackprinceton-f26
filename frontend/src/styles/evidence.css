@@ -240,7 +240,3 @@
 .dimmed-edge {
   opacity: 0.14 !important;
 }
-.evidence-list button.is-focused {
-  border-color: var(--amber);
-  background: #2a2c20;
-}

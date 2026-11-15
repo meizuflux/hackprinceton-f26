@@ -26,12 +26,8 @@ import {
   Check,
   FileArchive,
   Focus,
-  GitBranch,
-  History,
-  Layers,
   Lightbulb,
   LoaderCircle,
-  Minus,
   Network,
   Search,
   ShieldCheck,
@@ -85,7 +81,6 @@ import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
 import {
   boardColorVars,
-  cardKind,
   threadBadge,
   threadCategory,
   threadColors,
@@ -94,7 +89,6 @@ import {
 import { BoardLegend } from "./components/BoardLegend";
 import {
   formatCaseSubtitle,
-  formatCaseTime,
   insightKind,
   insightStrength,
   scoreLabel,
@@ -109,7 +103,7 @@ import {
 } from "./components/board-focus";
 import { casePath, useRouter } from "./routing";
 import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
-import { CaseWorkspace } from "./components/CaseWorkspace";
+import { CaseTitle, CaseWorkspace } from "./components/CaseWorkspace";
 import { AskWidget } from "./components/AskWidget";
 import { AnalysisEntries } from "./components/AnalysisEntries";
 import { HeadlinePanel } from "./components/HeadlinePanel";
@@ -118,9 +112,6 @@ import { ReplayedCase } from "./replay/ReplayedCase";
 import { replayRequested, requestReplay } from "./replay/intent";
 import { RUN_PANEL_EVENT } from "./replay/ReplayHud";
 import { UploadConfirm, type AnalysisMode } from "./onboarding/UploadConfirm";
-
-/** A request from another section to open the board's review dock. */
-export type ReviewRequest = { panel: Tab | "audit"; id: number };
 import {
   Landing,
   ProjectManager,
@@ -217,8 +208,6 @@ function BoardCanvas({
   active,
   focusSelection,
   onClearFocusSelection,
-  reviewRequest,
-  onClearReviewRequest,
 }: {
   data: CaseData;
   /** The full case, laid out once so cards revealed by a replay keep their final positions. */
@@ -230,8 +219,6 @@ function BoardCanvas({
   active: boolean;
   focusSelection?: Selection | null;
   onClearFocusSelection?: () => void;
-  reviewRequest?: ReviewRequest | null;
-  onClearReviewRequest?: () => void;
 }) {
   const { fitView, fitBounds, getViewport, setViewport } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -484,21 +471,12 @@ function BoardCanvas({
   // The backend's headline finding opens in the dock when the case loads.
   const headline = useMemo(() => resolveHeadline(data), [data]);
   const [dockMode, setDockMode] = useState<
-    "closed" | "overview" | "analysis" | "inspector" | "audit"
+    "closed" | "overview" | "analysis" | "inspector"
   >(() => (headline ? "overview" : "closed"));
-  const auditChain = useQuery({
-    queryKey: ["audit-chain", data.id],
-    queryFn: () => api.getAuditChain(data.id),
-    enabled: !isMock && dockMode === "audit",
-  });
   const [returnMode, setReturnMode] = useState<
-    "closed" | "overview" | "analysis" | "audit"
-  >("analysis");
-  const [auditReturnMode, setAuditReturnMode] = useState<
     "closed" | "overview" | "analysis"
-  >("closed");
+  >("analysis");
   const [search, setSearch] = useState("");
-  const [boardView, setBoardView] = useState<"graph" | "list">("graph");
   const dockRef = useRef<HTMLElement>(null);
   const analysisRef = useRef<HTMLElement>(null);
   const previousDockMode = useRef(dockMode);
@@ -671,24 +649,6 @@ function BoardCanvas({
     },
     [dockMode, tab, data, focusTarget, resetBoardView],
   );
-  const toggleAudit = useCallback(
-    (options?: { toggle?: boolean }) => {
-      if (dockMode === "audit") {
-        if (options?.toggle !== false) setDockMode(auditReturnMode);
-        return;
-      }
-      setAuditReturnMode(
-        dockMode === "analysis" || dockMode === "overview"
-          ? dockMode
-          : dockMode === "inspector" &&
-              (returnMode === "analysis" || returnMode === "overview")
-            ? returnMode
-            : "closed",
-      );
-      setDockMode("audit");
-    },
-    [dockMode, auditReturnMode, returnMode],
-  );
   const analysisShown =
     dockMode === "analysis" ||
     (dockMode === "inspector" && returnMode === "analysis");
@@ -722,13 +682,6 @@ function BoardCanvas({
     },
     [data, focusTarget],
   );
-
-  useEffect(() => {
-    if (!reviewRequest || !active) return;
-    if (reviewRequest.panel === "audit") toggleAudit({ toggle: false });
-    else openAnalysis(reviewRequest.panel, { toggle: false });
-    onClearReviewRequest?.();
-  }, [reviewRequest, active, openAnalysis, toggleAudit, onClearReviewRequest]);
 
   useEffect(() => {
     if (focusSelection && active) {
@@ -1251,10 +1204,10 @@ function BoardCanvas({
       <div className="workspace">
         <div className="board-area">
           <div className="board-toolbar">
-            <div className="board-title">
-              <h1>{projectName || data.title}</h1>
-              <span>{formatCaseSubtitle(data.subtitle, data.timezone)}</span>
-            </div>
+            <CaseTitle
+              title={projectName || data.title}
+              subtitle={formatCaseSubtitle(data.subtitle, data.timezone)}
+            />
             <div className="board-actions">
               <label className="board-search">
                 <Search size={14} />
@@ -1285,31 +1238,6 @@ function BoardCanvas({
                   </button>
                 )}
               </label>
-              <button
-                className="text-button view-toggle"
-                aria-pressed={boardView === "list"}
-                onClick={() =>
-                  setBoardView(boardView === "graph" ? "list" : "graph")
-                }
-              >
-                {boardView === "graph" ? (
-                  <Layers size={15} />
-                ) : (
-                  <GitBranch size={15} />
-                )}
-                {boardView === "graph" ? "List" : "Board"}
-              </button>
-              <button
-                className="text-button"
-                aria-pressed={
-                  dockMode === "audit" ||
-                  (dockMode === "inspector" && returnMode === "audit")
-                }
-                aria-controls="review-dock"
-                onClick={() => toggleAudit()}
-              >
-                <History size={15} /> Audit trail
-              </button>
               <AnalysisEntries
                 data={data}
                 active={analysisShown ? tab : null}
@@ -1318,141 +1246,72 @@ function BoardCanvas({
             </div>
           </div>
           <div
-            className={`canvas-wrap ${storyMode && boardView === "graph" ? "is-story" : ""}${growing ? " replay-growing" : ""}`}
+            className={`canvas-wrap ${storyMode ? "is-story" : ""}${growing ? " replay-growing" : ""}`}
             style={boardColorVars()}
           >
-            {boardView === "list" ? (
-              <div className="evidence-list">
-                <h2>Evidence & connections</h2>
-                <p>Inspect any record to review its original sources.</p>
-                {matchingNodes.map((n) => (
-                  <button
-                    key={n.id}
-                    className={
-                      focusedNodeIds && focusedNodeIds.has(n.id)
-                        ? "is-focused"
-                        : ""
-                    }
-                    onClick={() => inspect("node", n.id)}
-                  >
-                    <span
-                      className={`list-record-type kind-${cardKind(n.data.type)}`}
-                    >
-                      {n.data.type}
-                    </span>
-                    <strong>{n.data.label}</strong>
-                    <span>
-                      {n.data.citations.length} sources{" "}
-                      <ArrowUpRight size={14} />
-                    </span>
-                  </button>
-                ))}
-                <h3>Relationships</h3>
-                {data.edges
-                  .filter(
-                    (e) =>
-                      !matchingNodeIds ||
-                      matchingNodeIds.has(e.source) ||
-                      matchingNodeIds.has(e.target),
-                  )
-                  .map((e) => (
-                    <button key={e.id} onClick={() => inspect("edge", e.id)}>
-                      <span className="list-record-type">
-                        {relationshipKind(e.type, e.certainty) === "observed"
-                          ? "Observed"
-                          : relationshipKind(e.type, e.certainty) ===
-                              "inference"
-                            ? "Inference"
-                            : "Claim"}
-                      </span>
-                      <strong>
-                        {data.nodes.find((n) => n.id === e.source)?.label}{" "}
-                        {e.directed ? (
-                          <ArrowRight size={12} />
-                        ) : (
-                          <Minus size={12} />
-                        )}{" "}
-                        {e.label}{" "}
-                        {e.directed ? (
-                          <ArrowRight size={12} />
-                        ) : (
-                          <Minus size={12} />
-                        )}{" "}
-                        {data.nodes.find((n) => n.id === e.target)?.label}
-                      </strong>
-                      <span>
-                        {e.citations.length} sources <ArrowUpRight size={14} />
-                      </span>
-                    </button>
-                  ))}
-              </div>
-            ) : (
-              <ReactFlow
-                nodes={(storyMode ? storyFlowNodes : visibleNodes) as Node[]}
-                edges={visibleEdges}
-                onNodesChange={
-                  (storyMode ? onStoryNodesChange : onNodesChange) as (
-                    changes: NodeChange<Node>[],
-                  ) => void
+            <ReactFlow
+              nodes={(storyMode ? storyFlowNodes : visibleNodes) as Node[]}
+              edges={visibleEdges}
+              onNodesChange={
+                (storyMode ? onStoryNodesChange : onNodesChange) as (
+                  changes: NodeChange<Node>[],
+                ) => void
+              }
+              onEdgesChange={onEdgesChange}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              onNodeClick={(event, n) => {
+                if (!storyMode) {
+                  inspect("node", n.id);
+                  return;
                 }
-                onEdgesChange={onEdgesChange}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                onNodeClick={(event, n) => {
-                  if (!storyMode) {
-                    inspect("node", n.id);
-                    return;
-                  }
-                  if (isGroupId(n.id)) toggleGroup(n.id);
-                  else if (
-                    !(event.target as HTMLElement).closest(".story-card-body")
-                  )
-                    setExpandedId((current) =>
-                      current === n.id ? null : n.id,
-                    );
-                }}
-                onEdgeClick={(_, e) => {
-                  const edge = visibleEdges.find((entry) => entry.id === e.id);
-                  if (edge?.data?.aggregateCount) edge.data.onInspect();
-                  else inspect("edge", e.id);
-                }}
-                onNodeMouseEnter={(_, n) => setHoveredNodeId(n.id)}
-                onNodeMouseLeave={() => setHoveredNodeId(null)}
-                onEdgeMouseEnter={(_, e) => setHoveredEdgeId(e.id)}
-                onEdgeMouseLeave={() => setHoveredEdgeId(null)}
-                onPaneClick={() => {
-                  if (expandedId) setExpandedId(null);
-                  else if (dockMode === "inspector") closeInspector();
-                }}
-                onInit={() => setFlowReady(true)}
-                fitView={!growing}
+                if (isGroupId(n.id)) toggleGroup(n.id);
+                else if (
+                  !(event.target as HTMLElement).closest(".story-card-body")
+                )
+                  setExpandedId((current) => (current === n.id ? null : n.id));
+              }}
+              onEdgeClick={(_, e) => {
+                const edge = visibleEdges.find((entry) => entry.id === e.id);
+                if (edge?.data?.aggregateCount) edge.data.onInspect();
+                else inspect("edge", e.id);
+              }}
+              onNodeMouseEnter={(_, n) => setHoveredNodeId(n.id)}
+              onNodeMouseLeave={() => setHoveredNodeId(null)}
+              onEdgeMouseEnter={(_, e) => setHoveredEdgeId(e.id)}
+              onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+              onPaneClick={() => {
+                if (expandedId) setExpandedId(null);
+                else if (dockMode === "inspector") closeInspector();
+              }}
+              onInit={() => setFlowReady(true)}
+              fitView={!growing}
+              fitViewOptions={{ padding: fitPadding, ...fitZoom }}
+              panOnScroll
+              panOnScrollSpeed={1}
+              zoomOnScroll={false}
+              zoomOnPinch
+              minZoom={0.15}
+              maxZoom={1.8}
+              nodesConnectable={false}
+              // Each card's inspect button and each thread's label button are
+              // the keyboard stops; the wrappers would add a second, unstyled
+              // stop per card and thread.
+              nodesFocusable={false}
+              edgesFocusable={false}
+              deleteKeyCode={null}
+              proOptions={{ hideAttribution: true }}
+            >
+              <Controls
+                position="bottom-right"
+                showInteractive={false}
                 fitViewOptions={{ padding: fitPadding, ...fitZoom }}
-                panOnScroll
-                panOnScrollSpeed={1}
-                zoomOnScroll={false}
-                zoomOnPinch
-                minZoom={0.15}
-                maxZoom={1.8}
-                nodesConnectable={false}
-                // Each card's inspect button and each thread's label button are
-                // the keyboard stops; the wrappers would add a second, unstyled
-                // stop per card and thread.
-                nodesFocusable={false}
-                edgesFocusable={false}
-                deleteKeyCode={null}
-                proOptions={{ hideAttribution: true }}
               >
-                <Controls
-                  position="bottom-right"
-                  showInteractive={false}
-                  fitViewOptions={{ padding: fitPadding, ...fitZoom }}
-                >
-                  <ZoomReadout />
-                </Controls>
-                {!storyMode && <CanvasMinimap frameNodes={nodes} />}
-              </ReactFlow>
-            )}
-            {story && boardView === "graph" && !growing && (
+                <ZoomReadout />
+              </Controls>
+              {!storyMode && <CanvasMinimap frameNodes={nodes} />}
+            </ReactFlow>
+            {story && !growing && (
               <div
                 className="board-view-switch"
                 role="group"
@@ -1482,9 +1341,9 @@ function BoardCanvas({
             {search.trim() && (
               <div className="search-feedback" role="status">
                 {matchingNodes.length
-                  ? `${matchingNodes.length} matching pin${matchingNodes.length === 1 ? "" : "s"}.${boardView === "graph" ? " Other pins are dimmed." : ""}`
+                  ? `${matchingNodes.length} matching pin${matchingNodes.length === 1 ? "" : "s"}. Other pins are dimmed.`
                   : "No matching evidence. Try a name, device, or location."}
-                {boardView === "graph" && hiddenMatches.length > 0 && (
+                {hiddenMatches.length > 0 && (
                   <>
                     {" "}
                     {hiddenMatches.length} folded into groups.{" "}
@@ -1503,13 +1362,11 @@ function BoardCanvas({
                 )}
               </div>
             )}
-            {boardView === "graph" && (
-              <BoardLegend
-                nodes={data.nodes}
-                edges={data.edges}
-                yield={dockMode !== "closed"}
-              />
-            )}
+            <BoardLegend
+              nodes={data.nodes}
+              edges={data.edges}
+              yield={dockMode !== "closed"}
+            />
           </div>
         </div>
         <aside
@@ -1523,20 +1380,12 @@ function BoardCanvas({
           {dockMode !== "inspector" && (
             <div className="review-dock-header">
               <div>
-                <h2>{dockMode === "audit" ? "Audit trail" : "Analysis"}</h2>
+                <h2>Analysis</h2>
               </div>
               <button
                 className="icon-button"
-                aria-label={
-                  dockMode === "audit" && auditReturnMode !== "closed"
-                    ? "Back to review"
-                    : "Close review dock"
-                }
+                aria-label="Close review dock"
                 onClick={() => {
-                  if (dockMode === "audit") {
-                    setDockMode(auditReturnMode);
-                    return;
-                  }
                   setSelection(null);
                   setDockMode("closed");
                   resetBoardView();
@@ -1734,118 +1583,20 @@ function BoardCanvas({
                 focusTarget(targetNodes, { dockOpen: true });
             }}
             backLabel={
-              returnMode === "audit"
-                ? "Back to audit"
-                : returnMode === "overview"
-                  ? "Back to key finding"
-                  : returnMode === "closed"
-                    ? "Back to board"
-                    : tab === "gaps"
-                      ? "Back to gaps"
-                      : tab === "insights"
-                        ? "Back to insights"
-                        : "Back to next evidence"
+              returnMode === "overview"
+                ? "Back to key finding"
+                : returnMode === "closed"
+                  ? "Back to board"
+                  : tab === "gaps"
+                    ? "Back to gaps"
+                    : tab === "insights"
+                      ? "Back to insights"
+                      : "Back to next evidence"
             }
           />
-          <section className="audit-panel" hidden={dockMode !== "audit"}>
-            {auditChain.data && (
-              <div
-                className={`audit-chain ${auditChain.data.verified ? "verified" : "failed"}`}
-                role="status"
-              >
-                <strong>
-                  {auditChain.data.verified
-                    ? "Audit chain verified"
-                    : "Audit chain verification failed"}
-                </strong>
-                <span>
-                  {auditChain.data.entries.length} hash-chained entries from
-                  ingestion and analysis · head{" "}
-                  <code>{auditChain.data.head.slice(0, 16)}…</code>
-                </span>
-                <ul>
-                  {auditChain.data.checks.map((check) => (
-                    <li key={check.message} className={check.ok ? "" : "bad"}>
-                      {check.ok ? "✓" : "✗"} {check.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {auditChain.isError && (
-              <p className="error-message" role="alert">
-                Could not verify the audit chain: {auditChain.error.message}
-              </p>
-            )}
-            <div className="audit-steps">
-              {data.audit.map((a) => (
-                <div className="audit-step" key={a.id}>
-                  <Check size={13} />
-                  <time dateTime={a.time}>
-                    {formatCaseTime(a.time, data.timezone)}
-                  </time>
-                  <h3>{a.title}</h3>
-                  <AuditDescription text={a.description} />
-                  {a.citations.map((id) => (
-                    <button
-                      key={id}
-                      onClick={() => {
-                        inspect("source", id);
-                      }}
-                    >
-                      {data.sources
-                        .find((s) => s.id === id)
-                        ?.path.split("/")
-                        .pop()}{" "}
-                      <ArrowUpRight size={10} />
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </section>
         </aside>
       </div>
     </>
-  );
-}
-
-/**
- * Audit entries from the backend carry their step payload as JSON. Show it as
- * labelled fields with long hashes shortened (full value on hover) instead of a
- * raw JSON string; anything else is shown as written.
- */
-function AuditDescription({ text }: { text: string }) {
-  let fields: [string, string][] | null = null;
-  if (text.trim().startsWith("{")) {
-    try {
-      const parsed: unknown = JSON.parse(text);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        fields = Object.entries(parsed).map(([key, value]) => [
-          key.replace(/_/g, " "),
-          value === null
-            ? "none"
-            : typeof value === "object"
-              ? JSON.stringify(value)
-              : String(value),
-        ]);
-      }
-    } catch {
-      fields = null;
-    }
-  }
-  if (!fields) return <p>{text}</p>;
-  return (
-    <dl className="audit-fields">
-      {fields.map(([key, value]) => (
-        <div key={key}>
-          <dt>{key}</dt>
-          <dd title={value.length > 24 ? value : undefined}>
-            {/^[0-9a-f]{32,}$/i.test(value) ? `${value.slice(0, 16)}…` : value}
-          </dd>
-        </div>
-      ))}
-    </dl>
   );
 }
 
@@ -1861,8 +1612,6 @@ function Board(props: {
   active: boolean;
   focusSelection?: Selection | null;
   onClearFocusSelection?: () => void;
-  reviewRequest?: ReviewRequest | null;
-  onClearReviewRequest?: () => void;
 }) {
   return (
     <>
@@ -1880,9 +1629,6 @@ export default function App() {
   const queryClient = useQueryClient();
   const [openingCase, setOpeningCase] = useState(false);
   const [focusSelection, setFocusSelection] = useState<Selection | null>(null);
-  const [reviewRequest, setReviewRequest] = useState<ReviewRequest | null>(
-    null,
-  );
   const uploadOpen = route.kind === "new-project";
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState<SessionProject[]>([]);
@@ -2218,10 +1964,6 @@ export default function App() {
                       route.kind === "case" ? route.insightsTab : undefined
                     }
                     navigate={navigate}
-                    onOpenReview={(panel) => {
-                      setReviewRequest({ panel, id: Date.now() });
-                      navigate(casePath(route.caseId));
-                    }}
                     onFocusOnBoard={(sel) => {
                       setFocusSelection(sel);
                       if (route.kind !== "case" || route.view) {
@@ -2244,8 +1986,6 @@ export default function App() {
                       active={route.kind === "case" && !route.view}
                       focusSelection={focusSelection}
                       onClearFocusSelection={() => setFocusSelection(null)}
-                      reviewRequest={reviewRequest}
-                      onClearReviewRequest={() => setReviewRequest(null)}
                       projectName={
                         projects.find(
                           (project) => project.caseId === route.caseId,

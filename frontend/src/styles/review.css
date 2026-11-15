@@ -15,8 +15,7 @@
   transition: top 0.15s ease;
 }
 .review-dock-header,
-.inspector-head,
-.audit-heading {
+.inspector-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
@@ -32,8 +31,7 @@
   font-weight: 550;
 }
 .analysis-panel,
-.inspector,
-.audit-panel {
+.inspector {
   display: flex;
   flex: 1;
   flex-direction: column;
@@ -68,8 +66,7 @@
   margin-left: 5px;
 }
 .panel-content,
-.inspector-body,
-.audit-steps {
+.inspector-body {
   padding: 16px;
   overflow: auto;
   flex: 1;
@@ -134,8 +131,7 @@
   margin-bottom: 6px;
 }
 .analysis-card p,
-.reasoning-note,
-.audit-step p {
+.reasoning-note {
   font-size: 13px;
   line-height: 1.65;
   color: #c3cdd8;
@@ -317,54 +313,6 @@
     monospace;
   color: #d2dce6;
 }
-.audit-heading > div {
-  display: flex;
-  gap: 8px;
-  align-items: center;
-}
-.audit-heading h2 {
-  font-size: 14px;
-  font-weight: 500;
-}
-.audit-heading span {
-  color: var(--muted);
-  font-size: 11px;
-}
-.audit-step {
-  position: relative;
-  padding: 0 0 16px 24px;
-}
-.audit-step:not(:last-child) {
-  margin-bottom: 16px;
-  border-bottom: 1px solid var(--line);
-}
-.audit-step > svg {
-  position: absolute;
-  top: 3px;
-  left: 0;
-  color: var(--brand-text);
-}
-.audit-step time {
-  color: var(--muted);
-  font-size: 12px;
-  font-variant-numeric: tabular-nums;
-}
-.audit-step h3 {
-  font-size: 14px;
-  font-weight: 550;
-  margin: 2px 0 6px;
-}
-.audit-step button {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  background: var(--brand-selected);
-  color: var(--brand-text);
-  padding: 7px;
-  margin: 10px 5px 0 0;
-  font-size: 11px;
-  border-radius: 3px;
-}
 .focus-board-button,
 .insight-board-btn {
   display: inline-flex;
@@ -425,63 +373,6 @@
 .cite-chip:focus-visible {
   border-color: var(--brand-400);
   color: #e6eef6;
-}
-.audit-chain {
-  margin: 16px 16px 0;
-  padding: 12px;
-  border: 1px solid #3f5266;
-  border-radius: 5px;
-  background: #1f2a36;
-  color: #c3cdd8;
-  font-size: 12px;
-  line-height: 1.55;
-}
-.audit-chain.failed {
-  border-color: #8a4a3a;
-  background: #3e2722;
-}
-.audit-chain strong {
-  display: block;
-  color: #e6eef6;
-  font-size: 13px;
-}
-.audit-chain ul {
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
-  font-size: 11px;
-}
-.audit-chain li.bad {
-  color: #f0a58f;
-}
-.audit-chain code {
-  font-size: 10px;
-}
-.audit-step p {
-  overflow-wrap: anywhere;
-}
-.audit-fields {
-  display: grid;
-  gap: 2px;
-  margin: 0;
-  font-size: 12px;
-}
-.audit-fields > div {
-  display: grid;
-  grid-template-columns: minmax(96px, auto) 1fr;
-  gap: 12px;
-}
-.audit-fields dt {
-  color: var(--muted);
-}
-.audit-fields dd {
-  margin: 0;
-  min-width: 0;
-  overflow-wrap: anywhere;
-  color: #c3cdd8;
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 11px;
-  line-height: 1.7;
 }
 /* The step from a cited source to its file: a quiet brand action under the excerpt. */
 .source-meta .open-raw-button {

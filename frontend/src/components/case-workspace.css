@@ -51,12 +51,22 @@
   color: var(--text);
   background: #ffffff0c;
 }
+/* Expanded header: the product mark and name (the mark is for dark surfaces, as here). */
 .case-toolbar-caption {
-  font:
-    10px "IBM Plex Mono",
-    monospace;
-  letter-spacing: 0.8px;
-  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.case-toolbar-caption[hidden] {
+  display: none;
+}
+.case-toolbar-caption .brand-mark {
+  flex-shrink: 0;
 }
 .case-toolbar-content {
   min-height: 0;
@@ -112,7 +122,6 @@
   height: 100%;
   min-height: 100%;
 }
-.case-board-panel .evidence-list,
 .case-board-panel .search-feedback {
   left: var(--toolbar-clearance);
 }
@@ -156,9 +165,10 @@
 @media (max-width: 900px) {
   .case-workspace {
     --toolbar-clearance: 68px;
+    --toolbar-left: 10px;
   }
   .case-toolbar {
-    left: 10px;
+    left: var(--toolbar-left);
   }
   .case-content-panel {
     left: var(--toolbar-clearance);
@@ -189,4 +199,52 @@
     margin-left: var(--toolbar-clearance);
     border-left: 1px solid var(--line);
   }
+}
+
+/* Case heading: a quiet "Investigation" eyebrow before the single case h1. */
+.case-title-line {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.case-eyebrow {
+  flex-shrink: 0;
+  padding-right: 8px;
+  border-right: 1px solid var(--chrome-border);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 550;
+  letter-spacing: 0.06em;
+  line-height: 14px;
+  text-transform: uppercase;
+}
+.case-title-line h1 {
+  min-width: 0;
+}
+
+/* The run summary and run panel sit beside the floating toolbar, so they move
+   right while it is expanded instead of hiding under it. */
+.case-workspace:has(.case-toolbar[data-expanded="true"])
+  :is(.replay-hud, .replay-chip) {
+  left: calc(var(--toolbar-left, 16px) + min(192px, 100vw - 32px) + 12px);
+  max-width: calc(
+    100% - var(--toolbar-left, 16px) - min(192px, 100vw - 32px) - 28px
+  );
+  transition: left 0.15s ease;
+}
+/* Pushed right, the run summary would meet the centred Story / Full graph switch, so the switch drops one row,
+   as it does on narrow boards. */
+.case-workspace:has(.case-toolbar[data-expanded="true"]):has(
+    .replay-chip,
+    .replay-hud
+  )
+  .board-view-switch {
+  top: calc(var(--topbar-clearance-y, 68px) + 46px);
+}
+/* The run panel ends above the minimap, which shares the left of the board with it. */
+.case-board-panel:has(.board-minimap) .replay-hud {
+  max-height: calc(
+    100% - var(--topbar-clearance-y, 68px) - var(--minimap-height, 176px) - 32px
+  );
 }
