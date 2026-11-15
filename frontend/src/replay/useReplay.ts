@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { isApiError } from "../api/http";
-import type { TraceEvent, TracePage } from "../api/types";
+import type { TraceEvent, TracePage, TracePhase } from "../api/types";
 import { clearReplayRequest, replayRequested } from "./intent";
 import {
   advanceClock,
+  phaseSegments,
+  playbackRate,
+  slowedPhase,
   countUpTo,
   defaultSpeed,
   mergeEvents,
@@ -40,6 +43,8 @@ export interface ReplayState {
   finished: boolean;
   /** Increments when the run completes while being watched. */
   completedWatching: boolean;
+  /** A phase currently shown slower than the chosen speed so each step is visible. */
+  slowed?: { phase: TracePhase; speed: number };
   setSpeed: (speed: number) => void;
   togglePlaying: () => void;
   skipToEnd: () => void;
@@ -129,6 +134,11 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
   const endMs = useMemo(() => runEndMs(events), [events]);
   const capMs = processing ? lastEventMs : endMs;
 
+  const segments = useMemo(() => phaseSegments(events, capMs), [events, capMs]);
+  const segmentsRef = useRef(segments);
+  segmentsRef.current = segments;
+  const slowed = slowedPhase(clockMs, segments, speed);
+
   // Animation frame clock.
   const clockRef = useRef(0);
   clockRef.current = clockMs;
@@ -139,7 +149,9 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
     const tick = (now: number) => {
       const dt = now - last;
       last = now;
-      setClockMs((t) => advanceClock(t, dt, speed, capMs));
+      setClockMs((t) =>
+        advanceClock(t, dt, playbackRate(t, segmentsRef.current, speed), capMs),
+      );
       setWallMs((w) => w + dt);
       frame = requestAnimationFrame(tick);
     };
@@ -194,6 +206,7 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
     speed,
     finished: reachedEnd,
     completedWatching: watched,
+    slowed: playing && !live ? slowed : undefined,
     setSpeed,
     togglePlaying: () => {
       if (reachedEnd) restart();

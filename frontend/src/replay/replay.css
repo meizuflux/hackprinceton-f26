@@ -54,6 +54,10 @@
 .replay-clock span {
   color: var(--muted);
 }
+.replay-slowed {
+  color: var(--amber);
+  font-style: normal;
+}
 .replay-bar {
   height: 4px;
   background: var(--line);
@@ -216,7 +220,8 @@
 }
 .replay-growing .react-flow__node,
 .replay-growing .react-flow__edge {
-  animation: replay-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: replay-enter 0.3s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: var(--reveal-delay, 0ms);
 }
 @media (prefers-reduced-motion: reduce) {
   .replay-growing .react-flow__node,

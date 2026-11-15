@@ -252,3 +252,98 @@ export function formatTokens(count: number): string {
 export function formatCost(usd: number): string {
   return `$${usd.toFixed(usd < 1 ? 3 : 2)}`;
 }
+
+/** Minimum on-screen time per phase, so short phases stay watchable. */
+export const phaseMinWallMs: Partial<Record<TracePhase, number>> = {
+  ingest: 4000,
+  rules: 2000,
+  ml: 2500,
+};
+
+export interface PhaseSegment {
+  phase: TracePhase;
+  startMs: number;
+  endMs: number;
+}
+
+/**
+ * Split the replay clock into phase segments at each phase's first event.
+ * Phases without events get no segment. The last segment ends at `endMs`.
+ */
+export function phaseSegments(
+  events: readonly TraceEvent[],
+  endMs: number,
+): PhaseSegment[] {
+  const starts: Array<{ phase: TracePhase; startMs: number }> = [];
+  for (const e of events) {
+    if (!starts.some((s) => s.phase === e.phase))
+      starts.push({ phase: e.phase, startMs: e.tMs });
+  }
+  starts.sort((a, b) => a.startMs - b.startMs);
+  return starts.map((s, i) => ({
+    phase: s.phase,
+    startMs: i === 0 ? 0 : s.startMs,
+    endMs:
+      i + 1 < starts.length
+        ? starts[i + 1].startMs
+        : Math.max(endMs, s.startMs),
+  }));
+}
+
+function segmentAt(
+  segments: readonly PhaseSegment[],
+  tMs: number,
+): PhaseSegment | undefined {
+  return (
+    segments.find(
+      (s) => s.endMs > s.startMs && tMs >= s.startMs && tMs < s.endMs,
+    ) ?? undefined
+  );
+}
+
+/** Replay-clock milliseconds advanced per wall millisecond at `tMs`. */
+export function playbackRate(
+  tMs: number,
+  segments: readonly PhaseSegment[],
+  speed: number,
+): number {
+  const seg = segmentAt(segments, tMs);
+  const min = seg ? (phaseMinWallMs[seg.phase] ?? 0) : 0;
+  if (!seg || !min) return speed;
+  return Math.min(speed, (seg.endMs - seg.startMs) / min);
+}
+
+/** The phase being slowed for legibility at `tMs`, with its effective speed; undefined at the chosen speed. */
+export function slowedPhase(
+  tMs: number,
+  segments: readonly PhaseSegment[],
+  speed: number,
+): { phase: TracePhase; speed: number } | undefined {
+  const seg = segmentAt(segments, tMs);
+  if (!seg) return undefined;
+  const rate = playbackRate(tMs, segments, speed);
+  return rate < speed ? { phase: seg.phase, speed: rate } : undefined;
+}
+
+/**
+ * Replay-clock time reached after `wallMs` of playback from the start at a
+ * speed: each phase takes max(real length / speed, its minimum on-screen time).
+ */
+export function playbackTime(
+  wallMs: number,
+  segments: readonly PhaseSegment[],
+  speed: number,
+  endMs: number,
+): number {
+  let left = Math.max(0, wallMs);
+  let t = 0;
+  for (const seg of segments) {
+    const length = seg.endMs - seg.startMs;
+    if (length <= 0) continue;
+    const wall = Math.max(length / speed, phaseMinWallMs[seg.phase] ?? 0);
+    if (left < wall) return seg.startMs + (left / wall) * length;
+    left -= wall;
+    t = seg.endMs;
+  }
+  return Math.min(endMs, t + left * speed);
+}

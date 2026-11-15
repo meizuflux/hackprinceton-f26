@@ -82,7 +82,7 @@ export function ReplayHud({ replay }: { replay: ReplayState }) {
     ["ML signals", p.mlSignals],
     ["LLM calls", p.llmCalls],
     ["Tool calls", p.toolCalls],
-    ["Insights", p.insights],
+    ["Agent insights", p.insights],
   ];
   const recordTypes = Object.entries(p.recordTypes).sort((a, b) => b[1] - a[1]);
   const percent = replay.endMs
@@ -126,6 +126,14 @@ export function ReplayHud({ replay }: { replay: ReplayState }) {
             Recorded run {formatDuration(replay.endMs)} ·{" "}
             {replay.finished ? "finished" : `playing at ${replay.speed}×`}
             <br />
+            {replay.slowed && (
+              <em className="replay-slowed">
+                {phaseOrder.find((x) => x.id === replay.slowed!.phase)?.label}{" "}
+                shown at {replay.slowed.speed.toFixed(1)}× so each step is
+                visible
+                <br />
+              </em>
+            )}
             <span>
               Replay clock {formatDuration(replay.clockMs)} · watched for{" "}
               {formatDuration(replay.wallMs)}

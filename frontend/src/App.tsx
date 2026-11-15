@@ -429,31 +429,45 @@ function BoardCanvas({
     return null;
   }, [selection, dockMode, tab, data]);
 
-  const visibleNodes = useMemo(
-    () =>
-      revealedNodes.map((n) => {
-        const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
-        const isDimmed =
-          (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
-          (focusedNodeIds && !isFocused);
-        return {
-          ...n,
-          className:
-            `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
-          data: {
-            ...n.data,
-            active:
-              selection?.kind === "node" ? selection.id === n.id : isFocused,
-            isFocused,
-            onInspect: () => inspect("node", n.id),
-            onInspectGap: n.data.gapId
-              ? () => inspect("gap", n.data.gapId!)
-              : undefined,
-          },
-        };
-      }),
-    [revealedNodes, matchingNodeIds, focusedNodeIds, selection, inspect],
-  );
+  // Items revealed in the same tick fade in a few tens of ms apart.
+  const revealDelays = useRef(new Map<string, number>());
+  const visibleNodes = useMemo(() => {
+    let fresh = 0;
+    return revealedNodes.map((n) => {
+      const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
+      const isDimmed =
+        (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
+        (focusedNodeIds && !isFocused);
+      if (growing && !revealDelays.current.has(n.id))
+        revealDelays.current.set(n.id, Math.min(fresh++, 6) * 50);
+      const delay = revealDelays.current.get(n.id);
+      return {
+        ...n,
+        ...(delay
+          ? { style: { ...n.style, "--reveal-delay": `${delay}ms` } }
+          : {}),
+        className:
+          `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+        data: {
+          ...n.data,
+          active:
+            selection?.kind === "node" ? selection.id === n.id : isFocused,
+          isFocused,
+          onInspect: () => inspect("node", n.id),
+          onInspectGap: n.data.gapId
+            ? () => inspect("gap", n.data.gapId!)
+            : undefined,
+        },
+      };
+    });
+  }, [
+    revealedNodes,
+    matchingNodeIds,
+    focusedNodeIds,
+    selection,
+    inspect,
+    growing,
+  ]);
 
   const visibleEdges = useMemo(() => {
     const nodesById = new Map(nodes.map((node) => [node.id, node]));

@@ -8,6 +8,10 @@ import {
   formatCost,
   formatDuration,
   mergeEvents,
+  phaseSegments,
+  playbackRate,
+  playbackTime,
+  slowedPhase,
   runEndMs,
   summarize,
 } from "./trace";
@@ -140,5 +144,42 @@ describe("reveal", () => {
   });
   it("builds an empty placeholder case", () => {
     expect(emptyCase("x", "X").nodes).toEqual([]);
+  });
+});
+
+describe("per-phase pacing", () => {
+  const pe = [
+    ev(0, "run_started", "ingest"),
+    ev(1500, "file_parsed", "ingest"),
+    ev(1800, "stage_finished", "rules"),
+    ev(1900, "ml_signal", "ml"),
+    ev(2000, "llm_call", "llm"),
+    ev(102_000, "run_finished", "output"),
+  ];
+  const segs = phaseSegments(pe, 102_000);
+  it("segments the clock at each phase start", () => {
+    expect(segs.map((s) => [s.phase, s.startMs, s.endMs])).toEqual([
+      ["ingest", 0, 1800],
+      ["rules", 1800, 1900],
+      ["ml", 1900, 2000],
+      ["llm", 2000, 102_000],
+      ["output", 102_000, 102_000],
+    ]);
+  });
+  it("slows short phases but keeps the chosen speed for long ones", () => {
+    expect(playbackRate(100, segs, 10)).toBeCloseTo(1800 / 4000);
+    expect(playbackRate(1850, segs, 10)).toBeCloseTo(100 / 2000);
+    expect(playbackRate(50_000, segs, 10)).toBe(10);
+    expect(slowedPhase(50_000, segs, 10)).toBeUndefined();
+    expect(slowedPhase(100, segs, 10)?.phase).toBe("ingest");
+  });
+  it("maps wall time to replay time", () => {
+    expect(playbackTime(2000, segs, 10, 102_000)).toBeCloseTo(900);
+    expect(playbackTime(4000, segs, 10, 102_000)).toBeCloseTo(1800);
+    expect(playbackTime(4000 + 2000 + 2500, segs, 10, 102_000)).toBeCloseTo(
+      2000,
+    );
+    expect(playbackTime(8500 + 1000, segs, 10, 102_000)).toBeCloseTo(12_000);
+    expect(playbackTime(1e9, segs, 10, 102_000)).toBe(102_000);
   });
 });
