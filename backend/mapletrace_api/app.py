@@ -10,7 +10,8 @@ Run:  uvicorn mapletrace_api.app:app --reload --port 8000      (from backend/)
     GET  /cases/{caseId}/{section}       graph | gaps | insights | suggestions | contradictions | explanations |
                                          timeline | audit | changes | sources | signals
     GET  /cases/{caseId}/source?id=...   one cited record in full (source inspector)
-    GET  /cases/{caseId}/evidence/{evidenceId}   original evidence file (read-only copy)
+    GET  /cases/{caseId}/evidence/{evidenceId}   original evidence file (read-only copy; ?inline=true renders media)
+    GET  /cases/{caseId}/evidence/{evidenceId}/view?locator=&offset=&limit=   viewable file + cited position
     GET  /cases/{caseId}/files           evidence inventory from the latest ingestion (hash, format, parse status, ...)
     GET  /cases/{caseId}/records?evidenceId=&limit=&offset=   normalized ingestion records, read-only, with citations
     GET  /cases/{caseId}/audit-chain     ingestion + analysis audit entries with hashes, re-verified
@@ -52,6 +53,8 @@ from mapletrace_reason import history
 from mapletrace_reason.llm_cache import cache_path
 from mapletrace_reason.pipeline import analyze
 from mapletrace_reason.store import PROTECTED_KEYS, citation_id, unique_labels
+
+from mapletrace_api import viewer
 
 DATA = Path(os.environ.get("MAPLETRACE_DATA", Path(__file__).resolve().parents[1] / "data"))
 MAX_UPLOAD = int(os.environ.get("MAPLETRACE_MAX_UPLOAD_MB", "100")) * 1024 * 1024
@@ -351,21 +354,63 @@ def get_source(case_id: str, id: str):
     return src
 
 
-@app.get("/cases/{case_id}/evidence/{evidence_id}")
-def get_evidence(case_id: str, evidence_id: str):
-    case_dir = _case_dir(case_id)
-    meta = _read_json(case_dir / "case.json")
-    if meta.get("latest") is None:
-        raise ApiError(409, "not_ready", "the case has no finished analysis yet")
-    ingest_dir = case_dir / meta["versions"][meta["latest"]]["ingest_dir"]
-    import sqlite3
-    con = sqlite3.connect(f"file:{(ingest_dir / 'case.db').as_posix()}?mode=ro", uri=True)
-    row = con.execute("SELECT stored_path, original_path FROM evidence_files WHERE external_id=? OR 'FILE-' || file_id = ?",
+# --------------------------------------------------------------------------- evidence files and viewer (read-only)
+def _evidence_row(con: sqlite3.Connection, evidence_id: str) -> sqlite3.Row:
+    row = con.execute("SELECT * FROM evidence_files WHERE external_id=? OR 'FILE-' || file_id = ?",
                       (evidence_id, evidence_id)).fetchone()
-    con.close()
     if not row:
         raise ApiError(404, "evidence_not_found", f"no evidence {evidence_id}")
-    return FileResponse(ingest_dir / row[0], filename=Path(row[1].split("::")[-1]).name)
+    return row
+
+
+@app.get("/cases/{case_id}/evidence/{evidence_id}")
+def get_evidence(case_id: str, evidence_id: str, inline: bool = False):
+    """The read-only copy. `inline=true` lets the browser render images, video, audio and PDF in place; every other
+    format is always an attachment, and nothing is content-sniffed into HTML."""
+    ingest_dir, _ = _latest_dirs(case_id)
+    con = _ro(ingest_dir / "case.db")
+    try:
+        row = _evidence_row(con, evidence_id)
+    finally:
+        con.close()
+    try:
+        path = viewer.stored_file(ingest_dir, row["stored_path"])
+    except viewer.ViewError as exc:
+        raise ApiError(exc.status, exc.code, exc.message)
+    mime = viewer.media_type((row["sniffed_format"] or "").lower())
+    show = bool(inline and mime)
+    return FileResponse(path, filename=Path(row["original_path"].split("::")[-1]).name,
+                        media_type=mime if show else "application/octet-stream",
+                        content_disposition_type="inline" if show else "attachment",
+                        # Chrome's PDF viewer refuses sandboxed documents; every other response is sandboxed
+                        headers={"X-Content-Type-Options": "nosniff",
+                                 **({} if show and mime == "application/pdf" else {"Content-Security-Policy": "sandbox"})})
+
+
+@app.get("/cases/{case_id}/evidence/{evidence_id}/view")
+def view_evidence(case_id: str, evidence_id: str, locator: Optional[str] = None, offset: Optional[int] = None,
+                  limit: int = viewer.DEFAULT_LIMIT):
+    """One evidence file in a viewable form (table, numbered lines, pretty JSON, inline media or metadata only), with
+    the citation `locator` (the label after `EV-xxx:` in a source ID) resolved to rows or lines to highlight."""
+    if limit < 1 or limit > viewer.MAX_LIMIT or (offset is not None and offset < 0):
+        raise ApiError(400, "bad_paging", f"limit must be 1-{viewer.MAX_LIMIT} and offset >= 0")
+    if locator is not None and len(locator) > 500:
+        raise ApiError(400, "bad_locator", "locator is too long")
+    ingest_dir, analysis_dir = _latest_dirs(case_id)
+    con = _ro(ingest_dir / "case.db")
+    try:
+        row = _evidence_row(con, evidence_id)
+        excerpt = None
+        if locator and (analysis_dir / "board.json").exists():
+            sid = citation_id(_evidence_id(row), locator)
+            excerpt = next((s.get("excerpt") for s in _read_json(analysis_dir / "board.json").get("sources", [])
+                            if s.get("id") == sid), None)
+        return viewer.build_view(con, ingest_dir, row, locator or None, offset, limit, excerpt)
+    except viewer.ViewError as exc:
+        raise ApiError(exc.status, exc.code, exc.message)
+    finally:
+        con.close()
+# --------------------------------------------------------------------------- end evidence files and viewer
 
 
 @app.get("/cases/{case_id}/files")
@@ -396,7 +441,8 @@ _RECORD_FIELDS = ("ts_utc", "ts_start_utc", "ts_end_utc", "ts_raw", "ts_precisio
 
 
 @app.get("/cases/{case_id}/records")
-def get_records(case_id: str, evidenceId: Optional[str] = None, limit: int = 100, offset: int = 0):  # noqa: N803
+def get_records(case_id: str, evidenceId: Optional[str] = None, limit: int = 100, offset: int = 0,  # noqa: N803
+                recordType: Optional[str] = None):  # noqa: N803
     if limit < 1 or limit > 500 or offset < 0:
         raise ApiError(400, "bad_paging", "limit must be 1-500 and offset >= 0")
     ingest_dir, analysis_dir = _latest_dirs(case_id)
@@ -411,6 +457,11 @@ def get_records(case_id: str, evidenceId: Optional[str] = None, limit: int = 100
             if not f:
                 raise ApiError(404, "evidence_not_found", f"no evidence {evidenceId}")
             where, args = " WHERE r.file_id = ?", [f["file_id"]]
+        # record types (with counts) within the file filter, so the UI can offer a type filter
+        types = dict(con.execute(f"SELECT r.record_type, COUNT(*) FROM records r{where} GROUP BY r.record_type "
+                                 f"ORDER BY COUNT(*) DESC", args).fetchall())
+        if recordType:
+            where, args = (where + " AND" if where else " WHERE") + " r.record_type = ?", args + [recordType]
         total = con.execute(f"SELECT COUNT(*) FROM records r{where}", args).fetchone()[0]
         rows = con.execute(f"SELECT r.*, f.external_id FROM records r JOIN evidence_files f ON f.file_id = r.file_id"
                            f"{where} ORDER BY r.record_id LIMIT ? OFFSET ?", args + [limit, offset]).fetchall()
@@ -437,7 +488,7 @@ def get_records(case_id: str, evidenceId: Optional[str] = None, limit: int = 100
             items.append({"id": r["record_id"], "recordType": r["record_type"], "fields": fields, "citations": [cit]})
     finally:
         con.close()
-    return {"total": total, "limit": limit, "offset": offset, "items": items}
+    return {"total": total, "limit": limit, "offset": offset, "types": types, "items": items}
 
 
 @app.get("/cases/{case_id}/audit-chain")
