@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   ArrowUpRight,
-  Fingerprint,
   FolderOpen,
   Plus,
   Search,
@@ -9,6 +8,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { CaseData } from "../api/types";
+import { BrandMark } from "../components/BrandMark";
 import "./onboarding.css";
 
 export { LandingPage as Landing } from "./LandingPage";
@@ -56,7 +56,7 @@ export function ProjectManager({
             navigate("/");
           }}
         >
-          <Fingerprint size={25} aria-hidden="true" />
+          <BrandMark size={20} />
           MapleTrace
         </a>
       </header>

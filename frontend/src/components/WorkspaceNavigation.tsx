@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import {
   ArrowLeft,
-  Fingerprint,
   FolderOpen,
   PanelLeftClose,
   PanelLeftOpen,
 } from "lucide-react";
 import { casePath } from "../routing";
+import { BrandMark } from "./BrandMark";
 import type { SessionProject } from "../onboarding/Onboarding";
 
 export function WorkspaceNavigation({
@@ -52,7 +52,7 @@ export function WorkspaceNavigation({
             navigate("/");
           }}
         >
-          <Fingerprint size={24} /> MapleTrace
+          <BrandMark size={18} /> MapleTrace
         </a>
         <button className="text-button" onClick={() => navigate("/projects")}>
           <ArrowLeft size={16} /> All projects
