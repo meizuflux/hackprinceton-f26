@@ -37,7 +37,8 @@
 .canvas-wrap .react-flow__pane:active {
   cursor: grabbing;
 }
-.board-toolbar {
+.board-toolbar,
+.workspace-topbar {
   position: absolute;
   z-index: 10;
   top: 16px;
@@ -53,6 +54,7 @@
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
+  transition: left 0.15s ease;
 }
 .board-title {
   min-width: 0;

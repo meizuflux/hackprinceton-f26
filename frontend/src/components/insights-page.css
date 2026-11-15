@@ -1,15 +1,18 @@
 .insights-page {
-  width: min(1120px, 100%);
-  min-height: 100%;
+  width: 100%;
+  height: 100%;
+  max-width: 1100px;
   margin: 0 auto;
-  padding: 42px clamp(20px, 5vw, 64px) 72px;
+  padding: 24px 32px 48px;
+  overflow-y: auto;
   color: var(--text);
+  box-sizing: border-box;
 }
 .insight-card-main:focus-visible {
   outline-offset: -3px;
 }
 .insights-hero {
-  padding-bottom: 28px;
+  padding-bottom: 20px;
   border-bottom: 1px solid var(--line);
 }
 .insights-kicker {
@@ -27,11 +30,11 @@
   justify-content: space-between;
   align-items: end;
   gap: 24px;
-  margin-top: 15px;
+  margin-top: 10px;
 }
 .insights-hero h1 {
   font:
-    500 clamp(30px, 4vw, 42px)/1.12 "Newsreader",
+    500 24px/1.2 "Newsreader",
     Georgia,
     serif;
   letter-spacing: -0.02em;

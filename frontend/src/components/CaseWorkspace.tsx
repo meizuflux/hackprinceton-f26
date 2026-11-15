@@ -3,10 +3,12 @@ import {
   Files,
   FolderOpen,
   GitBranch,
+  History,
   Lightbulb,
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
+  PanelRightOpen,
   ScanText,
 } from "lucide-react";
 import type { CaseData } from "../api/types";
@@ -171,6 +173,44 @@ export function CaseWorkspace({
           </nav>
         </div>
       </aside>
+      {view !== "board" && (
+        <header className="workspace-topbar">
+          <div className="board-title">
+            <h1>{projectName || data.title}</h1>
+            <span>
+              {data.subtitle} · {views.find((v) => v.id === view)?.label}
+            </span>
+          </div>
+          <div className="board-actions">
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => navigate(casePath(data.id))}
+            >
+              <GitBranch size={15} /> Mind map
+            </button>
+            <button
+              type="button"
+              className="text-button"
+              onClick={() => {
+                navigate(casePath(data.id));
+              }}
+            >
+              <History size={15} /> Audit trail
+            </button>
+            <button
+              type="button"
+              className="review-toggle"
+              onClick={() => {
+                navigate(casePath(data.id));
+              }}
+            >
+              <PanelRightOpen size={15} /> Review gaps{" "}
+              <strong>{data.gaps.length}</strong>
+            </button>
+          </div>
+        </header>
+      )}
       <div className="case-panels">
         <section
           className="case-board-panel"

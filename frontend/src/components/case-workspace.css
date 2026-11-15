@@ -92,13 +92,16 @@
   padding-top: 6px;
   border-top: 1px solid var(--line);
 }
+.workspace-topbar {
+  left: var(--toolbar-clearance);
+}
 .case-panels {
   position: relative;
   min-height: 0;
   min-width: 0;
+  height: 100%;
 }
-.case-board-panel,
-.case-content-panel {
+.case-board-panel {
   height: 100%;
   min-height: 0;
 }
@@ -107,25 +110,63 @@
   min-height: 100%;
 }
 .case-board-panel .board-toolbar,
+.workspace-topbar,
 .case-board-panel .evidence-list,
 .case-board-panel .search-feedback {
   left: var(--toolbar-clearance);
 }
 .case-content-panel {
-  overflow: auto;
-  padding-left: calc(var(--toolbar-clearance) - 16px);
+  position: absolute;
+  top: 84px;
+  left: var(--toolbar-clearance);
+  right: 16px;
+  bottom: 16px;
+  border: 1px solid #424b3d;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition:
+    left 0.15s ease,
+    right 0.15s ease;
 }
 .case-panels > .section-inspector {
-  top: 12px;
-  bottom: 12px;
-  max-height: calc(100% - 24px);
+  top: 84px;
+  right: 16px;
+  bottom: 16px;
+  width: min(390px, calc(100% - 32px));
+  max-height: calc(100% - 100px);
 }
 @media (min-width: 901px) {
   .case-workspace:has(.case-toolbar[data-expanded="true"]) {
     --toolbar-clearance: 220px;
   }
+  .case-panels:has(> .section-inspector) .case-content-panel {
+    right: 422px;
+  }
 }
 @media (max-width: 900px) {
+  .workspace-topbar {
+    position: relative;
+    top: 0;
+    left: 0;
+    right: 0;
+    margin: 12px 12px 0 68px;
+    flex-wrap: wrap;
+    gap: 12px;
+  }
+  .case-content-panel {
+    position: relative;
+    top: auto;
+    left: auto;
+    right: auto;
+    bottom: auto;
+    margin: 12px 12px 12px 68px;
+    height: auto;
+    min-height: calc(100dvh - 120px);
+  }
   .case-board-panel {
     overflow: auto;
   }
@@ -138,7 +179,7 @@
   .case-panels > .section-inspector {
     position: relative;
     inset: auto;
-    margin: 12px;
+    margin: 12px 12px 12px 68px;
     width: auto;
     max-height: none;
   }
