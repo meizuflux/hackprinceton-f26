@@ -55,11 +55,12 @@ class Answer:
     unknowns: list[str] = field(default_factory=list)
     record_ids: list[int] = field(default_factory=list)
     model_calls: int = 0
+    summary: str = ""
 
     def message(self) -> dict:
         return {"role": "assistant", "content": self.content, "evidence_status": self.evidence_status,
-                "citations": self.citations, "observations": self.observations, "inference": self.inference,
-                "unknowns": self.unknowns}
+                "citations": self.citations, "summary": self.summary, "observations": self.observations,
+                "inference": self.inference, "unknowns": self.unknowns}
 
 
 def load_results(analysis: dict) -> Results:
@@ -287,7 +288,7 @@ class CaseChat:
                             f"{'were' if dropped > 1 else 'was'} left out.")
         citations = [self.citation(i) for i in rid_order]
         return Answer(self._content(summary, observations, citations, inference, unknowns, status), status, citations,
-                      observations, inference, unknowns, rid_order, model_calls)
+                      observations, inference, unknowns, rid_order, model_calls, summary)
 
     def _from_text(self, text: str, seen: set[int], model_calls: int) -> Answer:
         """The model answered without submit_answer: keep its text, but cite nothing it did not read."""
@@ -295,7 +296,7 @@ class CaseChat:
         return Answer(self._content(text, [], [], "", ["This answer was not submitted with citations; treat it as "
                                                         "unsupported."], "insufficient"), "insufficient", [],
                       unknowns=["This answer was not submitted with citations; treat it as unsupported."],
-                      model_calls=model_calls)
+                      model_calls=model_calls, summary=text)
 
     @staticmethod
     def _content(summary: str, observations: list[dict], citations: list[dict], inference: str, unknowns: list[str],
