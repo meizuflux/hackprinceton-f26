@@ -1,5 +1,6 @@
 # ingestion
 pillow>=10
+av>=13
 python-dateutil>=2.8
 hachoir>=3.2
 pypdf>=4

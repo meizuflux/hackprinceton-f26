@@ -17,14 +17,17 @@ Edges join a media card to other cards only through cited records, with `certain
 `stage: "media_links"` and a `basis` that names the rule:
 
 - `vms_export`: a video's clip file named in `vms_export_index.csv` (or any record whose attributes name the
-  clip file) joins the clip to the camera/location card for that `camera_id`, citing the export row.
-- `capture_device`: a photo's EXIF device that matches an explicitly linked device/person entity (via
-  `entity_links`) joins the photo to that card. No fuzzy matching.
-- `place`: a photo's GPS that falls inside a location the analysis already clusters (an existing location card with
-  coordinates) joins the photo to that location, citing both records; `certainty: "inferred"` (a GPS radius is an
+  clip file) joins the clip to the camera card for that `camera_id` (the camera's device entity, `ent-<id>`; created
+  with `stage: "media_links"` when the board has none), citing the export row.
+- `capture_device`: a photo's EXIF device joins the card of the same entity, or of an entity explicitly linked to it
+  (via `entity_links`). When no such card exists, photos that record the same EXIF device entity share one new
+  device card (exact entity match, never fuzzy). Kestrel has no device links, so it uses the shared card.
+- `place`: a photo's GPS that falls within 150 m of the centre of a place cluster already on the board (an ML
+  `place_cluster` card, `sig-...`; the other location cards carry no coordinates) joins the photo to that location, citing both records; `certainty: "inferred"` (a GPS radius is an
   inference), `basis` gives the distance.
 
-Each edge must cite records on both ends. Media with no rule-backed link still appears as a card, unconnected.
+Edge `type` is `temporal` for `vms_export` and `capture_device` and `spatial` for `place`; edges also carry `rule`.
+Media cards sit in their own backend layout column. Each edge must cite records on both ends. Media with no rule-backed link still appears as a card, unconnected.
 `stage_finished` with `stage: "media_links"` is written to the trace after the rules stages.
 
 ## Image description (LLM, optional, isolated)
@@ -37,6 +40,9 @@ identification of real people, no protected attributes, no guesses about identit
   certainty: "inferred"}`, attached to the media card. It cites the media record (with `frameS` for video frames).
 - Isolation: like ML signals, vision output is never fed to claims, contradictions, explanations, gaps, insights or
   the investigator agent, so the existing recorded investigator and chat caches stay valid. A test checks this.
+- One request per image (a photo, or a frame at 10/50/90% of the duration); `media.vision.text` joins the frame texts
+  and `citations` holds the media record's citation. Misses skip that image with a flag in `analysis.json`
+  `llm.vision`; the run never fails. `make backend-vision-record` records only this cache.
 - Cache: a separate file `backend/llm_cache/vision-<archive sha256>.jsonl` keyed explicitly on (evidence sha256,
   frame time, prompt text, model), not on decoded image bytes, so a replay never needs to decode video. Recording
   needs frame extraction (`av`/PyAV or an `ffmpeg` binary); replay needs neither.

@@ -1,6 +1,7 @@
 """Record the Kestrel LLM cache and build the demo snapshot through the same code path as an upload.
 
     python -m mapletrace_api.demo record      # one billed run: records backend/llm_cache/<archive sha256>.jsonl
+    python -m mapletrace_api.demo record-vision  # billed: records only backend/llm_cache/vision-<sha>.jsonl
     python -m mapletrace_api.demo snapshot    # replays the cache (no API calls) -> backend/demo/kestrel.tar.gz
 
 Both run an upload of cases/kestrel/kestrel_case_upload.zip exactly as POST /upload does, so the recorded requests
@@ -21,7 +22,7 @@ import tempfile
 from pathlib import Path
 
 
-def _run(llm: bool) -> tuple[Path, dict]:
+def _run(llm: bool, vision_record: bool = False) -> tuple[Path, dict]:
     data = Path(tempfile.mkdtemp(prefix="mapletrace-demo-"))
     os.environ["MAPLETRACE_DATA"] = str(data)
     from mapletrace_api import app as api  # imported after MAPLETRACE_DATA is set
@@ -43,12 +44,17 @@ def _run(llm: bool) -> tuple[Path, dict]:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="mapletrace_api.demo")
-    p.add_argument("command", choices=["record", "snapshot"])
+    p.add_argument("command", choices=["record", "record-vision", "snapshot"])
     args = p.parse_args(argv)
-    case_dir, llm = _run(llm=args.command == "record")
+    case_dir, llm = _run(llm=args.command == "record", vision_record=args.command == "record-vision")
     print(json.dumps(llm, indent=1))
     cache = (llm or {}).get("cache") or {}
-    if args.command == "record":
+    if args.command == "record-vision":
+        v = (llm or {}).get("vision") or {}
+        if not llm or cache.get("misses") or v.get("skipped") or v.get("error"):
+            raise SystemExit(f"vision recording incomplete (the analysis cache must exist and replay fully): {v}")
+        print(f"Recorded {v.get('recorded', 0)} image descriptions into backend/llm_cache/{v.get('cache')}")
+    elif args.command == "record":
         print(f"Recorded {cache.get('recorded', 0)} responses into backend/llm_cache/{cache.get('file')}")
     else:
         if not llm or not llm.get("enabled") or cache.get("misses"):
