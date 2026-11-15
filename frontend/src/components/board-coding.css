@@ -199,66 +199,83 @@
   stroke-width: 2;
 }
 
-/* Legend: a paper key pinned to the board, in the same inks as the cards. */
+/* Key: a compact chrome button at the bottom left; the colour key opens above it on paper, in the card inks. */
 .board-legend {
   position: absolute;
-  z-index: 5;
+  z-index: 6;
   bottom: var(--chrome-bottom, var(--board-inset));
   left: var(--board-inset);
-  max-width: calc(
-    100% - var(--board-inset) * 2 - var(--dock-offset, 0px) -
-      var(--minimap-width) - 36px - var(--zoom-gap) * 2
-  );
+  font-size: 12px;
+}
+.board-legend-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid var(--chrome-border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 550;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition: background-color 0.15s ease-out;
+}
+.board-legend-toggle svg {
+  color: var(--muted);
+}
+.board-legend-toggle:hover {
+  background: var(--raised);
+}
+.board-legend-toggle[aria-expanded="true"] {
+  border-color: var(--brand-border);
+  background: #1c2732;
+}
+.board-legend-toggle[aria-expanded="true"] svg {
+  color: var(--brand-text);
+}
+.board-legend-body {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 14px 22px;
+  width: max-content;
+  max-width: calc(100vw - var(--board-inset) * 2 - 64px);
+  padding: 12px 14px;
   border: 1px solid #b4ab9a;
   border-radius: var(--radius);
   background: #faf8f1;
   color: #3f4238;
   box-shadow: var(--shadow);
-  font-size: 12px;
+  transform-origin: bottom left;
+  animation: legend-open 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.board-legend-toggle {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 30px;
-  padding: 0 10px;
-  background: transparent;
-  color: #3f4238;
-  font-size: 12px;
-  font-weight: 600;
-}
-.board-legend-toggle svg {
-  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
-}
-.board-legend[data-open="false"] .board-legend-toggle svg {
-  transform: rotate(-90deg);
-}
-.board-legend-toggle:focus-visible {
-  outline-color: #4f5f3c;
-}
-.board-legend-body {
-  display: grid;
-  gap: 6px;
-  padding: 0 12px 10px;
+@keyframes legend-open {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
+  }
 }
 .board-legend-body[hidden] {
   display: none;
 }
 .board-legend-row {
-  display: flex;
-  align-items: baseline;
-  gap: 10px;
+  display: grid;
+  align-content: start;
+  gap: 8px;
 }
 .board-legend-row h3 {
-  flex: 0 0 52px;
   font-size: 11px;
   font-weight: 600;
   color: #5b604f;
 }
 .board-legend-row ul {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px 14px;
+  display: grid;
+  gap: 6px;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -266,12 +283,18 @@
 .board-legend-row li {
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
 }
 .board-legend-row li.legend-divider {
-  padding-left: 14px;
-  border-left: 1px solid #d9d2c3;
+  margin-top: 4px;
+  padding-top: 8px;
+  border-top: 1px solid #d9d2c3;
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-legend-body {
+    animation: none;
+  }
 }
 .legend-card,
 .legend-question {
