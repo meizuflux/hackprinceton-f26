@@ -1,15 +1,15 @@
-/* Floating "Ask a question" on the mind map. It stacks above the minimap and zoom controls (bottom right) and
-   expands upward, so it never covers them or the legend (bottom left). When the review dock is open it moves left
-   of the dock. */
+/* Floating "Ask a question" on the mind map. It sits in the board's bottom strip, to the left of the zoom controls
+   and level with them, so it stays clear of the cards, the minimap, the zoom controls and the Key (bottom left); its
+   suggestions rise above it on hover. When the review dock is open it moves left of the dock with the controls.
+   Full graph: inset 16 + minimap 240 + zoom gap 10 + controls 38 + gap 10. */
 .case-board-panel:has(> .ask-widget) {
   position: relative;
 }
 .ask-widget {
-  /* board inset 16 + the minimap's rendered height (published by CanvasMinimap) + gap 12 */
-  --ask-bottom: calc(28px + var(--minimap-height, 176px));
+  --ask-bottom: 16px;
   position: absolute;
   z-index: 11;
-  right: 16px;
+  right: 314px;
   bottom: var(--ask-bottom);
   display: flex;
   flex-direction: column;
@@ -22,12 +22,11 @@
   pointer-events: auto;
 }
 .case-board-panel:has(.review-dock.is-open) > .ask-widget {
-  right: 432px; /* dock width 400 + its inset 16 + gap 16 */
+  right: 730px; /* dock offset 416 + the full-graph strip 314 */
 }
-/* Story view has no minimap, so the box sits in the bottom strip beside the zoom controls (inset 16 + controls 38 +
-   gap 10) instead of stacking above them over the story's bottom row; its suggestions still rise on hover. */
+/* Story view has no minimap: the zoom controls sit at the edge, so the box sits just left of them (inset 16 +
+   controls 38 + gap 10). */
 .case-board-panel:has(.canvas-wrap.is-story) > .ask-widget {
-  --ask-bottom: 16px;
   right: 64px;
 }
 .case-board-panel:has(.canvas-wrap.is-story):has(.review-dock.is-open)
@@ -142,20 +141,27 @@
   }
 }
 @media (max-width: 900px) {
-  /* the board is one viewport tall and the review dock stacks below it */
+  /* The board is one viewport tall and the review dock stacks below it. The full graph's bottom strip is too narrow
+     for the minimap, the zoom controls and the box side by side, so the box stacks above the minimap instead
+     (inset 16 + the minimap's rendered height, published by CanvasMinimap, + gap 12). */
+  .ask-widget,
   .case-board-panel:has(.review-dock.is-open) > .ask-widget {
+    --ask-bottom: calc(28px + var(--minimap-height, 176px));
     right: 16px;
   }
   .ask-widget {
     bottom: calc(100% - 100dvh + var(--ask-bottom));
   }
+  .case-board-panel:has(.canvas-wrap.is-story) > .ask-widget,
   .case-board-panel:has(.canvas-wrap.is-story):has(.review-dock.is-open)
     > .ask-widget {
+    --ask-bottom: 16px;
     right: 64px;
   }
 }
 @media (max-width: 540px) {
-  .ask-widget {
+  .ask-widget,
+  .case-board-panel:has(.review-dock.is-open) > .ask-widget {
     /* chrome bottom 54 + the minimap's rendered height + gap 10 */
     --ask-bottom: calc(64px + var(--minimap-height, 116px));
     right: 12px;

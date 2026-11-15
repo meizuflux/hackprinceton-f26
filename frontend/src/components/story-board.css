@@ -518,6 +518,14 @@
   cursor: pointer;
 }
 
+/* On narrow boards the centred switch would collide with the run summary chip pinned beside the toolbar, so it
+   drops one row below the chip. */
+@media (max-width: 700px) {
+  .board-view-switch {
+    top: calc(var(--topbar-clearance-y, 68px) + 46px);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .story-card,
   .story-group-sheet,
