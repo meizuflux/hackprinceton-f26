@@ -15,6 +15,7 @@ Run:  uvicorn mapletrace_api.app:app --reload --port 8000      (from backend/)
     GET  /cases/{caseId}/records?evidenceId=&limit=&offset=   normalized ingestion records, read-only, with citations
     GET  /cases/{caseId}/audit-chain     ingestion + analysis audit entries with hashes, re-verified
     POST /cases/{caseId}/evidence        add a ZIP of new evidence -> new version, compared with the previous one
+    POST /demo                           install the committed Kestrel demo snapshot (instant, no model calls) -> {caseId}
     GET  /cases/{caseId}/overrides       investigator corrections
     POST /cases/{caseId}/overrides       record a correction -> re-analysis job
 
@@ -27,7 +28,10 @@ import hashlib
 import json
 import os
 import re
+import shutil
 import sqlite3
+import tarfile
+import tempfile
 import threading
 import traceback
 import uuid
@@ -45,6 +49,7 @@ from mapletrace_ingest.verify import verify_run
 from mapletrace_ingest.db import GENESIS_HASH, verify_audit_chain
 from mapletrace_ingest.pipeline import ingest_zip
 from mapletrace_reason import history
+from mapletrace_reason.llm_cache import cache_path
 from mapletrace_reason.pipeline import analyze
 from mapletrace_reason.store import PROTECTED_KEYS, citation_id, unique_labels
 
@@ -53,6 +58,11 @@ MAX_UPLOAD = int(os.environ.get("MAPLETRACE_MAX_UPLOAD_MB", "100")) * 1024 * 102
 SECTIONS = {"graph", "gaps", "insights", "suggestions", "contradictions", "explanations", "timeline", "audit", "changes",
             "sources", "nodes", "edges", "uncertainTimes", "missingPeriods", "sourceGroups", "signals"}
 _lock = threading.Lock()
+LLM_MODEL = os.environ.get("MAPLETRACE_LLM_MODEL", "claude-sonnet-5-5")
+REPO = Path(__file__).resolve().parents[2]
+DEMO_SNAPSHOT = Path(__file__).resolve().parents[1] / "demo" / "kestrel.tar.gz"
+DEMO_ARCHIVE = REPO / "cases" / "kestrel" / "kestrel_case_upload.zip"
+DEMO_CASE_ID = "kestrel-demo"
 
 app = FastAPI(title="Mapletrace API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_methods=["*"], allow_headers=["*"],
@@ -152,6 +162,20 @@ def _combined_zip(case_dir: Path, meta: dict, version: int) -> Path:
     return out
 
 
+def _llm_config(meta: dict) -> Optional[dict]:
+    """LLM settings for a case. An upload whose archive has recorded responses (`backend/llm_cache/`) replays them for
+    free, without calling the API; an explicit LLM request records responses it does not have yet (billed)."""
+    sha = meta["uploads"][0]["sha256"] if len(meta.get("uploads", [])) == 1 else None
+    cached = bool(sha) and cache_path(sha).exists()
+    if meta.get("llm"):
+        mode = "record"
+    elif cached:
+        mode = "replay"
+    else:
+        return None
+    return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": mode}
+
+
 def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str], reingest: bool = True) -> None:
     case_dir = _cases() / case_id
     meta = _read_json(case_dir / "case.json")
@@ -162,7 +186,7 @@ def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str
             src = _combined_zip(case_dir, meta, version)
             ingest_zip(src, ingest_dir, timezone=meta.get("timezone") or "UTC", case_name=meta.get("title"), overwrite=True)
         _job(job_id, status="processing", progress=40, stage="analysis", message="Analysing evidence")
-        llm = {"model": "claude-opus-5-5", "verifier_model": "claude-sonnet-5-5"} if meta.get("llm") else None
+        llm = _llm_config(meta)
 
         def progress(stage, pct):
             _job(job_id, status="processing", progress=40 + int(pct * 0.58), stage=stage, message=stage.replace("_", " "))
@@ -249,6 +273,33 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
     _job(job_id, status="processing", progress=0, stage="queued", message="Queued", caseId=case_id)
     background.add_task(_run_version, job_id, case_id, 1, None)
     return {"jobId": job_id, "caseId": case_id}
+
+
+@app.post("/demo")
+def open_demo():
+    """Install the committed Kestrel snapshot (ingestion + analysis with recorded LLM results) once, then reuse it."""
+    case_dir = _cases() / DEMO_CASE_ID
+    if (case_dir / "case.json").exists():
+        return {"caseId": DEMO_CASE_ID}
+    if not DEMO_SNAPSHOT.exists():
+        raise ApiError(404, "no_demo_snapshot", "no demo snapshot; build it with make backend-demo-snapshot")
+    with _lock:
+        tmp = Path(tempfile.mkdtemp(dir=_cases(), prefix=".demo-"))
+        try:
+            with tarfile.open(DEMO_SNAPSHOT) as t:
+                t.extractall(tmp, filter="data")
+            meta = _read_json(tmp / "case.json")
+            # the uploaded archive is not in the snapshot; it is the repository's Kestrel ZIP (checked by hash)
+            upload = meta["uploads"][0]
+            if DEMO_ARCHIVE.exists() and hashlib.sha256(DEMO_ARCHIVE.read_bytes()).hexdigest() == upload["sha256"]:
+                (tmp / "uploads").mkdir(exist_ok=True)
+                shutil.copyfile(DEMO_ARCHIVE, tmp / "uploads" / upload["stored"])
+            if not (case_dir / "case.json").exists():
+                shutil.rmtree(case_dir, ignore_errors=True)
+                tmp.rename(case_dir)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    return {"caseId": DEMO_CASE_ID}
 
 
 @app.get("/status/{job_id}")
@@ -464,7 +515,8 @@ def _reanalyse(job_id: str, case_id: str, v: dict) -> None:
     case_dir = _cases() / case_id
     ingest_dir = case_dir / v["ingest_dir"]
     try:
-        summary = analyze(ingest_dir, None, case_dir / v["analysis_dir"], case_dir / "overrides.jsonl", None)
+        meta = _read_json(case_dir / "case.json")
+        summary = analyze(ingest_dir, None, case_dir / v["analysis_dir"], case_dir / "overrides.jsonl", _llm_config(meta))
         with _lock:
             meta = _read_json(case_dir / "case.json")
             meta["versions"].append({**v, "analysis_dir": str(Path(summary["out_dir"]).resolve().relative_to(case_dir.resolve())),
