@@ -9,6 +9,7 @@ services:
       MAPLETRACE_MAX_UPLOAD_MB: "100"
       MAPLETRACE_CORS: ${MAPLETRACE_CORS:-}
       MAPLETRACE_LLM_MODEL: ${MAPLETRACE_LLM_MODEL:-claude-sonnet-5-5}
+      MAPLETRACE_CHAT_MODEL: ${MAPLETRACE_CHAT_MODEL:-${MAPLETRACE_LLM_MODEL:-claude-sonnet-5-5}}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
       - type: bind

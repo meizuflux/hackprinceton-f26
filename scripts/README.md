@@ -4,10 +4,11 @@ This deploys a **single Ubuntu VM** using the Vultr API and builds the Docker im
 
 ## Run
 
-Install Python 3.11+, Git, and OpenSSH locally. Commit the desired revision first: the script transfers only tracked files in `HEAD` and rejects tracked uncommitted changes. Set the Vultr API key and run:
+Install Python 3.11+, Git, and OpenSSH locally. Commit the desired revision first: the script transfers only tracked files in `HEAD` and rejects tracked uncommitted changes. Create the ignored deployment environment file and fill in the Vultr API key:
 
 ```sh
-export VULTR_API_KEY='...'
+cp scripts/.env.example scripts/.env
+# Edit scripts/.env, then deploy:
 python3 scripts/deploy-vultr.py
 ```
 
@@ -21,7 +22,9 @@ The default domain is `mapletrace.work`. As soon as the instance is active, the 
 
 Optional values can be overridden: `--region`, `--plan`, `--os-id`, `--volume-size-gb`, `--identity-file`, `--ssh-key-id`, `--firewall-group-id`, `--object-storage-id`, `--backup-bucket`, and `--domain`. The default `--os-id 2284` is Ubuntu 24.04 LTS x64. Run `python3 scripts/deploy-vultr.py --help` for all options. Existing volumes must contain one ext4 filesystem, and an existing bucket must be private and unversioned. Do not use an existing bucket unless its lifecycle rules and backup prefix are appropriate.
 
-For live, uncached LLM calls, optionally export `ANTHROPIC_API_KEY`. `MAPLETRACE_LLM_MODEL` and `MAPLETRACE_CORS` are also optional. Set all desired optional variables on every invocation; omitted values are cleared from the server configuration. No application authentication is provided.
+The script automatically reads `scripts/.env` when present, including on updates. Set `VULTR_API_KEY` there; it stays on the deploying machine. For live, uncached LLM calls, optionally set `ANTHROPIC_API_KEY`. The backend also accepts `MAPLETRACE_LLM_MODEL`, `MAPLETRACE_CHAT_MODEL`, and `MAPLETRACE_CORS`. Those four backend settings are sent securely over SSH and written to `/opt/mapletrace/.env`; omitted optional settings are cleared there. `scripts/.env` is ignored by Git; keep it private and do not commit secrets.
+
+Existing shell environment variables take precedence over values in the file, even when empty. The file accepts one `KEY=value` per line, optional `export`, comments, and single- or double-quoted values. Quote values containing spaces or `#`; variable expansion, command execution, and multiline values are not supported. Unknown or duplicate keys are rejected. To use a different file instead of `scripts/.env`, pass `--env-file /path/to/deployment.env`; that file must exist and should be kept outside version control. No application authentication is provided.
 
 Re-run the same command to reuse resources recorded in the local state file. Use `--state-file PATH` for a separate deployment; changing to a different file can create additional billable resources. The script prints resource IDs as they are created. If a create request times out, the remote outcome may be unknown and an ID may not be saved; inspect the Vultr console before retrying to avoid duplicates. Resources are not automatically deleted. Existing instances must already have Ubuntu and root SSH access; when reusing one without saved state, pass `--identity-file` and `--instance-id` as well as the other existing resource IDs. A partial deployment may need manual recovery; the initial version has not been tested against a live account.
 

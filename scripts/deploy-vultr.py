@@ -22,6 +22,8 @@ ROOT = Path(__file__).resolve().parent.parent
 API = "https://api.vultr.com/v2"
 REMOTE = "/opt/mapletrace"
 DEFAULT_DOMAIN = "mapletrace.work"
+ENV_KEYS = {"VULTR_API_KEY", "ANTHROPIC_API_KEY", "MAPLETRACE_LLM_MODEL", "MAPLETRACE_CHAT_MODEL", "MAPLETRACE_CORS"}
+DEFAULT_ENV_FILE = ROOT / "scripts" / ".env"
 STATE_DIR = Path.home() / ".local" / "state" / "mapletrace-vultr"
 
 
@@ -72,9 +74,38 @@ def api(method, path, payload=None):
         raise RuntimeError(f"Vultr API returned HTTP {exc.code}: {exc.read(4096).decode(errors='replace')}") from exc
 
 
+def load_env_file(path, *, required=False):
+    """Load deployment settings without executing shell code or expanding variables."""
+    path = Path(path).expanduser()
+    if not path.exists():
+        if required:
+            raise ValueError(f"Environment file does not exist: {path}")
+        return
+    values = {}
+    for number, line in enumerate(path.read_text(encoding="utf-8").splitlines(), 1):
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        if line.startswith("export "):
+            line = line[7:].lstrip()
+        key, sep, raw = line.partition("=")
+        key = key.strip()
+        if not sep or key not in ENV_KEYS or key in values:
+            raise ValueError(f"Invalid or duplicate setting in {path} at line {number}")
+        try:
+            tokens = shlex.split(raw, comments=True, posix=True)
+        except ValueError as exc:
+            raise ValueError(f"Invalid value in {path} at line {number}") from exc
+        if len(tokens) > 1:
+            raise ValueError(f"Quote values containing spaces in {path} at line {number}")
+        values[key] = tokens[0] if tokens else ""
+    for key, value in values.items():
+        os.environ.setdefault(key, value)
+
+
 def env_content(domain):
     lines = [f"MAPLETRACE_DOMAIN='{domain}'"]
-    for name in ("ANTHROPIC_API_KEY", "MAPLETRACE_LLM_MODEL", "MAPLETRACE_CORS"):
+    for name in ("ANTHROPIC_API_KEY", "MAPLETRACE_LLM_MODEL", "MAPLETRACE_CHAT_MODEL", "MAPLETRACE_CORS"):
         value = os.environ.get(name, "")
         if "\n" in value or "\r" in value:
             raise ValueError(f"{name} must be a single line")
@@ -376,6 +407,7 @@ systemctl enable --now mapletrace-backup.timer
 
 def parser():
     p = argparse.ArgumentParser(description=__doc__)
+    p.add_argument("--env-file", help="deployment environment file (default: scripts/.env if present)")
     p.add_argument("--instance-id", help="reuse an existing instance; avoids creating another billable server")
     p.add_argument("--region", default="ewr", help="Vultr region ID for a new instance")
     p.add_argument("--plan", default="vc2-2c-4gb", help="Vultr plan ID for a new instance")
@@ -427,6 +459,7 @@ def main():
     if args.timeout <= 0:
         parser().error("--timeout must be positive")
     try:
+        load_env_file(args.env_file or DEFAULT_ENV_FILE, required=bool(args.env_file))
         deploy(args)
     except (ValueError, RuntimeError, TimeoutError, OSError, subprocess.CalledProcessError, urllib.error.URLError) as exc:
         print(f"Deployment failed: {exc}", file=sys.stderr)
