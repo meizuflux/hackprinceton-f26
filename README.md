@@ -41,11 +41,11 @@ make docker-down               # stop; case data is kept
 Open [localhost:5173](http://localhost:5173). `compose.yaml` runs two services:
 
 - **`backend`:** FastAPI on port 8000 inside the Compose network only, built from the repository root with `backend/Dockerfile` and run as a non-root user. The root `.dockerignore` is an allowlist (backend code, `backend/demo/`, `backend/llm_cache/` and the Kestrel upload ZIP).
-- **`frontend`:** the production build with `VITE_API_BASE_URL=/api`, served by nginx on `127.0.0.1:5173`. nginx proxies `/api/` to the backend, stripping the prefix as Vite does, accepts 100 MB uploads and allows 600-second timeouts. It starts once the backend is healthy.
+- **`frontend`:** the production build with `VITE_API_BASE_URL=/api`, served by Caddy on `127.0.0.1:5173`. Caddy proxies `/api/` to the backend, stripping the prefix as Vite does, accepts requests up to 100 MiB and allows 600 seconds for backend response headers. It starts once the backend is healthy.
 
 The demo button and the Kestrel upload work without a key. Case data lives in the `mapletrace-data` volume at `/data`; it survives `make docker-down` and is removed by `docker compose down -v`.
 
-Compose reads `ANTHROPIC_API_KEY` (optional) and `MAPLETRACE_LLM_MODEL` (default `claude-sonnet-5-5`) from your shell or a git-ignored root `.env`; never commit keys. `MAPLETRACE_DATA`, `MAPLETRACE_MAX_UPLOAD_MB=100` and `MAPLETRACE_CORS` are set in `compose.yaml`. If you raise the upload limit, also raise `client_max_body_size` in `frontend/nginx.conf`.
+Compose reads `ANTHROPIC_API_KEY` (optional) and `MAPLETRACE_LLM_MODEL` (default `claude-sonnet-5-5`) from your shell or a git-ignored root `.env`; never commit keys. `MAPLETRACE_DATA`, `MAPLETRACE_MAX_UPLOAD_MB=100` and `MAPLETRACE_CORS` are set in `compose.yaml`. If you raise the upload limit, also raise `max_size` in `frontend/Caddyfile`.
 
 For a mock-only frontend without a backend: `docker build --build-arg VITE_API_BASE_URL=mock -t mapletrace-mock frontend`, then `docker run --rm -p 127.0.0.1:5173:80 mapletrace-mock`.
 

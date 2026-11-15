@@ -129,7 +129,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 
 - The backend image is built from the repo root and mirrors the repo layout under `/app`. The root `.dockerignore` is an allowlist: add any new runtime file to it.
 - Data lives in the `mapletrace-data` volume at `/data`; the image runs as a non-root user.
-- The frontend image is built with `VITE_API_BASE_URL=/api` (`mock` is a build arg). nginx strips `/api` the way Vite does, and its `client_max_body_size 100m` must follow `MAPLETRACE_MAX_UPLOAD_MB`.
+- The frontend image is built with `VITE_API_BASE_URL=/api` (`mock` is a build arg). Caddy serves the frontend and strips `/api` the way Vite does; its `max_size` must follow `MAPLETRACE_MAX_UPLOAD_MB`.
 - Only the frontend is published, on `127.0.0.1:5173`. `ANTHROPIC_API_KEY` is optional.
 
 ## Specification change approval
@@ -137,3 +137,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 - Before any modification to root `SPEC.md`, present the proposed changes and ask both the user and team members for approval. Wait for explicit approval; silence is not approval.
 - If team members cannot be reached through an explicitly authorized channel, ask the user to obtain their approval. Do not contact anyone without authorization or assume team consent.
 - This rule governs `SPEC.md` only; routine implementation and other documentation proceed within the user's authorized scope.
+
+## Vultr deployment
+
+- `scripts/deploy-vultr.py` deploys committed revisions to a single Ubuntu instance using `scripts/compose.vultr.yaml`. Caddy provides automatic TLS for the configured domain (default `mapletrace.work`); the app remains unauthenticated. Case data uses a mounted Vultr block storage volume; Caddy certificates stay in a Compose volume. The deploy workflow provisions or reuses a Vultr firewall, instance, block volume and Object Storage bucket, reads optional deployment settings from git-ignored `scripts/.env`, records resource IDs locally for retries, and uses daily object-storage case backups with backend writes stopped during archiving. A scoped 60-day lifecycle expires backups. Keep the deploy upload limit aligned with Caddy.

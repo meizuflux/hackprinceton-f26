@@ -1,0 +1,46 @@
+# Single-host deployment. Keep upload limit aligned with frontend/Caddyfile.
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: backend/Dockerfile
+    environment:
+      MAPLETRACE_DATA: /data
+      MAPLETRACE_MAX_UPLOAD_MB: "100"
+      MAPLETRACE_CORS: ${MAPLETRACE_CORS:-}
+      MAPLETRACE_LLM_MODEL: ${MAPLETRACE_LLM_MODEL:-claude-sonnet-5-5}
+      MAPLETRACE_CHAT_MODEL: ${MAPLETRACE_CHAT_MODEL:-${MAPLETRACE_LLM_MODEL:-claude-sonnet-5-5}}
+      ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    volumes:
+      - type: bind
+        source: /mnt/mapletrace-data/mapletrace
+        target: /data
+        bind:
+          create_host_path: false
+    healthcheck:
+      test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status == 200 else 1)"]
+      interval: 10s
+      timeout: 3s
+      start_period: 20s
+      retries: 3
+    restart: unless-stopped
+  frontend:
+    build:
+      context: ../frontend
+      args:
+        VITE_API_BASE_URL: /api
+    environment:
+      MAPLETRACE_DOMAIN: ${MAPLETRACE_DOMAIN:?Set MAPLETRACE_DOMAIN}
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+volumes:
+  caddy-data:
+  caddy-config:
