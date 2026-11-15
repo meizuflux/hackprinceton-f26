@@ -96,18 +96,41 @@ export interface CaseData {
   normalizedRecords?: NormalizedEvidenceRecord[];
 }
 
-export type IngestionStatus = "processing" | "ready";
+export type IngestionStatus = "processing" | "ready" | "failed";
+export interface UploadOptions {
+  /** Shown as the case title; the backend derives the case ID from it. */
+  caseName?: string;
+}
 export interface UploadResult {
   jobId: string;
+  caseId?: string;
 }
 export interface IngestionProgress {
   status: IngestionStatus;
   progress: number;
   message: string;
+  stage?: string;
+  caseId?: string;
 }
 
+/** One entry in the case list. Only the live API persists cases. */
+export interface CaseSummary {
+  caseId: string;
+  title: string;
+  created: string;
+  versions: number;
+  ready: boolean;
+}
+
+export type ApiMode = "mock" | "live";
+
 export interface CaseApi {
-  createUpload(file: File): Promise<UploadResult>;
+  mode: ApiMode;
+  createUpload(file: File, options?: UploadOptions): Promise<UploadResult>;
   getStatus(jobId: string): Promise<IngestionProgress>;
-  getCase(): Promise<CaseData>;
+  /** Without an ID, returns the most recent ready case. */
+  getCase(caseId?: string): Promise<CaseData>;
+  listCases(): Promise<CaseSummary[]>;
+  /** URL of the original evidence file, when the adapter can serve bytes. */
+  evidenceFileUrl(caseId: string, evidenceId: string): string | undefined;
 }

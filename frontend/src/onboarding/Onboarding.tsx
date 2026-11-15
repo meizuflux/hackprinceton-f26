@@ -23,6 +23,7 @@ export interface SessionProject {
 export function ProjectManager({
   data,
   projects,
+  persistent = false,
   navigate,
   onDemo,
   opening,
@@ -30,6 +31,8 @@ export function ProjectManager({
 }: {
   data?: CaseData;
   projects: SessionProject[];
+  /** True when cases come from the backend rather than session state. */
+  persistent?: boolean;
   navigate: Navigate;
   onDemo: () => void;
   opening: boolean;
@@ -62,7 +65,11 @@ export function ProjectManager({
         <div className="project-heading">
           <div>
             <h1>Projects</h1>
-            <p>Projects are kept for this session.</p>
+            <p>
+              {persistent
+                ? "Cases analysed by the case service."
+                : "Projects are kept for this session."}
+            </p>
           </div>
           <button
             className="button button-primary"
@@ -115,13 +122,17 @@ export function ProjectManager({
                   <span className="project-card-detail">
                     {data?.id === project.caseId
                       ? `${data.sources.length} sources · ${data.nodes.length} evidence pins`
-                      : "Session project"}
+                      : persistent
+                        ? "Analysed case"
+                        : "Session project"}
                   </span>
                 </span>
                 <span className="project-card-kind">
-                  {data?.id === project.caseId
-                    ? "Fictional data"
-                    : "Session project"}
+                  {persistent
+                    ? "Case"
+                    : data?.id === project.caseId
+                      ? "Fictional data"
+                      : "Session project"}
                 </span>
                 <ArrowUpRight size={17} aria-hidden="true" />
               </button>
@@ -133,13 +144,14 @@ export function ProjectManager({
           <section className="project-empty">
             <h2>No projects yet</h2>
             <p>
-              Select New project to choose a ZIP, or open the fictional case
-              below.
+              {persistent
+                ? "Select New project to upload a ZIP of case evidence."
+                : "Select New project to choose a ZIP, or open the fictional case below."}
             </p>
           </section>
         )}
 
-        {!hasFictionalCase && data && (
+        {!persistent && !hasFictionalCase && data && (
           <section className="fictional-case">
             <div>
               <h2>{data.title}</h2>

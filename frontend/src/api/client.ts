@@ -1,4 +1,5 @@
 import { demoCase } from "./fixtures";
+import { createHttpApi } from "./http";
 import type { CaseApi, IngestionProgress, UploadResult } from "./types";
 
 const MOCK_PROCESSING_MS = 5_000;
@@ -6,7 +7,9 @@ const jobs = new Map<string, number>();
 let nextJob = 1;
 
 /** Mock adapter: validates upload metadata only; never reads or parses the ZIP. */
-export const api: CaseApi = {
+export const mockApi: CaseApi = {
+  mode: "mock",
+
   async createUpload(file: File): Promise<UploadResult> {
     if (!file.name.toLowerCase().endsWith(".zip")) {
       throw new Error("Choose a .zip archive.");
@@ -16,7 +19,7 @@ export const api: CaseApi = {
     }
     const jobId = `demo-job-${nextJob++}`;
     jobs.set(jobId, Date.now());
-    return { jobId };
+    return { jobId, caseId: demoCase.id };
   },
 
   async getStatus(jobId: string): Promise<IngestionProgress> {
@@ -28,6 +31,7 @@ export const api: CaseApi = {
         status: "ready",
         progress: 100,
         message: "Workspace preview ready.",
+        caseId: demoCase.id,
       };
     }
     const progress = Math.min(
@@ -46,6 +50,36 @@ export const api: CaseApi = {
   async getCase() {
     return demoCase;
   },
+
+  async listCases() {
+    return [];
+  },
+
+  evidenceFileUrl() {
+    return undefined;
+  },
 };
 
-export const isMock = true;
+/**
+ * `VITE_API_BASE_URL` selects the backend; `mock` (or an empty value outside
+ * development) selects the fixture adapter. Development defaults to `/api`,
+ * which Vite proxies to the backend.
+ */
+export function resolveApiBase(
+  configured: string | undefined,
+  mode: string,
+): string | undefined {
+  const value = configured?.trim();
+  if (value === "mock") return undefined;
+  if (value) return value;
+  return mode === "development" ? "/api" : undefined;
+}
+
+const apiBase = resolveApiBase(
+  import.meta.env.VITE_API_BASE_URL,
+  import.meta.env.MODE,
+);
+
+export const api: CaseApi = apiBase ? createHttpApi(apiBase) : mockApi;
+
+export const isMock = api.mode === "mock";

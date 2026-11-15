@@ -33,6 +33,7 @@ import {
   X,
 } from "lucide-react";
 import { api } from "./api/client";
+import { isApiError } from "./api/http";
 import type { CaseData } from "./api/types";
 import { CanvasMinimap } from "./components/CanvasMinimap";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
@@ -860,24 +861,53 @@ export default function App() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadedCaseId, setUploadedCaseId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const caseQueryKey = ["case"] as const;
+  const routeCaseId = route.kind === "case" ? route.caseId : undefined;
   const caseQuery = useQuery({
-    queryKey: caseQueryKey,
-    queryFn: () => api.getCase(),
+    queryKey: ["case", routeCaseId ?? "latest"],
+    queryFn: () => api.getCase(routeCaseId),
     enabled:
       route.kind === "case" ||
       route.kind === "projects" ||
       route.kind === "new-project",
+    retry: (count, error) =>
+      count < 2 && (!isApiError(error) || error.status >= 500),
+  });
+  const casesQuery = useQuery({
+    queryKey: ["cases"],
+    queryFn: () => api.listCases(),
+    enabled: api.mode === "live" && route.kind !== "welcome",
   });
   const statusQuery = useQuery({
     queryKey: ["upload", jobId],
     queryFn: () => api.getStatus(jobId!),
     enabled: !!jobId,
-    refetchInterval: (q) => (q.state.data?.status === "ready" ? false : 650),
+    refetchInterval: (q) =>
+      q.state.data?.status === "ready" || q.state.data?.status === "failed"
+        ? false
+        : 650,
   });
   const ready = statusQuery.data?.status === "ready";
+  const uploadFailed =
+    statusQuery.isError || statusQuery.data?.status === "failed";
+  const caseNotFound =
+    route.kind === "case" &&
+    ((caseQuery.data !== undefined && caseQuery.data.id !== route.caseId) ||
+      isApiError(caseQuery.error, "case_not_found") ||
+      isApiError(caseQuery.error, "bad_case_id"));
+  const listedProjects = useMemo(() => {
+    const listed = (casesQuery.data ?? [])
+      .filter((entry) => entry.ready)
+      .map((entry) => ({ caseId: entry.caseId, name: entry.title }));
+    return [
+      ...projects,
+      ...listed.filter(
+        (entry) => !projects.some((project) => project.caseId === entry.caseId),
+      ),
+    ];
+  }, [projects, casesQuery.data]);
   const uploadGuard = useRef({
     openingCase: false,
     uploading: false,
@@ -889,7 +919,7 @@ export default function App() {
     openingCase,
     uploading,
     ready,
-    failed: statusQuery.isError,
+    failed: uploadFailed,
   };
   useEffect(() => {
     if (route.kind !== "case" || caseQuery.data?.id !== route.caseId) return;
@@ -951,8 +981,9 @@ export default function App() {
     setError("");
     setUploading(true);
     try {
-      const result = await api.createUpload(file);
+      const result = await api.createUpload(file, { caseName: projectName });
       setJobId(result.jobId);
+      setUploadedCaseId(result.caseId ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed. Try again.");
       setUploading(false);
@@ -962,19 +993,23 @@ export default function App() {
     if (uploadOpen) navigate("/projects", { replace: true });
     setProjectName("");
     setJobId(null);
+    setUploadedCaseId(null);
     setUploading(false);
     setFile(null);
     setError("");
   }
   closeUploadRef.current = closeUpload;
-  async function openCase() {
+  /** Opens a case by ID, or the most recent ready case when no ID is given. */
+  async function openCase(caseId?: string) {
     setError("");
     setOpeningCase(true);
     try {
       const data = await queryClient.fetchQuery({
-        queryKey: caseQueryKey,
-        queryFn: () => api.getCase(),
+        queryKey: ["case", caseId ?? "latest"],
+        queryFn: () => api.getCase(caseId),
       });
+      queryClient.setQueryData(["case", data.id], data);
+      void queryClient.invalidateQueries({ queryKey: ["cases"] });
       setProjects((current) => [
         { caseId: data.id, name: projectName.trim() || data.title },
         ...current.filter((p) => p.caseId !== data.id),
@@ -984,7 +1019,11 @@ export default function App() {
         navigate(casePath(data.id));
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Could not open the case. Try again.",
+        isApiError(e, "no_cases")
+          ? "No analysed case yet. Upload a ZIP to start one."
+          : e instanceof Error
+            ? e.message
+            : "Could not open the case. Try again.",
       );
     } finally {
       setOpeningCase(false);
@@ -1006,7 +1045,8 @@ export default function App() {
       {projectRoute ? (
         <ProjectManager
           data={caseQuery.data}
-          projects={projects}
+          projects={listedProjects}
+          persistent={api.mode === "live"}
           navigate={navigate}
           onDemo={() => void openCase()}
           opening={openingCase}
@@ -1014,12 +1054,10 @@ export default function App() {
         />
       ) : (
         <div className="app-shell">
-          {(route.kind !== "case" ||
-            !caseQuery.data ||
-            caseQuery.data.id !== route.caseId) && (
+          {(route.kind !== "case" || !caseQuery.data || caseNotFound) && (
             <WorkspaceNavigation
               navigate={navigate}
-              projects={projects}
+              projects={listedProjects}
               activeCaseId={route.kind === "case" ? route.caseId : undefined}
             />
           )}
@@ -1034,9 +1072,7 @@ export default function App() {
                   Go home
                 </button>
               </div>
-            ) : route.kind === "case" &&
-              caseQuery.data &&
-              caseQuery.data.id !== route.caseId ? (
+            ) : caseNotFound ? (
               <div className="center-state">
                 <h2>Case not found</h2>
                 <button
@@ -1051,9 +1087,20 @@ export default function App() {
                 <LoaderCircle className="spin" />
                 <h2>Opening evidence workspace…</h2>
               </div>
+            ) : isApiError(caseQuery.error, "not_ready") ? (
+              <div className="center-state">
+                <h2>This case is still being analysed</h2>
+                <button
+                  className="button button-primary"
+                  onClick={() => caseQuery.refetch()}
+                >
+                  Check again
+                </button>
+              </div>
             ) : caseQuery.isError ? (
               <div className="center-state">
                 <h2>Couldn’t load the case</h2>
+                <p>{caseQuery.error.message}</p>
                 <button
                   className="button button-primary"
                   onClick={() => caseQuery.refetch()}
@@ -1106,7 +1153,7 @@ export default function App() {
             if (
               e.target === e.currentTarget &&
               !openingCase &&
-              (!uploading || ready || statusQuery.isError)
+              (!uploading || ready || uploadFailed)
             )
               closeUpload();
           }}
@@ -1120,9 +1167,7 @@ export default function App() {
           >
             <button
               className="icon-button modal-close"
-              disabled={
-                openingCase || (uploading && !ready && !statusQuery.isError)
-              }
+              disabled={openingCase || (uploading && !ready && !uploadFailed)}
               onClick={closeUpload}
               aria-label="Close upload"
             >
@@ -1161,7 +1206,11 @@ export default function App() {
             >
               <FileArchive size={30} />
               <strong>
-                {file ? file.name : "Choose a ZIP to preview the workspace"}
+                {file
+                  ? file.name
+                  : api.mode === "live"
+                    ? "Choose a ZIP of case evidence"
+                    : "Choose a ZIP to preview the workspace"}
               </strong>
               <span>
                 {file
@@ -1198,8 +1247,10 @@ export default function App() {
                   <span>
                     {statusQuery.isError
                       ? "Processing interrupted"
-                      : (statusQuery.data?.message ??
-                        "Preparing workspace preview…")}
+                      : statusQuery.data?.status === "failed"
+                        ? "Analysis failed"
+                        : (statusQuery.data?.message ??
+                          "Preparing workspace preview…")}
                   </span>
                   <span>{statusQuery.data?.progress ?? 0}%</span>
                 </div>
@@ -1209,12 +1260,25 @@ export default function App() {
                     Retry status
                   </button>
                 )}
+                {statusQuery.data?.status === "failed" && (
+                  <p className="error-message" role="alert">
+                    {statusQuery.data.message ||
+                      "The case service could not process this archive."}
+                  </p>
+                )}
               </div>
             )}
             <button
               className="button button-primary full-width"
               disabled={!file || (uploading && !ready) || openingCase}
-              onClick={ready ? () => void openCase() : upload}
+              onClick={
+                ready
+                  ? () =>
+                      void openCase(
+                        statusQuery.data?.caseId ?? uploadedCaseId ?? undefined,
+                      )
+                  : upload
+              }
             >
               {openingCase ? (
                 <>
@@ -1230,16 +1294,28 @@ export default function App() {
                   <LoaderCircle size={16} className="spin" /> Preparing
                   workspace
                 </>
+              ) : api.mode === "live" ? (
+                <>
+                  Upload and analyse <ArrowRight size={16} />
+                </>
               ) : (
                 <>
                   Preview workspace <ArrowRight size={16} />
                 </>
               )}
             </button>
-            <p className="upload-disclosure">
-              Prototype: ZIP contents are not read or uploaded. This preview
-              uses fictional case data and simulated progress.
-            </p>
+            {api.mode === "live" ? (
+              <p className="upload-disclosure">
+                The ZIP is uploaded to the case service, which hashes every file
+                and keeps read-only copies. Evidence is never modified. Limit
+                100 MB.
+              </p>
+            ) : (
+              <p className="upload-disclosure">
+                Prototype: ZIP contents are not read or uploaded. This preview
+                uses fictional case data and simulated progress.
+              </p>
+            )}
           </section>
         </div>
       )}

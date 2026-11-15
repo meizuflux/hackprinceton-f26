@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { FileSearch, Files, Search, ShieldAlert } from "lucide-react";
+import { Download, FileSearch, Files, Search, ShieldAlert } from "lucide-react";
+import { api } from "../api/client";
 import type { CaseData } from "../api/types";
 import { listEvidenceFiles, type NormalizedEvidenceRecord } from "../api/files";
 import "./evidence-browser.css";
@@ -72,7 +73,9 @@ export function EvidenceBrowser({
           <span className="evidence-state-chip">
             {citedRecords.length
               ? `${citedRecords.length} normalized records`
-              : "Unavailable in mock"}
+              : api.mode === "mock"
+                ? "Unavailable in mock"
+                : "Unavailable"}
           </span>
         </header>
         <label className="evidence-search">
@@ -233,13 +236,19 @@ export function EvidenceBrowser({
                     : "Choose a source to inspect its available citation."}
                 </p>
               );
+            const evidenceId = selected.metadata.evidence_id;
+            const originalUrl = evidenceId
+              ? api.evidenceFileUrl(data.id, evidenceId)
+              : undefined;
             return (
               <>
                 <div className="evidence-preview-topline">
                   <span className="evidence-source-id">{selected.id}</span>
-                  <span className="evidence-fiction-label">
-                    FICTIONAL EXCERPT
-                  </span>
+                  {api.mode === "mock" && (
+                    <span className="evidence-fiction-label">
+                      FICTIONAL EXCERPT
+                    </span>
+                  )}
                 </div>
                 <h3>{selected.filename}</h3>
                 <p className="evidence-path">{selected.path}</p>
@@ -254,7 +263,11 @@ export function EvidenceBrowser({
                     <dd>{selected.timestamp}</dd>
                   </div>
                   <div>
-                    <dt>Illustrative hash</dt>
+                    <dt>
+                      {api.mode === "mock"
+                        ? "Illustrative hash"
+                        : "File SHA-256"}
+                    </dt>
                     <dd>
                       <code>{selected.hash}</code>
                     </dd>
@@ -264,14 +277,25 @@ export function EvidenceBrowser({
                     <dd>{selected.citationCount}</dd>
                   </div>
                 </dl>
-                <div className="evidence-unavailable">
-                  <ShieldAlert size={15} />
-                  <span>
-                    <strong>Original file unavailable.</strong> The mock upload
-                    does not read ZIP contents; this excerpt is synthetic and
-                    cannot open or download source bytes.
-                  </span>
-                </div>
+                {originalUrl ? (
+                  <a
+                    className="button button-secondary evidence-download"
+                    href={originalUrl}
+                    download
+                  >
+                    <Download size={15} aria-hidden="true" /> Download original{" "}
+                    {evidenceId} (read-only copy)
+                  </a>
+                ) : (
+                  <div className="evidence-unavailable">
+                    <ShieldAlert size={15} />
+                    <span>
+                      <strong>Original file unavailable.</strong> The mock
+                      upload does not read ZIP contents; this excerpt is
+                      synthetic and cannot open or download source bytes.
+                    </span>
+                  </div>
+                )}
               </>
             );
           })()}

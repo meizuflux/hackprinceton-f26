@@ -37,9 +37,11 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   if (!response.ok) {
     const detail = await response.json().catch(() => null);
     throw new Error(
-      typeof detail?.detail === "string"
-        ? detail.detail
-        : `Chat service returned ${response.status}.`,
+      typeof detail?.error?.message === "string"
+        ? detail.error.message
+        : typeof detail?.detail === "string"
+          ? detail.detail
+          : `Chat service returned ${response.status}.`,
     );
   }
   return response.json() as Promise<T>;

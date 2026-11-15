@@ -1,5 +1,6 @@
 import { ArrowLeft, ChevronDown, GitBranch, X } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { isMock } from "../api/client";
 import type { CaseData } from "../api/types";
 import { relationshipLabel } from "./relationships";
 
@@ -214,7 +215,9 @@ export function Inspector({
                     <strong>Recorded:</strong> {source.timestamp}
                   </p>
                   <p>
-                    <strong>Placeholder hash:</strong>{" "}
+                    <strong>
+                      {isMock ? "Placeholder hash:" : "File SHA-256:"}
+                    </strong>{" "}
                     <code>{source.hash}</code>
                   </p>
                   {Object.keys(source.metadata).length > 0 && (
