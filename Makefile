@@ -2,7 +2,7 @@
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
 	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel \
 	backend-analyze-kestrel backend-serve backend-seed-kestrel backend-llm-record backend-vision-record backend-demo-snapshot backend-chat-record dev \
-	docker-up docker-down docker-logs
+	docker-up docker-down docker-logs vultr-deploy vultr-test
 
 PYTHON ?= python3
 UV ?= uv
@@ -11,6 +11,7 @@ GENERATOR := generator/generate.py
 # --locked fails if uv.lock is out of date with pyproject.toml instead of silently re-resolving.
 BACKEND_PY := $(UV) run --locked python
 API ?= http://127.0.0.1:8000
+VULTR_ARGS ?=
 
 help:
 	@echo "make frontend-install  Install locked dependencies"
@@ -37,6 +38,8 @@ help:
 	@echo "make docker-up         Build and start the backend and frontend containers at http://localhost:5173"
 	@echo "make docker-down       Stop the containers (case data stays in the mapletrace-data volume)"
 	@echo "make docker-logs       Follow the container logs"
+	@echo "make vultr-deploy     Deploy to Vultr with uv (VULTR_ARGS='--help' for options)"
+	@echo "make vultr-test       Run Vultr deployment tests with uv"
 
 frontend-install:
 	cd frontend && bun install --frozen-lockfile
@@ -123,3 +126,10 @@ docker-logs:
 
 backend-chat-record:
 	cd backend && $(BACKEND_PY) -m mapletrace_api.chat record
+
+# VULTR_ARGS passes non-secret CLI options through to the deployment script.
+vultr-deploy:
+	$(UV) run --no-project --script scripts/deploy-vultr.py $(VULTR_ARGS)
+
+vultr-test:
+	$(UV) run --no-project --python '>=3.11' python -m unittest discover -s scripts -p 'test_*.py' -q

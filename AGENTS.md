@@ -141,4 +141,5 @@ Rules and durable decisions for agents working in this repository. How-to materi
 
 ## Vultr deployment
 
+- Run Vultr deployment and its tests from the root with `make vultr-deploy` and `make vultr-test` (uv); pass non-secret options in `VULTR_ARGS`.
 - `scripts/deploy-vultr.py` deploys committed revisions to a single Ubuntu instance using `scripts/compose.vultr.yaml`. Caddy provides automatic TLS for the configured domain (default `mapletrace.work`); the app remains unauthenticated. Case data uses a mounted Vultr block storage volume; Caddy certificates stay in a Compose volume. The deploy workflow provisions or reuses a Vultr firewall, instance, block volume and Object Storage bucket, reads optional deployment settings from git-ignored `scripts/.env`, records resource IDs locally for retries, and uses daily object-storage case backups with backend writes stopped during archiving. A scoped 60-day lifecycle expires backups. Keep the deploy upload limit aligned with Caddy.

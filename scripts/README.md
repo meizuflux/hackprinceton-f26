@@ -4,12 +4,12 @@ This deploys a **single Ubuntu VM** using the Vultr API and builds the Docker im
 
 ## Run
 
-Install Python 3.11+, Git, and OpenSSH locally. Commit the desired revision first: the script transfers only tracked files in `HEAD` and rejects tracked uncommitted changes. Create the ignored deployment environment file and fill in the Vultr API key:
+Install uv, Git, and OpenSSH locally; uv will use Python 3.11 or newer. Commit the desired revision first: the script transfers only tracked files in `HEAD` and rejects tracked uncommitted changes. Create the ignored deployment environment file and fill in the Vultr API key:
 
 ```sh
 cp scripts/.env.example scripts/.env
 # Edit scripts/.env, then deploy:
-python3 scripts/deploy-vultr.py
+make vultr-deploy
 ```
 
 The API key must be permitted to manage instances, SSH keys, firewall groups, block storage, Object Storage subscriptions and buckets. The default run creates **billable** resources: an `ewr` (New Jersey) `vc2-2c-4gb` instance, a 40 GB high-performance block volume, and a Standard Object Storage subscription. Confirm availability and pricing for your account before running it. The script provisions a private bucket and retrieves its S3 credentials from Vultr; separate object-storage credentials are not needed.
@@ -20,11 +20,11 @@ New firewall groups allow SSH and web ports from anywhere. Newly created Ubuntu 
 
 The default domain is `mapletrace.work`. As soon as the instance is active, the script prints its public IPv4 address and the A record to create. At your DNS provider, point the `mapletrace.work` A record (usually host `@`) to that address, and remove any AAAA record that points elsewhere. DNS must resolve to the instance before Caddy can obtain its TLS certificate. If propagation takes longer than the deployment wait, rerun the same command after DNS is ready; saved resource IDs prevent creating duplicates. To use another domain, pass `--domain your-domain.example`. Ports 80 and 443 must be publicly reachable.
 
-Optional values can be overridden: `--region`, `--plan`, `--os-id`, `--volume-size-gb`, `--identity-file`, `--ssh-key-id`, `--firewall-group-id`, `--object-storage-id`, `--backup-bucket`, and `--domain`. The default `--os-id 2284` is Ubuntu 24.04 LTS x64. Run `python3 scripts/deploy-vultr.py --help` for all options. Existing volumes must contain one ext4 filesystem, and an existing bucket must be private and unversioned. Do not use an existing bucket unless its lifecycle rules and backup prefix are appropriate.
+Optional values can be overridden: `--region`, `--plan`, `--os-id`, `--volume-size-gb`, `--identity-file`, `--ssh-key-id`, `--firewall-group-id`, `--object-storage-id`, `--backup-bucket`, and `--domain`. The default `--os-id 2284` is Ubuntu 24.04 LTS x64. Run `make vultr-deploy VULTR_ARGS='--help'` for all options; pass other non-secret script flags through `VULTR_ARGS`, for example `make vultr-deploy VULTR_ARGS='--domain mapletrace.work'`. Run `make vultr-test` to check the deployment scripts. Existing volumes must contain one ext4 filesystem, and an existing bucket must be private and unversioned. Do not use an existing bucket unless its lifecycle rules and backup prefix are appropriate.
 
 The script automatically reads `scripts/.env` when present, including on updates. Set `VULTR_API_KEY` there; it stays on the deploying machine. For live, uncached LLM calls, optionally set `ANTHROPIC_API_KEY`. The backend also accepts `MAPLETRACE_LLM_MODEL`, `MAPLETRACE_CHAT_MODEL`, and `MAPLETRACE_CORS`. Those four backend settings are sent securely over SSH and written to `/opt/mapletrace/.env`; omitted optional settings are cleared there. `scripts/.env` is ignored by Git; keep it private and do not commit secrets.
 
-Existing shell environment variables take precedence over values in the file, even when empty. The file accepts one `KEY=value` per line, optional `export`, comments, and single- or double-quoted values. Quote values containing spaces or `#`; variable expansion, command execution, and multiline values are not supported. Unknown or duplicate keys are rejected. To use a different file instead of `scripts/.env`, pass `--env-file /path/to/deployment.env`; that file must exist and should be kept outside version control. No application authentication is provided.
+Existing shell environment variables take precedence over values in the file, even when empty. The file accepts one `KEY=value` per line, optional `export`, comments, and single- or double-quoted values. Quote values containing spaces or `#`; variable expansion, command execution, and multiline values are not supported. Unknown or duplicate keys are rejected. To use a different file instead of `scripts/.env`, pass `VULTR_ARGS='--env-file /path/to/deployment.env'` to Make; that file must exist and should be kept outside version control. No application authentication is provided.
 
 Re-run the same command to reuse resources recorded in the local state file. Use `--state-file PATH` for a separate deployment; changing to a different file can create additional billable resources. The script prints resource IDs as they are created. If a create request times out, the remote outcome may be unknown and an ID may not be saved; inspect the Vultr console before retrying to avoid duplicates. Resources are not automatically deleted. Existing instances must already have Ubuntu and root SSH access; when reusing one without saved state, pass `--identity-file` and `--instance-id` as well as the other existing resource IDs. A partial deployment may need manual recovery; the initial version has not been tested against a live account.
 

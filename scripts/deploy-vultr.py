@@ -1,4 +1,8 @@
 #!/usr/bin/env python3
+# /// script
+# requires-python = ">=3.11"
+# dependencies = []
+# ///
 """Provision a Vultr instance and deploy a committed MapleTrace revision over SSH."""
 import argparse
 import base64
