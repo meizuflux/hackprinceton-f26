@@ -47,6 +47,7 @@ import {
 import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
 import {
+  getFocusFitOptions,
   getNodesForSelection,
   getNodesForTab,
   type Tab,
@@ -105,27 +106,27 @@ function BoardCanvas({
   const reviewButtonRef = useRef<HTMLButtonElement>(null);
 
   const focusTarget = useCallback(
-    (targetNodeIds: Set<string> | string[]) => {
+    (
+      targetNodeIds: Set<string> | string[],
+      options?: { dockOpen?: boolean },
+    ) => {
       const ids = Array.from(targetNodeIds);
       if (ids.length === 0) return;
       const isNarrow =
         typeof window !== "undefined" &&
         window.matchMedia("(max-width: 900px)").matches;
-      const rightPad = !isNarrow && dockMode !== "closed" ? 440 : 80;
+      const isDockOpen = options?.dockOpen ?? dockMode !== "closed";
+      const fitOptions = getFocusFitOptions({
+        nodeCount: ids.length,
+        isNarrow,
+        dockOpen: isDockOpen,
+      });
 
       requestAnimationFrame(() => {
         try {
           fitView({
             nodes: ids.map((id) => ({ id })),
-            padding: {
-              top: 130,
-              bottom: 140,
-              left: 100,
-              right: rightPad,
-            },
-            duration: 700,
-            maxZoom: ids.length === 1 ? 1.25 : 1.1,
-            minZoom: 0.35,
+            ...fitOptions,
           });
         } catch {
           // Graceful fallback
@@ -140,14 +141,14 @@ function BoardCanvas({
       try {
         fitView({
           padding: {
-            top: 120,
-            bottom: 150,
-            left: 90,
-            right: 45,
+            top: "90px",
+            bottom: "100px",
+            left: "90px",
+            right: "60px",
           },
           duration: 650,
-          minZoom: 0.15,
-          maxZoom: 1.2,
+          minZoom: 0.5,
+          maxZoom: 1.1,
         });
       } catch {
         // Graceful fallback
@@ -169,7 +170,7 @@ function BoardCanvas({
 
       const targetNodes = getNodesForSelection(nextSelection, data);
       if (targetNodes.size > 0) {
-        focusTarget(targetNodes);
+        focusTarget(targetNodes, { dockOpen: true });
       }
     },
     [dockMode, returnMode, data, focusTarget],
@@ -182,7 +183,7 @@ function BoardCanvas({
       resetBoardView();
     } else if (returnMode === "analysis") {
       const targetNodes = getNodesForTab(tab, data);
-      if (targetNodes.size > 0) focusTarget(targetNodes);
+      if (targetNodes.size > 0) focusTarget(targetNodes, { dockOpen: true });
     }
     requestAnimationFrame(() => {
       if (openerRef.current?.isConnected) openerRef.current.focus();
@@ -434,7 +435,7 @@ function BoardCanvas({
                     setSelection(null);
                     setTab("gaps");
                     const targetNodes = getNodesForTab("gaps", data);
-                    focusTarget(targetNodes);
+                    focusTarget(targetNodes, { dockOpen: true });
                   }
                 }}
               >
@@ -520,11 +521,13 @@ function BoardCanvas({
                 fitView
                 fitViewOptions={{
                   padding: {
-                    top: "120px",
-                    bottom: "150px",
+                    top: "90px",
+                    bottom: "100px",
                     left: "90px",
-                    right: "45px",
+                    right: "60px",
                   },
+                  minZoom: 0.5,
+                  maxZoom: 1.1,
                 }}
                 panOnScroll
                 panOnScrollSpeed={1}
@@ -541,11 +544,13 @@ function BoardCanvas({
                   showInteractive={false}
                   fitViewOptions={{
                     padding: {
-                      top: "120px",
-                      bottom: "150px",
+                      top: "90px",
+                      bottom: "100px",
                       left: "90px",
-                      right: "45px",
+                      right: "60px",
                     },
+                    minZoom: 0.5,
+                    maxZoom: 1.1,
                   }}
                 />
                 <CanvasMinimap />
@@ -659,7 +664,7 @@ function BoardCanvas({
                       setTab(next);
                       setSelection(null);
                       const targetNodes = getNodesForTab(next, data);
-                      focusTarget(targetNodes);
+                      focusTarget(targetNodes, { dockOpen: true });
                       document.getElementById(`tab-${next}`)?.focus();
                     }
                   }}
@@ -668,7 +673,7 @@ function BoardCanvas({
                     setTab(id);
                     setSelection(null);
                     const targetNodes = getNodesForTab(id, data);
-                    focusTarget(targetNodes);
+                    focusTarget(targetNodes, { dockOpen: true });
                   }}
                 >
                   {label}
@@ -775,7 +780,8 @@ function BoardCanvas({
             onOpenSource={onOpenSource}
             onFocusOnBoard={(sel) => {
               const targetNodes = getNodesForSelection(sel, data);
-              if (targetNodes.size > 0) focusTarget(targetNodes);
+              if (targetNodes.size > 0)
+                focusTarget(targetNodes, { dockOpen: true });
             }}
             backLabel={
               returnMode === "audit"

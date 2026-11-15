@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { demoCase } from "../api/fixtures";
-import { getNodesForSelection, getNodesForTab } from "./board-focus";
+import {
+  getFocusFitOptions,
+  getFocusPadding,
+  getNodesForSelection,
+  getNodesForTab,
+} from "./board-focus";
 
 describe("board-focus helpers", () => {
   it("resolves nodes with gaps when focusing gaps tab", () => {
@@ -44,5 +49,31 @@ describe("board-focus helpers", () => {
     expect(getNodesForSelection({ kind: "edge", id: "e1" }, demoCase)).toEqual(
       new Set(["alex", "wh4"]),
     );
+  });
+
+  it("calculates string pixel padding to avoid percentage distortion in ReactFlow", () => {
+    const desktopOpen = getFocusPadding({ isNarrow: false, dockOpen: true });
+    expect(desktopOpen.right).toBe("440px");
+    expect(desktopOpen.top.endsWith("px")).toBe(true);
+    expect(desktopOpen.bottom.endsWith("px")).toBe(true);
+    expect(desktopOpen.left.endsWith("px")).toBe(true);
+
+    const desktopClosed = getFocusPadding({ isNarrow: false, dockOpen: false });
+    expect(desktopClosed.right).toBe("60px");
+
+    const mobileOpen = getFocusPadding({ isNarrow: true, dockOpen: true });
+    expect(mobileOpen.right).toBe("60px");
+  });
+
+  it("configures comfortable zoom scale limits for single vs multi-node focus", () => {
+    const single = getFocusFitOptions({ nodeCount: 1, dockOpen: true });
+    expect(single.maxZoom).toBe(1.15);
+    expect(single.minZoom).toBe(0.65);
+    expect(single.padding.right).toBe("440px");
+
+    const multi = getFocusFitOptions({ nodeCount: 4, dockOpen: true });
+    expect(multi.maxZoom).toBe(1.05);
+    expect(multi.minZoom).toBe(0.65);
+    expect(multi.padding.right).toBe("440px");
   });
 });

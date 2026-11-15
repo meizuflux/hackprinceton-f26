@@ -112,3 +112,48 @@ export function getNodesForTab(tab: Tab, data: CaseData): Set<string> {
 
   return ids;
 }
+
+type PaddingPx = `${number}px`;
+
+export interface FocusFitOptions {
+  padding: {
+    top: PaddingPx;
+    bottom: PaddingPx;
+    left: PaddingPx;
+    right: PaddingPx;
+  };
+  duration: number;
+  maxZoom: number;
+  minZoom: number;
+}
+
+/** Computes padding strings in pixels so ReactFlow (@xyflow/system) doesn't treat padding as percentage ratios. */
+export function getFocusPadding(options: {
+  isNarrow?: boolean;
+  dockOpen?: boolean;
+}): { top: PaddingPx; bottom: PaddingPx; left: PaddingPx; right: PaddingPx } {
+  const isNarrow = options.isNarrow ?? false;
+  const dockOpen = options.dockOpen ?? false;
+  const rightPad: PaddingPx = !isNarrow && dockOpen ? "440px" : "60px";
+
+  return {
+    top: "90px",
+    bottom: "100px",
+    left: "90px",
+    right: rightPad,
+  };
+}
+
+/** Returns fitView options configured for comfortable legibility (~0.95–1.15x zoom). */
+export function getFocusFitOptions(options: {
+  nodeCount: number;
+  isNarrow?: boolean;
+  dockOpen?: boolean;
+}): FocusFitOptions {
+  return {
+    padding: getFocusPadding(options),
+    duration: 650,
+    maxZoom: options.nodeCount === 1 ? 1.15 : 1.05,
+    minZoom: 0.65,
+  };
+}
