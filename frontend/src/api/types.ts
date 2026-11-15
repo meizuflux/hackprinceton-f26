@@ -122,6 +122,47 @@ export interface NormalizedEvidenceRecord {
   citations: Array<{ evidenceId: string; locator: string; sourceId?: string }>;
 }
 
+export interface Contradiction {
+  id: string;
+  title: string;
+  text: string;
+  severity: string;
+  kind: string;
+  possibleReasons: string[];
+  resolvingEvidence: string[];
+  citations: CitationId[];
+  status?: string;
+  key?: string;
+}
+
+export interface Hypothesis {
+  id: string;
+  statement: string;
+  /** e.g. best supported, plausible, weakly supported, contradicted. */
+  label: string;
+  points: number;
+  independentSupport: number;
+  supporting: Array<{ reason: string; citation: CitationId }>;
+  contradicting: Array<{ reason: string; citation: CitationId }>;
+  assumptions: string[];
+  key?: string;
+}
+
+/** Competing explanations of one key event, with the backend's verdict. */
+export interface ExplanationSet {
+  episode: string;
+  verdict: string;
+  /** False means the evidence does not separate the explanations. */
+  decided: boolean;
+  hypotheses: Hypothesis[];
+  /** Evidence that would tell the explanations apart. */
+  discriminatingEvidence: Array<{
+    artifact: string;
+    why: string;
+    params?: Record<string, string>;
+  }>;
+}
+
 export interface CaseData {
   id: string;
   title: string;
@@ -135,6 +176,8 @@ export interface CaseData {
   sources: SourceRecord[];
   audit: AuditRecord[];
   normalizedRecords?: NormalizedEvidenceRecord[];
+  contradictions?: Contradiction[];
+  explanations?: ExplanationSet[];
   /** IANA time zone the case is displayed in. Times on the wire are ISO 8601. */
   timezone?: string;
 }
