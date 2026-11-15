@@ -1172,6 +1172,9 @@ export default function App() {
                 data={caseQuery.data}
                 view={route.kind === "case" ? (route.view ?? "board") : "board"}
                 sourceId={route.kind === "case" ? route.sourceId : undefined}
+                insightsTab={
+                  route.kind === "case" ? route.insightsTab : undefined
+                }
                 navigate={navigate}
                 onFocusOnBoard={(sel) => {
                   setFocusSelection(sel);

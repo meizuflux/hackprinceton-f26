@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { casePath, parseRoute } from "./routing";
+import { casePath, insightsPath, insightsTabs, parseRoute } from "./routing";
 
 describe("application routes", () => {
   it("recognizes the welcome page and a case path", () => {
@@ -74,5 +74,32 @@ describe("application routes", () => {
     }
     expect(() => casePath("a", "chat", "source")).toThrow();
     expect(() => casePath("a", "evidence", "../source")).toThrow();
+  });
+
+  it("deep-links each insights subsection", () => {
+    for (const tab of insightsTabs) {
+      expect(insightsPath("case one", tab)).toBe(
+        `/cases/case%20one/insights/${tab}`,
+      );
+      expect(parseRoute(insightsPath("case one", tab))).toEqual({
+        kind: "case",
+        caseId: "case one",
+        view: "insights",
+        insightsTab: tab,
+      });
+      expect(parseRoute(`/cases/a/insights/${tab}/`)).toMatchObject({
+        insightsTab: tab,
+      });
+    }
+    for (const path of [
+      "/cases/a/insights/unknown",
+      "/cases/a/insights/questions/x",
+      "/cases/a/files/questions",
+    ]) {
+      expect(parseRoute(path), path).toEqual({ kind: "not-found" });
+    }
+    expect(() =>
+      insightsPath("a", "other" as (typeof insightsTabs)[number]),
+    ).toThrow();
   });
 });
