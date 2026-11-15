@@ -112,6 +112,12 @@ def test_answers_cite_sources_drop_uncited_and_replay(api, monkeypatch):
     assert {"evidence_id", "locator", "excerpt", "source_id"} <= set(c)
     assert c["source_id"] in {s["id"] for s in board["sources"]}
     assert "Inference" in msg["content"] and "left out" in msg["content"]
+    kinds = [(st["type"], st.get("tool")) for st in first["steps"]]
+    assert kinds == [("model_call", None), ("tool_call", "get_record"), ("model_call", None)]
+    tool = first["steps"][1]
+    assert tool["args"] == {"record_id": rid} and tool["resultChars"] > 0
+    assert all({"inputTokens", "outputTokens", "costUsd", "durationMs", "durationSource"} <= set(st)
+               for st in first["steps"] if st["type"] == "model_call")
 
     # replay: no key, a fresh service and an exhausted fake; the recorded answer comes back unchanged
     monkeypatch.delenv("ANTHROPIC_API_KEY")
@@ -122,12 +128,25 @@ def test_answers_cite_sources_drop_uncited_and_replay(api, monkeypatch):
     # threads live in server memory: an unknown thread starts a new one
     r = client.post(f"/cases/{case_id}/chat", json={"message": question, "thread_id": first["thread_id"]})
     assert r.status_code == 200 and r.json()["replayed"] is True and r.json()["message"] == msg
+    assert [st["type"] for st in r.json()["steps"]] == ["model_call", "tool_call", "model_call"], "replay keeps steps"
     thread = r.json()["thread_id"]
     assert thread != first["thread_id"]
     # a suggested question replays standalone even after other turns in the same thread
     r = client.post(f"/cases/{case_id}/chat", json={"message": question.upper(), "thread_id": thread})
     assert r.status_code == 200 and r.json()["thread_id"] == thread and r.json()["message"] == msg
     assert (cache_dir / f"chat-{appmod._read_json(appmod._latest_dirs(case_id)[1] / 'analysis.json')['case']['source_archive_sha256']}.jsonl").exists()
+
+
+def test_step_helpers_truncate_args_and_estimate_duration():
+    from mapletrace_reason.chat import _short_args, model_step
+    long = "x" * 300
+    assert len(_short_args({"query": long})["query"]) == 120
+    resp = AIMessage(content="", usage_metadata={"input_tokens": 1000, "output_tokens": 550, "total_tokens": 1550})
+    est = model_step(resp, 5)
+    assert est["durationSource"] == "estimated" and est["durationMs"] == 10800 and est["costUsd"] > 0
+    assert model_step(resp, 2500)["durationSource"] == "live"
+    resp.response_metadata["latency_ms"] = 1234
+    assert model_step(resp, 5) | {} == {**est, "durationMs": 1234, "durationSource": "recorded"}
 
 
 def test_uncited_answer_is_insufficient(api, monkeypatch):

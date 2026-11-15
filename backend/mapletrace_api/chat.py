@@ -165,7 +165,8 @@ class ChatService:
             t.history = (t.history + [(question, ans.content)])[-HISTORY_TURNS:]
             t.record_ids |= set(ans.record_ids)
         return {"thread_id": thread_id, "message": ans.message(), "suggested": bool(suggested),
-                "replayed": cache.misses == before, "model_calls": ans.model_calls}
+                "replayed": cache.misses == before, "model_calls": ans.model_calls,
+                "steps": ans.steps}
 
 
 # ---------------------------------------------------------------------- recording

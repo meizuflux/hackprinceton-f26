@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Literal
@@ -58,11 +59,49 @@ class Answer:
     record_ids: list[int] = field(default_factory=list)
     model_calls: int = 0
     summary: str = ""
+    steps: list[dict] = field(default_factory=list)
 
     def message(self) -> dict:
         return {"role": "assistant", "content": self.content, "evidence_status": self.evidence_status,
                 "citations": self.citations, "summary": self.summary, "observations": self.observations,
                 "inference": self.inference, "unknowns": self.unknowns}
+
+
+# Steps (backend/TRACE.md "Chat steps"). Usage comes from the response's usage_metadata; cost is an estimate from
+# list prices; duration is the measured wall time of a live call, else recorded latency_ms, else an estimate.
+PRICE_PER_MTOK = {"input": 3.0, "output": 15.0, "cache_read": 0.3, "cache_write": 3.75}
+LIVE_MIN_MS = 150  # a cached response returns far faster than any real model call
+
+
+def _short_args(args, limit: int = 120):
+    if isinstance(args, str):
+        return args if len(args) <= limit else args[:limit - 1] + "\u2026"
+    if isinstance(args, dict):
+        return {str(k): _short_args(v, limit) for k, v in list(args.items())[:8]}
+    if isinstance(args, (list, tuple)):
+        return [_short_args(v, limit) for v in list(args)[:8]]
+    return args
+
+
+def model_step(resp, elapsed_ms: float) -> dict:
+    """One model call as a step. Private equivalent of llm_cache.call_stats (same estimate rule)."""
+    u = getattr(resp, "usage_metadata", None) or {}
+    details = u.get("input_token_details") or {}
+    cache_read, cache_write = int(details.get("cache_read") or 0), int(details.get("cache_creation") or 0)
+    out_tok = int(u.get("output_tokens") or 0)
+    in_tok = int(u.get("input_tokens") or 0)
+    fresh = max(in_tok - cache_read - cache_write, 0)
+    cost = (fresh * PRICE_PER_MTOK["input"] + out_tok * PRICE_PER_MTOK["output"]
+            + cache_read * PRICE_PER_MTOK["cache_read"] + cache_write * PRICE_PER_MTOK["cache_write"]) / 1e6
+    recorded = (getattr(resp, "response_metadata", None) or {}).get("latency_ms")
+    if elapsed_ms >= LIVE_MIN_MS:
+        ms, src = elapsed_ms, "live"
+    elif isinstance(recorded, (int, float)) and recorded > 0:
+        ms, src = recorded, "recorded"
+    else:
+        ms, src = 800 + out_tok / 55 * 1000, "estimated"
+    return {"type": "model_call", "inputTokens": in_tok, "outputTokens": out_tok, "costUsd": round(cost, 6),
+            "durationMs": int(ms), "durationSource": src}
 
 
 def load_results(analysis: dict) -> Results:
@@ -162,14 +201,17 @@ class CaseChat:
             out["source_id"] = c["id"]
         return out
 
-    def tools(self, seen: set[int], calls: list[str]) -> dict:
+    def tools(self, seen: set[int], calls: list[str], steps: list[dict] | None = None) -> dict:
         case = self._load()
         R = self.R
 
         def log(name: str, args: dict, result) -> str:
             calls.append(name)
             _record_ids(result, seen)
-            return json.dumps(result, default=str)[:TOOL_OUTPUT_CHARS]
+            out = json.dumps(result, default=str)[:TOOL_OUTPUT_CHARS]
+            if steps is not None:
+                steps.append({"type": "tool_call", "tool": name, "args": _short_args(args), "resultChars": len(out)})
+            return out
 
         tools = read_tools(case, self.ctx, R, self.analysis.get("verdicts") or [], log)
 
@@ -216,7 +258,8 @@ class CaseChat:
         self._load()
         seen: set[int] = set(prior_ids or ())
         calls: list[str] = []
-        tools = self.tools(seen, calls)
+        steps: list[dict] = []
+        tools = self.tools(seen, calls, steps)
         model = chat_model.bind_tools(list(tools.values()))
         messages = [SystemMessage(SYSTEM_PROMPT.format(tz=self.tz))]
         for q, a in history[-HISTORY_TURNS:]:
@@ -224,12 +267,14 @@ class CaseChat:
         messages.append(HumanMessage(question))
         model_calls = 0
         for _ in range(MAX_STEPS):
+            t0 = time.perf_counter()
             resp = model.invoke(messages)
+            steps.append(model_step(resp, (time.perf_counter() - t0) * 1000))
             model_calls += 1
             messages.append(resp)
             tool_calls = getattr(resp, "tool_calls", None) or []
             if not tool_calls:
-                return self._from_text(_text(resp.content), seen, model_calls)
+                return self._with_steps(self._from_text(_text(resp.content), seen, model_calls), steps)
             final = None
             for tc in tool_calls:
                 fn = tools.get(tc["name"])
@@ -245,9 +290,14 @@ class CaseChat:
                         out = json.dumps({"error": f"{type(exc).__name__}: {str(exc)[:200]}"})
                 messages.append(ToolMessage(out, tool_call_id=tc["id"], name=tc["name"]))
             if final is not None:
-                return self._assemble(final, seen, model_calls)
+                return self._with_steps(self._assemble(final, seen, model_calls), steps)
         return Answer("I could not finish this answer within the step limit. Try a narrower question.", "insufficient",
-                      [], model_calls=model_calls)
+                      [], model_calls=model_calls, steps=steps)
+
+    @staticmethod
+    def _with_steps(ans: Answer, steps: list[dict]) -> Answer:
+        ans.steps = steps
+        return ans
 
     # ------------------------------------------------------------------ assembly
     def _assemble(self, args: dict, seen: set[int], model_calls: int) -> Answer:
