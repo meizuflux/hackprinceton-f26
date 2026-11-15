@@ -21,6 +21,7 @@ from urllib.parse import urlparse, urlencode
 ROOT = Path(__file__).resolve().parent.parent
 API = "https://api.vultr.com/v2"
 REMOTE = "/opt/mapletrace"
+DEFAULT_DOMAIN = "mapletrace.work"
 STATE_DIR = Path.home() / ".local" / "state" / "mapletrace-vultr"
 
 
@@ -285,16 +286,17 @@ def deploy(args):
         print(f"Created billable Vultr instance {instance_id}.", flush=True)
     state.set(instance_id=instance_id, firewall_group_id=firewall_id)
     host = wait_instance(instance_id, args.timeout)
+    domain = args.domain or state.data.get("domain") or DEFAULT_DOMAIN
+    if not valid_domain(domain):
+        raise ValueError("Invalid domain in deployment state")
+    state.set(domain=domain)
+    print(f"Public IPv4: {host}\nDNS: point the A record for {domain} to {host}.", flush=True)
     if args.instance_id:
         api("PATCH", "/instances/" + instance_id, {"firewall_group_id": firewall_id})
     volume_id, mount_id, created_volume = prepare_volume(args, instance_id, state)
     state.set(volume_id=volume_id)
     print(f"Using block storage {volume_id} for case data.", flush=True)
     bucket, backup = prepare_object_storage(args, state)
-    domain = args.domain or state.data.get("domain") or host.replace(".", "-") + ".sslip.io"
-    if not valid_domain(domain):
-        raise ValueError("Invalid domain in deployment state")
-    state.set(domain=domain)
     config = env_content(domain)
     print(f"Instance {instance_id} is active at {host}; using https://{domain}/.", flush=True)
     ssh = ssh_base(args, host)
@@ -393,7 +395,7 @@ def parser():
     storage.add_argument("--volume-size-gb", type=int, default=40, help="create a new billable block storage volume of this size")
     p.add_argument("--volume-type", choices=("high_perf", "storage_opt"), default="high_perf")
     p.add_argument("--local-data-migrated", action="store_true", help="confirm old local Docker volume was migrated or is not needed")
-    p.add_argument("--domain", help="public DNS hostname; defaults to an sslip.io name for the instance IP")
+    p.add_argument("--domain", help="public DNS hostname (default: mapletrace.work)")
     p.add_argument("--state-file", default=str(STATE_DIR / "deployment.json"), help="local file storing resource IDs for retries")
     return p
 

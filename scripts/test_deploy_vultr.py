@@ -37,7 +37,7 @@ class DeployTests(unittest.TestCase):
                 deploy.env_content('maple.example.org')
 
     def test_domain_validation(self):
-        for domain in ('example.com', '1-2-3-4.sslip.io'):
+        for domain in ('example.com', 'mapletrace.work'):
             self.assertTrue(deploy.valid_domain(domain))
         for domain in ('localhost', '127.0.0.1', 'https://example.com', '*.example.com', 'x.example.com\nmalicious'):
             self.assertFalse(deploy.valid_domain(domain))
@@ -135,12 +135,12 @@ class DeployTests(unittest.TestCase):
                 state = deploy.DeploymentState(path).data
                 self.assertEqual(state['instance_id'], 'instance-1')
                 self.assertEqual(state['volume_id'], 'volume-1')
-                self.assertEqual(state['domain'], '192-0-2-10.sslip.io')
+                self.assertEqual(state['domain'], 'mapletrace.work')
                 self.assertEqual(api.call_args.args[1], '/instances')
                 cloud_init = base64.b64decode(api.call_args.args[2]['user_data']).decode()
                 self.assertIn('PasswordAuthentication no', cloud_init)
                 self.assertIn('KbdInteractiveAuthentication no', cloud_init)
-                self.assertTrue(any('192-0-2-10.sslip.io' in str(call) for call in run.call_args_list))
+                self.assertTrue(any('mapletrace.work' in str(call) for call in run.call_args_list))
 
     def test_retry_marks_previously_created_volume_for_safe_initialization(self):
         args = deploy.parser().parse_args(['--volume-id', 'block-1'])
