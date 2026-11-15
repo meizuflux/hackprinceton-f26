@@ -1,6 +1,6 @@
 # MapleTrace frontend
 
-React + Vite evidence board for source-linked case review. The UI loads case data through a replaceable API adapter. The current adapter is a mock: it does not read ZIP contents or perform analysis.
+React + Vite evidence board for source-linked case review. The UI loads case data through an API adapter. In development it talks to the FastAPI backend in `backend/`, which ingests the ZIP and produces every case fact. A disposable mock adapter with fictional fixtures remains available; it does not read ZIP contents or perform analysis.
 
 ## Run locally
 
@@ -8,20 +8,23 @@ Requires Bun 1.4.4. Run the app from the repository root:
 
 ```sh
 make frontend-install
-make frontend-dev
+make backend-install    # once; uv creates backend/.venv (Python 3.12)
+make dev                # API on :8000 and Vite on :5173
 ```
 
-Open [localhost:5173](http://localhost:5173), choose **Open projects**, then open the fictional case or select a ZIP to preview the workspace. ZIP selection does not read the archive.
+Open [localhost:5173](http://localhost:5173). The demo buttons open the prepared Kestrel case instantly from a committed snapshot, including its cached LLM results. **New project** uploads a ZIP for real analysis; uploading `cases/kestrel/kestrel_case_upload.zip` replays the recorded LLM responses instead of calling the API. Vite proxies `/api` to the backend (`MAPLETRACE_API_URL`, default `http://127.0.0.1:8000`). Cases persist in `backend/data/`.
+
+To use the mock adapter instead, start Vite with `VITE_API_BASE_URL=mock`; see `.env.example`. Production builds use the mock unless `VITE_API_BASE_URL` is set at build time.
 
 The welcome page is at `/`, and an opened case uses `/cases/:caseId`. Browser back and forward and direct case links are supported. The production nginx configuration falls back to the app for these routes.
 
-Each case has Mind map, Raw evidence, Generalized files, Insights, and Chat sections in a collapsible left toolbar. The icon rail expands to show labels and project actions; Escape collapses it while focused inside the toolbar. The latter four sections use `/evidence`, `/files`, `/insights`, and `/chat` under the case URL. Source links from the map and insights open `/evidence/:sourceId`; switching sections and expanding the toolbar preserve the map viewport and review context. Raw evidence currently shows fictional excerpts, with original files explicitly unavailable. Generalized files means normalized ingestion records; this view stays empty until authoritative backend records are supplied.
+Each case has Mind map, Raw evidence, Generalized files, Insights, and Chat sections in a collapsible left toolbar. The icon rail expands to show labels and project actions; Escape collapses it while focused inside the toolbar. The latter four sections use `/evidence`, `/files`, `/insights`, and `/chat` under the case URL. Source links from the map and insights open `/evidence/:sourceId`; switching sections and expanding the toolbar preserve the map viewport and review context. Raw evidence lists cited source records with their excerpts and links to download the read-only original file. Generalized files means normalized ingestion records, paged from the backend and filterable by evidence file. With the mock adapter, excerpts are fictional, originals are unavailable and no normalized records exist.
 
 Without Make, run `bun install --frozen-lockfile` and `bun run --bun dev` from `frontend/`.
 
 ## Run with Docker
 
-Requires Docker with Compose and a running Docker daemon. Stop any local Vite server using port 5173 first. From the repository root, build and start the production demo container:
+Requires Docker with Compose and a running Docker daemon. The container serves the production build, which uses the mock adapter; the backend is not containerised. Stop any local Vite server using port 5173 first. From the repository root, build and start the production demo container:
 
 ```sh
 docker compose up --build -d
@@ -48,10 +51,11 @@ make frontend-format     # Format source files
 
 ## Backend integration
 
-- `src/api/types.ts`: shared API contracts.
-- `src/api/client.ts`: API adapter (`createUpload`, `getStatus`, `getCase`).
-- `src/api/fixtures.ts`: example case data for the frontend workspace.
-- `src/api/files.ts`: source index and normalized record presentation contract; never derives normalized facts from fixtures. Supply optional `CaseData.normalizedRecords` through the future ingestion adapter. Each record needs an evidence ID and original locator; optional `sourceId` links only to an existing `CaseData.sources` entry. Records without citations are withheld from the viewer.
-- `src/api/chat.ts`: optional chat adapter; [CHAT.md](CHAT.md) documents the Deep Agents backend handoff. This pass implements the chat UI and HTTP contract, without a backend or model calls.
+- `src/api/types.ts`: presentation contract. The backend is authoritative; when they disagree, change these types. See `backend/README.md` for the API.
+- `src/api/http.ts`: live adapter for `backend/mapletrace_api` (upload, status, cases, files, records, audit chain, original file URLs). Backend errors arrive as `{"error": {"code", "message"}}` and surface as `ApiError`.
+- `src/api/client.ts`: selects the live or mock adapter from `VITE_API_BASE_URL`, and holds the mock.
+- `src/api/fixtures.ts`: disposable fictional case for the mock adapter only.
+- `src/api/files.ts`: source index built from citations already in `CaseData`.
+- `src/api/chat.ts`: optional chat adapter; [CHAT.md](CHAT.md) documents the handoff. The backend has no chat endpoint yet, so chat shows its unavailable state.
 
-The UI polls job status through TanStack Query. Connect the adapter to the Python backend as its endpoints become available. Citations use source IDs; original paths, excerpts, timestamps, and placeholder hashes live in source records.
+The UI polls job status through TanStack Query. Citations use source IDs (`EV-071:seq=40162`); original paths, excerpts, timestamps and file SHA-256 hashes live in source records. [INTEGRATION.md](INTEGRATION.md) records what the integration covers and what remains.

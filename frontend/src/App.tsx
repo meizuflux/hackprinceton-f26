@@ -32,19 +32,27 @@ import {
   Upload,
   X,
 } from "lucide-react";
-import { api } from "./api/client";
+import { api, isMock } from "./api/client";
+import { isApiError } from "./api/http";
 import type { CaseData } from "./api/types";
 import { CanvasMinimap } from "./components/CanvasMinimap";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
   arrangePins,
+  layoutCaseGraph,
   getPinDimensions,
   settlePinMoves,
   threadHandles,
 } from "./components/board-layout";
 import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
+import {
+  formatCaseTime,
+  insightKind,
+  insightStrength,
+  scoreLabel,
+} from "./components/presentation";
 import {
   getFocusFitOptions,
   getNodesForSelection,
@@ -82,6 +90,11 @@ function BoardCanvas({
   const [dockMode, setDockMode] = useState<
     "closed" | "analysis" | "inspector" | "audit"
   >("closed");
+  const auditChain = useQuery({
+    queryKey: ["audit-chain", data.id],
+    queryFn: () => api.getAuditChain(data.id),
+    enabled: !isMock && dockMode === "audit",
+  });
   const [returnMode, setReturnMode] = useState<"closed" | "analysis" | "audit">(
     "analysis",
   );
@@ -197,20 +210,29 @@ function BoardCanvas({
       onClearFocusSelection?.();
     }
   }, [focusSelection, active, inspect, onClearFocusSelection]);
+  // Fixture positions are hand-placed; backend positions are column placeholders.
+  const layout = useMemo(
+    () => (isMock ? undefined : layoutCaseGraph(data.nodes, data.edges)),
+    [data],
+  );
   const initialNodes: Node<PinData>[] = useMemo(
     () =>
       arrangePins(
         data.nodes.map((n) => {
           const dim = getPinDimensions(n);
+          const laidOut = layout?.get(n.id);
           return {
             id: n.id,
             type: "evidence",
             ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
-            position: { x: 100 + n.position.x, y: n.position.y * 1.2 },
+            position: laidOut
+              ? { x: 100 + laidOut.x, y: laidOut.y }
+              : { x: 100 + n.position.x, y: n.position.y * 1.2 },
             width: dim.width,
             height: dim.height,
             data: {
               ...n,
+              timeZone: data.timezone,
               width: dim.width,
               height: dim.height,
               onInspect: () => inspect("node", n.id),
@@ -221,7 +243,7 @@ function BoardCanvas({
           };
         }),
       ),
-    [data, inspect],
+    [data, inspect, layout],
   );
   const initialEdges: Edge<ThreadData>[] = useMemo(
     () =>
@@ -230,7 +252,7 @@ function BoardCanvas({
         source: e.source,
         target: e.target,
         data: {
-          kind: relationshipKind(e.type),
+          kind: relationshipKind(e.type, e.certainty),
           label: e.label,
           directed: e.directed === true,
           onInspect: () => inspect("edge", e.id),
@@ -251,7 +273,9 @@ function BoardCanvas({
           strokeWidth: 3,
           strokeLinecap: "round",
           strokeDasharray:
-            relationshipKind(e.type) === "observed" ? undefined : "8 7",
+            relationshipKind(e.type, e.certainty) === "observed"
+              ? undefined
+              : "8 7",
         },
       })),
     [data],
@@ -484,9 +508,10 @@ function BoardCanvas({
                   .map((e) => (
                     <button key={e.id} onClick={() => inspect("edge", e.id)}>
                       <span className="list-record-type">
-                        {relationshipKind(e.type) === "observed"
+                        {relationshipKind(e.type, e.certainty) === "observed"
                           ? "Observed"
-                          : relationshipKind(e.type) === "inference"
+                          : relationshipKind(e.type, e.certainty) ===
+                              "inference"
                             ? "Inference"
                             : "Claim"}
                       </span>
@@ -696,7 +721,9 @@ function BoardCanvas({
               <div className="panel-section-label">
                 <span>
                   {tab === "gaps"
-                    ? "Priority order · illustrative scores"
+                    ? isMock
+                      ? "Priority order · illustrative scores"
+                      : "Priority order · computed rank scores"
                     : tab === "insights"
                       ? "Inferences · require verification"
                       : "Suggested evidence to request"}
@@ -713,7 +740,7 @@ function BoardCanvas({
                     <div className="card-topline">
                       <span className="card-index">0{i + 1}</span>
                       <span className="priority-badge">
-                        <span>Illustrative</span> {Math.round(g.score * 100)}
+                        {scoreLabel(g.score, "rank")}
                       </span>
                     </div>
                     <h3>{g.title}</h3>
@@ -737,8 +764,8 @@ function BoardCanvas({
                     onClick={() => inspect("insight", g.id)}
                   >
                     <div className="insight-label">
-                      <Lightbulb size={13} /> Inference · illustrative{" "}
-                      {Math.round(g.score * 100)}%
+                      <Lightbulb size={13} /> {insightKind(g)} ·{" "}
+                      {insightStrength(g)}
                     </div>
                     <h3>{g.title}</h3>
                     <p>{g.text}</p>
@@ -802,11 +829,42 @@ function BoardCanvas({
             }
           />
           <section className="audit-panel" hidden={dockMode !== "audit"}>
+            {auditChain.data && (
+              <div
+                className={`audit-chain ${auditChain.data.verified ? "verified" : "failed"}`}
+                role="status"
+              >
+                <strong>
+                  {auditChain.data.verified
+                    ? "Audit chain verified"
+                    : "Audit chain verification failed"}
+                </strong>
+                <span>
+                  {auditChain.data.entries.length} hash-chained entries from
+                  ingestion and analysis · head{" "}
+                  <code>{auditChain.data.head.slice(0, 16)}…</code>
+                </span>
+                <ul>
+                  {auditChain.data.checks.map((check) => (
+                    <li key={check.message} className={check.ok ? "" : "bad"}>
+                      {check.ok ? "✓" : "✗"} {check.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {auditChain.isError && (
+              <p className="error-message" role="alert">
+                Could not verify the audit chain: {auditChain.error.message}
+              </p>
+            )}
             <div className="audit-steps">
               {data.audit.map((a) => (
                 <div className="audit-step" key={a.id}>
                   <Check size={13} />
-                  <time>{a.time}</time>
+                  <time dateTime={a.time}>
+                    {formatCaseTime(a.time, data.timezone)}
+                  </time>
                   <h3>{a.title}</h3>
                   <p>{a.description}</p>
                   {a.citations.map((id) => (
@@ -860,24 +918,53 @@ export default function App() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [uploadedCaseId, setUploadedCaseId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
-  const caseQueryKey = ["case"] as const;
+  const routeCaseId = route.kind === "case" ? route.caseId : undefined;
   const caseQuery = useQuery({
-    queryKey: caseQueryKey,
-    queryFn: () => api.getCase(),
+    queryKey: ["case", routeCaseId ?? "latest"],
+    queryFn: () => api.getCase(routeCaseId),
     enabled:
       route.kind === "case" ||
       route.kind === "projects" ||
       route.kind === "new-project",
+    retry: (count, error) =>
+      count < 2 && (!isApiError(error) || error.status >= 500),
+  });
+  const casesQuery = useQuery({
+    queryKey: ["cases"],
+    queryFn: () => api.listCases(),
+    enabled: api.mode === "live" && route.kind !== "welcome",
   });
   const statusQuery = useQuery({
     queryKey: ["upload", jobId],
     queryFn: () => api.getStatus(jobId!),
     enabled: !!jobId,
-    refetchInterval: (q) => (q.state.data?.status === "ready" ? false : 650),
+    refetchInterval: (q) =>
+      q.state.data?.status === "ready" || q.state.data?.status === "failed"
+        ? false
+        : 650,
   });
   const ready = statusQuery.data?.status === "ready";
+  const uploadFailed =
+    statusQuery.isError || statusQuery.data?.status === "failed";
+  const caseNotFound =
+    route.kind === "case" &&
+    ((caseQuery.data !== undefined && caseQuery.data.id !== route.caseId) ||
+      isApiError(caseQuery.error, "case_not_found") ||
+      isApiError(caseQuery.error, "bad_case_id"));
+  const listedProjects = useMemo(() => {
+    const listed = (casesQuery.data ?? [])
+      .filter((entry) => entry.ready)
+      .map((entry) => ({ caseId: entry.caseId, name: entry.title }));
+    return [
+      ...projects,
+      ...listed.filter(
+        (entry) => !projects.some((project) => project.caseId === entry.caseId),
+      ),
+    ];
+  }, [projects, casesQuery.data]);
   const uploadGuard = useRef({
     openingCase: false,
     uploading: false,
@@ -889,7 +976,7 @@ export default function App() {
     openingCase,
     uploading,
     ready,
-    failed: statusQuery.isError,
+    failed: uploadFailed,
   };
   useEffect(() => {
     if (route.kind !== "case" || caseQuery.data?.id !== route.caseId) return;
@@ -951,8 +1038,9 @@ export default function App() {
     setError("");
     setUploading(true);
     try {
-      const result = await api.createUpload(file);
+      const result = await api.createUpload(file, { caseName: projectName });
       setJobId(result.jobId);
+      setUploadedCaseId(result.caseId ?? null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Upload failed. Try again.");
       setUploading(false);
@@ -962,19 +1050,24 @@ export default function App() {
     if (uploadOpen) navigate("/projects", { replace: true });
     setProjectName("");
     setJobId(null);
+    setUploadedCaseId(null);
     setUploading(false);
     setFile(null);
     setError("");
   }
   closeUploadRef.current = closeUpload;
-  async function openCase() {
+  /** Opens a case by ID, or the demo case when no ID is given. */
+  async function openCase(requestedId?: string) {
     setError("");
     setOpeningCase(true);
     try {
+      const caseId = requestedId ?? (await api.openDemo());
       const data = await queryClient.fetchQuery({
-        queryKey: caseQueryKey,
-        queryFn: () => api.getCase(),
+        queryKey: ["case", caseId],
+        queryFn: () => api.getCase(caseId),
       });
+      queryClient.setQueryData(["case", data.id], data);
+      void queryClient.invalidateQueries({ queryKey: ["cases"] });
       setProjects((current) => [
         { caseId: data.id, name: projectName.trim() || data.title },
         ...current.filter((p) => p.caseId !== data.id),
@@ -984,7 +1077,11 @@ export default function App() {
         navigate(casePath(data.id));
     } catch (e) {
       setError(
-        e instanceof Error ? e.message : "Could not open the case. Try again.",
+        isApiError(e, "no_demo_snapshot")
+          ? "The demo case has not been prepared on this server. Upload a ZIP instead."
+          : e instanceof Error
+            ? e.message
+            : "Could not open the case. Try again.",
       );
     } finally {
       setOpeningCase(false);
@@ -1006,7 +1103,8 @@ export default function App() {
       {projectRoute ? (
         <ProjectManager
           data={caseQuery.data}
-          projects={projects}
+          projects={listedProjects}
+          persistent={api.mode === "live"}
           navigate={navigate}
           onDemo={() => void openCase()}
           opening={openingCase}
@@ -1014,12 +1112,10 @@ export default function App() {
         />
       ) : (
         <div className="app-shell">
-          {(route.kind !== "case" ||
-            !caseQuery.data ||
-            caseQuery.data.id !== route.caseId) && (
+          {(route.kind !== "case" || !caseQuery.data || caseNotFound) && (
             <WorkspaceNavigation
               navigate={navigate}
-              projects={projects}
+              projects={listedProjects}
               activeCaseId={route.kind === "case" ? route.caseId : undefined}
             />
           )}
@@ -1034,9 +1130,7 @@ export default function App() {
                   Go home
                 </button>
               </div>
-            ) : route.kind === "case" &&
-              caseQuery.data &&
-              caseQuery.data.id !== route.caseId ? (
+            ) : caseNotFound ? (
               <div className="center-state">
                 <h2>Case not found</h2>
                 <button
@@ -1051,9 +1145,20 @@ export default function App() {
                 <LoaderCircle className="spin" />
                 <h2>Opening evidence workspace…</h2>
               </div>
+            ) : isApiError(caseQuery.error, "not_ready") ? (
+              <div className="center-state">
+                <h2>This case is still being analysed</h2>
+                <button
+                  className="button button-primary"
+                  onClick={() => caseQuery.refetch()}
+                >
+                  Check again
+                </button>
+              </div>
             ) : caseQuery.isError ? (
               <div className="center-state">
                 <h2>Couldn’t load the case</h2>
+                <p>{caseQuery.error.message}</p>
                 <button
                   className="button button-primary"
                   onClick={() => caseQuery.refetch()}
@@ -1106,7 +1211,7 @@ export default function App() {
             if (
               e.target === e.currentTarget &&
               !openingCase &&
-              (!uploading || ready || statusQuery.isError)
+              (!uploading || ready || uploadFailed)
             )
               closeUpload();
           }}
@@ -1120,9 +1225,7 @@ export default function App() {
           >
             <button
               className="icon-button modal-close"
-              disabled={
-                openingCase || (uploading && !ready && !statusQuery.isError)
-              }
+              disabled={openingCase || (uploading && !ready && !uploadFailed)}
               onClick={closeUpload}
               aria-label="Close upload"
             >
@@ -1161,7 +1264,11 @@ export default function App() {
             >
               <FileArchive size={30} />
               <strong>
-                {file ? file.name : "Choose a ZIP to preview the workspace"}
+                {file
+                  ? file.name
+                  : api.mode === "live"
+                    ? "Choose a ZIP of case evidence"
+                    : "Choose a ZIP to preview the workspace"}
               </strong>
               <span>
                 {file
@@ -1198,8 +1305,10 @@ export default function App() {
                   <span>
                     {statusQuery.isError
                       ? "Processing interrupted"
-                      : (statusQuery.data?.message ??
-                        "Preparing workspace preview…")}
+                      : statusQuery.data?.status === "failed"
+                        ? "Analysis failed"
+                        : (statusQuery.data?.message ??
+                          "Preparing workspace preview…")}
                   </span>
                   <span>{statusQuery.data?.progress ?? 0}%</span>
                 </div>
@@ -1209,12 +1318,25 @@ export default function App() {
                     Retry status
                   </button>
                 )}
+                {statusQuery.data?.status === "failed" && (
+                  <p className="error-message" role="alert">
+                    {statusQuery.data.message ||
+                      "The case service could not process this archive."}
+                  </p>
+                )}
               </div>
             )}
             <button
               className="button button-primary full-width"
               disabled={!file || (uploading && !ready) || openingCase}
-              onClick={ready ? () => void openCase() : upload}
+              onClick={
+                ready
+                  ? () =>
+                      void openCase(
+                        statusQuery.data?.caseId ?? uploadedCaseId ?? undefined,
+                      )
+                  : upload
+              }
             >
               {openingCase ? (
                 <>
@@ -1230,16 +1352,28 @@ export default function App() {
                   <LoaderCircle size={16} className="spin" /> Preparing
                   workspace
                 </>
+              ) : api.mode === "live" ? (
+                <>
+                  Upload and analyse <ArrowRight size={16} />
+                </>
               ) : (
                 <>
                   Preview workspace <ArrowRight size={16} />
                 </>
               )}
             </button>
-            <p className="upload-disclosure">
-              Prototype: ZIP contents are not read or uploaded. This preview
-              uses fictional case data and simulated progress.
-            </p>
+            {api.mode === "live" ? (
+              <p className="upload-disclosure">
+                The ZIP is uploaded to the case service, which hashes every file
+                and keeps read-only copies. Evidence is never modified. Limit
+                100 MB.
+              </p>
+            ) : (
+              <p className="upload-disclosure">
+                Prototype: ZIP contents are not read or uploaded. This preview
+                uses fictional case data and simulated progress.
+              </p>
+            )}
           </section>
         </div>
       )}

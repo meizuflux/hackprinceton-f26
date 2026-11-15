@@ -187,7 +187,7 @@ On Kestrel (about 4 seconds, no LLM), the analysis finds:
 ## LLM layer (`--llm`)
 
 Set `ANTHROPIC_API_KEY` in your environment; never commit it. With `--llm`:
-- **Claim extraction:** `claude-opus-5-5` extracts claims from each statement and interview using structured output (`method="json_schema"`, since Opus 5.5 rejects forced tool use). Every claim must cite a sentence ID from that document; invented IDs are discarded.
+- **Claim extraction:** `claude-sonnet-5-5` (set `MAPLETRACE_LLM_MODEL` or `--model` to change) extracts claims from each statement and interview using structured output (`method="json_schema"`, since Sonnet 5.5 rejects forced tool use). Every claim must cite a sentence ID from that document; invented IDs are discarded.
 - **Investigator:** a deepagents agent (`deepagents` 0.7.x) gets read-only tools (`list_explanations`, `list_open_questions`, `list_ml_signals`, `search_records`, `get_record`) and two guarded writers:
   - `record_insight` rejects insights without valid record IDs, and downgrades "high" to "medium" with fewer than three independent sources.
   - `answer_question` can mark a gap partially resolved, never resolved.
@@ -195,6 +195,18 @@ Set `ANTHROPIC_API_KEY` in your environment; never commit it. With `--llm`:
 - **Audit:** every model call and tool call is written to the audit log.
 - **Sandboxing:** the agent runs in deepagents' in-memory sandbox, with no file system or shell access.
 - **Labelling:** agent output is marked `generated_by: agent:<model>` and `inferred`.
+
+### Cached LLM results
+
+One deep analysis of Kestrel costs about $1.30 with `claude-sonnet-5-5`; replays are free. See [LLM_COSTS.md](LLM_COSTS.md) for the breakdown.
+
+Model calls cost money, so responses are recorded per uploaded archive in `backend/llm_cache/<archive sha256>.jsonl`, keyed by a hash of each request. These files are committed.
+- **Replay:** an upload whose archive matches a cache file replays it automatically, even without the `llm` flag. It needs no API key and never calls the API: a miss raises before any request is sent, the failed call is logged, and the deterministic analysis continues.
+- **Record:** `--llm` (CLI) or `llm=true` (upload) reuses cached responses and records the ones it lacks. Those calls are billed.
+- **CLI:** `--llm-cache record|replay|off` (default `record`).
+- **Demo snapshot:** `backend/demo/kestrel.tar.gz` holds the finished Kestrel case, including the replayed LLM results. `POST /demo` installs it once as case `kestrel-demo`, which is instant and makes no model calls. The snapshot omits the uploaded ZIP; `POST /demo` restores it from `cases/kestrel/` after checking its hash.
+- **Rebuilding:** `make backend-llm-record` makes one billed run that records responses for the Kestrel ZIP. `make backend-demo-snapshot` rebuilds the snapshot by replaying the cache, and refuses if any response is missing. Both go through the same code path as `POST /upload`, so their requests match later uploads of the same archive.
+- **When to re-record:** changing prompts, tools, model settings or anything in the analysis that the model sees changes the request hashes, so record again and rebuild the snapshot.
 
 ## API (`mapletrace_api`)
 
@@ -211,14 +223,22 @@ uvicorn mapletrace_api.app:app --port 8000      # CORS allows http://localhost:5
 | GET | `/cases/{caseId}/{section}` | `graph`, `gaps`, `insights`, `suggestions`, `contradictions`, `explanations`, `timeline`, `audit`, `changes`, `sources`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `signals` |
 | GET | `/cases/{caseId}/source?id=EV-071:seq=40162` | One cited record in full (source inspector) |
 | GET | `/cases/{caseId}/evidence/{evidenceId}` | The original evidence file (read-only copy) |
+| GET | `/cases/{caseId}/files` | Evidence inventory from the latest ingestion: `[{evidenceId, fileId, path, filename, sha256, bytes, format, sniffedFormat, evidenceType, parseStatus, recordCount, manifestMatch (bool or null when the manifest lists no hash), origin, title}]` |
+| GET | `/cases/{caseId}/records?evidenceId=&limit=&offset=` | Normalized ingestion records, read-only: `{total, limit, offset, items: [{id, recordType, fields, citations: [{evidenceId, locator, sourceId?}]}]}`. `fields` holds flat scalars (`ts_utc`, `ts_start_utc`/`ts_end_utc`, `ts_raw`, `ts_precision`, `ts_flags`, `actor`, `target`, `lat`, `lon`, `content`, `reliability`, `duplicate_of`, then scalar attributes; protected attributes are never returned). `sourceId` is present only when the record is cited on the board. `limit` 1–500 (default 100) |
+| GET | `/cases/{caseId}/audit-chain` | `{verified, head, checks: [{source, ok, message}], entries: [{seq, time, stage, action, fileId, detail, hash, prevHash, source: ingest \| analysis}]}`. `verified` re-runs `mapletrace_ingest verify` (database hash, chain, evidence hashes), checks the analysis chain continues from the ingestion head, and checks the board/analysis outputs against their logged hashes |
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
+| POST | `/demo` | Install the committed Kestrel snapshot once and return `{caseId}` (`404 no_demo_snapshot` if it is missing) |
 | GET / POST | `/cases/{caseId}/overrides` | Read or record investigator corrections (`dismiss`, `confirm`, `set_status`, `set_label`, `note`, `reject_link`) |
 
 Errors are always `{"error": {"code", "message"}}`. Case data lives under `$MAPLETRACE_DATA` (default `backend/data/cases/<caseId>/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
 
 ### Board fields beyond the current `CaseData` type
 - **`nodes[].certainty` / `edges[].certainty`** (`observed` | `inferred`), plus `edges[].basis`.
-- **`gaps[]`:** `gapType`, `status`, `direction`, `missing`, `answer`, `previousStatus`, `key`.
+- **`nodes[].citations`** are never empty: entity and place nodes cite the records behind their threads (or, failing that, records that name them), up to 12.
+- **`edges[].directed`:** `true` for person → statement "stated", statement → event "conflicts with", event → place "occurred at" and person → event "recorded at"; `false` for communication, co-location and identity. `source` → `target` follows the direction.
+- **`gaps[].nodeIds`:** board nodes the gap concerns (its affected hypotheses, findings, contradictions and missing periods resolved to episode, person, statement and record nodes, plus event/statement nodes citing the gap's records). **`nodes[].gapId`** is the highest-scoring gap that concerns the node.
+- **`timezone`:** the case's IANA time zone (`case_info.assumed_timezone`), or `UTC`.
+- **`gaps[]`:** `gapType`, `status`, `direction`, `missing`, `whyItMatters`, `answer`, `previousStatus`, `key`.
 - **`insights[]`:** `certainty`, `confidence`, `observations[]` (each cited), `inference`, `unknowns`, `counterevidence`, `assumptions`, `limitations`, and `explanations` for verdict insights.
 - **`suggestions[]`:** `gapIds`, `artifact`, `score`.
 - **Top-level:** `contradictions`, `explanations`, `timeline`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `changes`, `overrides`, `signals` (ML leads: `type`, `method`, `score`, `certainty`, `citations`).

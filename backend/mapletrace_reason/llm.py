@@ -6,7 +6,8 @@
    records extra insights. It may only record an insight whose citations resolve to real records, and it
    checks support with a verifier subagent first. Its output is labelled as agent-generated and inferred.
 
-Every call is written to the audit log (model, input and output hashes). Needs ANTHROPIC_API_KEY.
+Every call is written to the audit log (model, input and output hashes). Responses are recorded in, or replayed
+from, a per-archive cache (`llm_cache.py`); replaying needs no API key and never calls the API.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ import os
 import re
 import threading
 from datetime import datetime
+from pathlib import Path
 from typing import Literal, Optional
 
 from pydantic import BaseModel, Field
@@ -25,6 +27,8 @@ from .analytics import Context, case_tz
 from .claims import _match_person, _night_window
 from .model import Item, stable_key
 from .store import iso, parse_ts
+
+DEFAULT_MODEL = "claude-sonnet-5-5"
 
 INVESTIGATOR_PROMPT = """You are an evidence analyst helping an investigator review a case. You work only from the
 tools provided; never invent facts, names, times or records.
@@ -75,7 +79,13 @@ class LLMRun:
         self.answers = 0
         self._chat = cfg.get("chat_model")          # tests can inject a fake model
         self._verifier_chat = cfg.get("verifier_chat_model")
-        if self._chat is None and not os.environ.get("ANTHROPIC_API_KEY"):
+        self.cache = None
+        mode = cfg.get("cache_mode", "record")
+        if mode in ("record", "replay"):
+            from .llm_cache import CACHE_DIR, ReplayCache, cache_path
+            archive = case.info.get("source_archive_sha256", "unknown")
+            self.cache = ReplayCache(cache_path(archive, Path(cfg.get("cache_dir") or CACHE_DIR)), mode)
+        if self._chat is None and mode != "replay" and not os.environ.get("ANTHROPIC_API_KEY"):
             raise RuntimeError("LLM mode needs the ANTHROPIC_API_KEY environment variable (or run without --llm)")
 
     def chat(self, verifier: bool = False):
@@ -84,9 +94,11 @@ class LLMRun:
         if not verifier and self._chat is not None:
             return self._chat
         from langchain_anthropic import ChatAnthropic
-        model = self.cfg.get("verifier_model" if verifier else "model", "claude-opus-5-5")
+        model = self.cfg.get("verifier_model" if verifier else "model", DEFAULT_MODEL)
+        # Replay needs no key: the cache answers every request, and a miss raises before anything is sent.
+        key = {} if os.environ.get("ANTHROPIC_API_KEY") else {"api_key": "replay-only"}
         m = ChatAnthropic(model=model, max_tokens=16000, reasoning_effort="medium" if verifier else "high", max_retries=3,
-                          timeout=600)
+                          timeout=600, cache=self.cache, **key)
         if verifier:
             self._verifier_chat = m
         else:
@@ -289,7 +301,8 @@ class LLMRun:
         agent = create_deep_agent(model=self.chat(), tools=list(t.values()),
                                   system_prompt=INVESTIGATOR_PROMPT.format(max_insights=max_insights),
                                   subagents=[verifier], name="mapletrace-investigator")
-        task = (f"Case: {case.info.get('case_name')}. Time zone {tz}. Start with list_explanations and list_open_questions; "
+        # The case name is left out: it comes from the upload form, and the prompt must match recorded responses.
+        task = (f"Time zone {tz}. Start with list_explanations and list_open_questions; "
                 "list_ml_signals has clustering and classification leads you can check against the records.")
         try:
             agent.invoke({"messages": [{"role": "user", "content": task}]},
@@ -311,4 +324,5 @@ class LLMRun:
         return {"enabled": True, "model": self.cfg.get("model"), "verifier_model": self.cfg.get("verifier_model"),
                 "llm_calls": sum(1 for c in self.calls if c.get("stage") != "tool"),
                 "tool_calls": sum(1 for c in self.calls if c.get("stage") == "tool"),
-                "claims_added": self.claims_added, "insights_added": self.insights_added, "answers": self.answers}
+                "claims_added": self.claims_added, "insights_added": self.insights_added, "answers": self.answers,
+                "cache": self.cache.stats() if self.cache else None}

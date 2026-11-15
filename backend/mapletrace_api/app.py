@@ -11,7 +11,11 @@ Run:  uvicorn mapletrace_api.app:app --reload --port 8000      (from backend/)
                                          timeline | audit | changes | sources | signals
     GET  /cases/{caseId}/source?id=...   one cited record in full (source inspector)
     GET  /cases/{caseId}/evidence/{evidenceId}   original evidence file (read-only copy)
+    GET  /cases/{caseId}/files           evidence inventory from the latest ingestion (hash, format, parse status, ...)
+    GET  /cases/{caseId}/records?evidenceId=&limit=&offset=   normalized ingestion records, read-only, with citations
+    GET  /cases/{caseId}/audit-chain     ingestion + analysis audit entries with hashes, re-verified
     POST /cases/{caseId}/evidence        add a ZIP of new evidence -> new version, compared with the previous one
+    POST /demo                           install the committed Kestrel demo snapshot (instant, no model calls) -> {caseId}
     GET  /cases/{caseId}/overrides       investigator corrections
     POST /cases/{caseId}/overrides       record a correction -> re-analysis job
 
@@ -24,6 +28,10 @@ import hashlib
 import json
 import os
 import re
+import shutil
+import sqlite3
+import tarfile
+import tempfile
 import threading
 import traceback
 import uuid
@@ -37,15 +45,24 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
+from mapletrace_ingest.verify import verify_run
+from mapletrace_ingest.db import GENESIS_HASH, verify_audit_chain
 from mapletrace_ingest.pipeline import ingest_zip
 from mapletrace_reason import history
+from mapletrace_reason.llm_cache import cache_path
 from mapletrace_reason.pipeline import analyze
+from mapletrace_reason.store import PROTECTED_KEYS, citation_id, unique_labels
 
 DATA = Path(os.environ.get("MAPLETRACE_DATA", Path(__file__).resolve().parents[1] / "data"))
 MAX_UPLOAD = int(os.environ.get("MAPLETRACE_MAX_UPLOAD_MB", "100")) * 1024 * 1024
 SECTIONS = {"graph", "gaps", "insights", "suggestions", "contradictions", "explanations", "timeline", "audit", "changes",
             "sources", "nodes", "edges", "uncertainTimes", "missingPeriods", "sourceGroups", "signals"}
 _lock = threading.Lock()
+LLM_MODEL = os.environ.get("MAPLETRACE_LLM_MODEL", "claude-sonnet-5-5")
+REPO = Path(__file__).resolve().parents[2]
+DEMO_SNAPSHOT = Path(__file__).resolve().parents[1] / "demo" / "kestrel.tar.gz"
+DEMO_ARCHIVE = REPO / "cases" / "kestrel" / "kestrel_case_upload.zip"
+DEMO_CASE_ID = "kestrel-demo"
 
 app = FastAPI(title="Mapletrace API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_methods=["*"], allow_headers=["*"],
@@ -145,6 +162,20 @@ def _combined_zip(case_dir: Path, meta: dict, version: int) -> Path:
     return out
 
 
+def _llm_config(meta: dict) -> Optional[dict]:
+    """LLM settings for a case. An upload whose archive has recorded responses (`backend/llm_cache/`) replays them for
+    free, without calling the API; an explicit LLM request records responses it does not have yet (billed)."""
+    sha = meta["uploads"][0]["sha256"] if len(meta.get("uploads", [])) == 1 else None
+    cached = bool(sha) and cache_path(sha).exists()
+    if meta.get("llm"):
+        mode = "record"
+    elif cached:
+        mode = "replay"
+    else:
+        return None
+    return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": mode}
+
+
 def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str], reingest: bool = True) -> None:
     case_dir = _cases() / case_id
     meta = _read_json(case_dir / "case.json")
@@ -155,7 +186,7 @@ def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str
             src = _combined_zip(case_dir, meta, version)
             ingest_zip(src, ingest_dir, timezone=meta.get("timezone") or "UTC", case_name=meta.get("title"), overwrite=True)
         _job(job_id, status="processing", progress=40, stage="analysis", message="Analysing evidence")
-        llm = {"model": "claude-opus-5-5", "verifier_model": "claude-sonnet-5-5"} if meta.get("llm") else None
+        llm = _llm_config(meta)
 
         def progress(stage, pct):
             _job(job_id, status="processing", progress=40 + int(pct * 0.58), stage=stage, message=stage.replace("_", " "))
@@ -184,6 +215,33 @@ def _board(case_id: str) -> dict:
     return board
 
 
+def _latest_dirs(case_id: str) -> tuple[Path, Path]:
+    """(ingest run dir, analysis dir) of the latest finished version."""
+    case_dir = _case_dir(case_id)
+    meta = _read_json(case_dir / "case.json")
+    if meta.get("latest") is None:
+        raise ApiError(409, "not_ready", "the case has no finished analysis yet")
+    v = meta["versions"][meta["latest"]]
+    return case_dir / v["ingest_dir"], case_dir / v["analysis_dir"]
+
+
+def _ro(db: Path) -> sqlite3.Connection:
+    """Read-only connection: the API never writes to case.db or analysis.db."""
+    if not db.exists():
+        raise ApiError(404, "db_not_found", f"{db.name} is missing for this case")
+    con = sqlite3.connect(f"file:{db.as_posix()}?mode=ro", uri=True)
+    con.row_factory = sqlite3.Row
+    return con
+
+
+def _evidence_id(row) -> str:
+    return row["external_id"] or f"FILE-{row['file_id']}"
+
+
+def _scalar(v) -> bool:
+    return v is None or isinstance(v, (str, int, float, bool))
+
+
 # --------------------------------------------------------------------------- routes
 @app.get("/health")
 def health():
@@ -206,7 +264,11 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
     case_id = (re.sub(r"[^a-z0-9]+", "-", (case_name or Path(file.filename or "case").stem).lower()).strip("-")[:40] or "case")
     case_id = f"{case_id}-{uuid.uuid4().hex[:6]}"
     case_dir = _cases() / case_id
-    info = await _save_upload(file, case_dir / "uploads" / "upload_1.zip")
+    try:
+        info = await _save_upload(file, case_dir / "uploads" / "upload_1.zip")
+    except ApiError:
+        shutil.rmtree(case_dir, ignore_errors=True)  # a rejected upload leaves no empty case behind
+        raise
     meta = {"caseId": case_id, "title": case_name or Path(file.filename or "case").stem, "created": _now(),
             "timezone": timezone_name, "llm": bool(llm), "uploads": [{**info, "stored": "upload_1.zip"}], "versions": [],
             "latest": None}
@@ -215,6 +277,33 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
     _job(job_id, status="processing", progress=0, stage="queued", message="Queued", caseId=case_id)
     background.add_task(_run_version, job_id, case_id, 1, None)
     return {"jobId": job_id, "caseId": case_id}
+
+
+@app.post("/demo")
+def open_demo():
+    """Install the committed Kestrel snapshot (ingestion + analysis with recorded LLM results) once, then reuse it."""
+    case_dir = _cases() / DEMO_CASE_ID
+    if (case_dir / "case.json").exists():
+        return {"caseId": DEMO_CASE_ID}
+    if not DEMO_SNAPSHOT.exists():
+        raise ApiError(404, "no_demo_snapshot", "no demo snapshot; build it with make backend-demo-snapshot")
+    with _lock:
+        tmp = Path(tempfile.mkdtemp(dir=_cases(), prefix=".demo-"))
+        try:
+            with tarfile.open(DEMO_SNAPSHOT) as t:
+                t.extractall(tmp, filter="data")
+            meta = _read_json(tmp / "case.json")
+            # the uploaded archive is not in the snapshot; it is the repository's Kestrel ZIP (checked by hash)
+            upload = meta["uploads"][0]
+            if DEMO_ARCHIVE.exists() and hashlib.sha256(DEMO_ARCHIVE.read_bytes()).hexdigest() == upload["sha256"]:
+                (tmp / "uploads").mkdir(exist_ok=True)
+                shutil.copyfile(DEMO_ARCHIVE, tmp / "uploads" / upload["stored"])
+            if not (case_dir / "case.json").exists():
+                shutil.rmtree(case_dir, ignore_errors=True)
+                tmp.rename(case_dir)
+        finally:
+            shutil.rmtree(tmp, ignore_errors=True)
+    return {"caseId": DEMO_CASE_ID}
 
 
 @app.get("/status/{job_id}")
@@ -279,6 +368,123 @@ def get_evidence(case_id: str, evidence_id: str):
     return FileResponse(ingest_dir / row[0], filename=Path(row[1].split("::")[-1]).name)
 
 
+@app.get("/cases/{case_id}/files")
+def get_files(case_id: str):
+    ingest_dir, _ = _latest_dirs(case_id)
+    con = _ro(ingest_dir / "case.db")
+    try:
+        counts = dict(con.execute("SELECT file_id, COUNT(*) FROM records GROUP BY file_id").fetchall())
+        out = []
+        for f in con.execute("SELECT * FROM evidence_files ORDER BY file_id"):
+            m = json.loads(f["manifest_json"]) if f["manifest_json"] else {}
+            listed = (m.get("sha256") or "").lower()
+            ext = (f["extension"] or "").lstrip(".")
+            out.append({"evidenceId": _evidence_id(f), "fileId": f["file_id"], "path": f["original_path"],
+                        "filename": Path(f["original_path"].split("::")[-1]).name, "sha256": f["sha256"],
+                        "bytes": f["size_bytes"], "format": m.get("format") or ext or f["sniffed_format"] or "",
+                        "sniffedFormat": f["sniffed_format"], "evidenceType": f["evidence_type"],
+                        "parseStatus": f["parse_status"], "recordCount": counts.get(f["file_id"], 0),
+                        "manifestMatch": (listed == f["sha256"]) if listed else None, "origin": f["origin"],
+                        "title": m.get("title")})
+    finally:
+        con.close()
+    return out
+
+
+_RECORD_FIELDS = ("ts_utc", "ts_start_utc", "ts_end_utc", "ts_raw", "ts_precision", "actor", "target", "lat", "lon",
+                  "content", "reliability", "duplicate_of")
+
+
+@app.get("/cases/{case_id}/records")
+def get_records(case_id: str, evidenceId: Optional[str] = None, limit: int = 100, offset: int = 0):  # noqa: N803
+    if limit < 1 or limit > 500 or offset < 0:
+        raise ApiError(400, "bad_paging", "limit must be 1-500 and offset >= 0")
+    ingest_dir, analysis_dir = _latest_dirs(case_id)
+    board = _read_json(analysis_dir / "board.json")
+    source_ids = {s["id"] for s in board.get("sources", [])}
+    con = _ro(ingest_dir / "case.db")
+    try:
+        where, args = "", []
+        if evidenceId:
+            f = con.execute("SELECT file_id FROM evidence_files WHERE external_id=? OR 'FILE-' || file_id = ?",
+                            (evidenceId, evidenceId)).fetchone()
+            if not f:
+                raise ApiError(404, "evidence_not_found", f"no evidence {evidenceId}")
+            where, args = " WHERE r.file_id = ?", [f["file_id"]]
+        total = con.execute(f"SELECT COUNT(*) FROM records r{where}", args).fetchone()[0]
+        rows = con.execute(f"SELECT r.*, f.external_id FROM records r JOIN evidence_files f ON f.file_id = r.file_id"
+                           f"{where} ORDER BY r.record_id LIMIT ? OFFSET ?", args + [limit, offset]).fetchall()
+        def attrs_of(raw):
+            return {k: v for k, v in json.loads(raw or "{}").items() if not PROTECTED_KEYS.search(k)}
+        file_ids = sorted({r["file_id"] for r in rows})
+        labels = unique_labels(
+            (x["record_id"], x["file_id"], json.loads(x["locator_json"] or "{}"), attrs_of(x["attributes_json"]))
+            for x in con.execute(f"SELECT record_id, file_id, locator_json, attributes_json FROM records "
+                                 f"WHERE file_id IN ({','.join('?' * len(file_ids))})", file_ids)) if file_ids else {}
+        items = []
+        for r in rows:
+            attrs = attrs_of(r["attributes_json"])
+            fields = {k: r[k] for k in _RECORD_FIELDS if r[k] is not None}
+            flags = json.loads(r["ts_flags"] or "[]")
+            if flags:
+                fields["ts_flags"] = ", ".join(flags)
+            fields.update({k: v for k, v in attrs.items() if _scalar(v) and v is not None and k not in fields})
+            ev = r["external_id"] or f"FILE-{r['file_id']}"
+            label = labels[r["record_id"]]
+            cit = {"evidenceId": ev, "locator": label}
+            if citation_id(ev, label) in source_ids:
+                cit["sourceId"] = citation_id(ev, label)
+            items.append({"id": r["record_id"], "recordType": r["record_type"], "fields": fields, "citations": [cit]})
+    finally:
+        con.close()
+    return {"total": total, "limit": limit, "offset": offset, "items": items}
+
+
+@app.get("/cases/{case_id}/audit-chain")
+def get_audit_chain(case_id: str):
+    ingest_dir, analysis_dir = _latest_dirs(case_id)
+    checks = []
+    try:
+        ingest = verify_run(ingest_dir)
+        checks += [{"source": "ingest", **c} for c in ingest["checks"]]
+        ingest_head = ingest["head"]
+    except (OSError, KeyError, ValueError) as exc:
+        checks.append({"source": "ingest", "ok": False, "message": f"ingestion run could not be verified: {exc}"})
+        ingest_head = GENESIS_HASH
+
+    def rows(db: Path, source: str) -> list[dict]:
+        con = _ro(db)
+        try:
+            return [{"seq": r["seq"], "time": r["ts_utc"], "stage": r["stage"], "action": r["action"],
+                     "fileId": r["file_id"], "detail": json.loads(r["detail_json"] or "{}"), "hash": r["entry_hash"],
+                     "prevHash": r["prev_hash"], "source": source}
+                    for r in con.execute("SELECT * FROM audit_log ORDER BY seq")]
+        finally:
+            con.close()
+
+    entries = rows(ingest_dir / "case.db", "ingest")
+    if (analysis_dir / "analysis.db").exists():
+        con = _ro(analysis_dir / "analysis.db")
+        try:
+            ok, msg = verify_audit_chain(con, start=ingest_head)
+        finally:
+            con.close()
+        checks.append({"source": "analysis", "ok": ok, "message": "analysis audit log: " + msg})
+        analysis = rows(analysis_dir / "analysis.db", "analysis")
+        written = next((e for e in reversed(analysis) if e["action"] == "outputs_written"), None)
+        if written:
+            for name, sha in written["detail"].items():
+                p = analysis_dir / name
+                same = p.exists() and hashlib.sha256(p.read_bytes()).hexdigest() == sha
+                checks.append({"source": "analysis", "ok": same,
+                               "message": f"{name} {'matches' if same else 'does not match'} the hash in the audit log"})
+        entries += analysis
+    else:
+        checks.append({"source": "analysis", "ok": False, "message": "analysis.db is missing"})
+    return {"verified": all(c["ok"] for c in checks), "head": entries[-1]["hash"] if entries else GENESIS_HASH,
+            "checks": checks, "entries": entries}
+
+
 @app.get("/cases/{case_id}/overrides")
 def get_overrides(case_id: str):
     return history.load_overrides(_case_dir(case_id) / "overrides.jsonl")
@@ -313,7 +519,8 @@ def _reanalyse(job_id: str, case_id: str, v: dict) -> None:
     case_dir = _cases() / case_id
     ingest_dir = case_dir / v["ingest_dir"]
     try:
-        summary = analyze(ingest_dir, None, case_dir / v["analysis_dir"], case_dir / "overrides.jsonl", None)
+        meta = _read_json(case_dir / "case.json")
+        summary = analyze(ingest_dir, None, case_dir / v["analysis_dir"], case_dir / "overrides.jsonl", _llm_config(meta))
         with _lock:
             meta = _read_json(case_dir / "case.json")
             meta["versions"].append({**v, "analysis_dir": str(Path(summary["out_dir"]).resolve().relative_to(case_dir.resolve())),

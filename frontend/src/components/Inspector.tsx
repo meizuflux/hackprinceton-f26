@@ -1,7 +1,14 @@
 import { ArrowLeft, ChevronDown, GitBranch, X } from "lucide-react";
 import { useEffect, useRef } from "react";
+import { isMock } from "../api/client";
 import type { CaseData } from "../api/types";
 import { relationshipLabel } from "./relationships";
+import {
+  formatCaseTime,
+  insightKind,
+  insightStrength,
+  scoreLabel,
+} from "./presentation";
 
 export type Selection = {
   kind: "node" | "edge" | "gap" | "insight" | "suggestion" | "source";
@@ -115,8 +122,40 @@ export function Inspector({
     ? data.gaps.find((entry) => entry.id === node.gapId)
     : undefined;
   const linkedSuggestions = gap
-    ? data.suggestions.filter((entry) => entry.gapId === gap.id)
+    ? data.suggestions.filter(
+        (entry) => entry.gapId === gap.id || entry.gapIds?.includes(gap.id),
+      )
     : [];
+  const insight =
+    selection.kind === "insight"
+      ? (item as CaseData["insights"][number])
+      : undefined;
+  const structuredInsight = Boolean(insight?.observations?.length);
+  const suggestionGaps = suggestion
+    ? data.gaps.filter(
+        (entry) =>
+          entry.id === suggestion.gapId ||
+          suggestion.gapIds?.includes(entry.id),
+      )
+    : [];
+  const citeButtons = (citations: string[]) =>
+    citations.length > 0 && (
+      <span className="cite-list">
+        {citations.map((id) => (
+          <button
+            key={id}
+            type="button"
+            className="cite-chip"
+            onClick={() =>
+              onOpenSource ? onOpenSource(id) : onSelect({ kind: "source", id })
+            }
+            title={`Open source ${id}`}
+          >
+            {id}
+          </button>
+        ))}
+      </span>
+    );
 
   const claimName = (claim: string) => {
     const referencedNode = data.nodes.find((entry) => entry.id === claim);
@@ -154,18 +193,28 @@ export function Inspector({
             {selection.kind === "gap"
               ? "Question to verify"
               : selection.kind === "insight"
-                ? "Inference"
+                ? insightKind(item as CaseData["insights"][number])
                 : selection.kind === "suggestion"
                   ? "Suggested next step"
                   : selection.kind === "node"
                     ? "Evidence record"
                     : selection.kind === "edge"
-                      ? relationshipLabel(edge!.type)
+                      ? relationshipLabel(edge!.type, edge!.certainty)
                       : "Source excerpt"}
           </span>
           {score !== undefined && (
             <span className="detail-score">
-              Illustrative score · {Math.round(score * 100)}%
+              {selection.kind === "insight"
+                ? insightStrength(item as CaseData["insights"][number])
+                : scoreLabel(
+                    score,
+                    selection.kind === "gap" ? "rank" : "percent",
+                  )}
+            </span>
+          )}
+          {gap?.gapType && (
+            <span className="detail-score">
+              {humanize(gap.gapType)} · {humanize(gap.status ?? "open")}
             </span>
           )}
           {onFocusOnBoard && (
@@ -179,7 +228,75 @@ export function Inspector({
             </button>
           )}
         </div>
-        <p className="inspector-description">{description}</p>
+        {gap?.whyItMatters ? (
+          <p className="inspector-description">{gap.whyItMatters}</p>
+        ) : structuredInsight ? null : (
+          <p className="inspector-description">{description}</p>
+        )}
+
+        {gap?.missing && (
+          <section className="inspector-section inspector-structured">
+            <h3>What is missing</h3>
+            <p>{gap.missing}</p>
+            {gap.direction && (
+              <>
+                <h3>How to close it</h3>
+                <p>{gap.direction}</p>
+              </>
+            )}
+            {gap.answer && (
+              <>
+                <h3>Partial answer</h3>
+                <p>{gap.answer}</p>
+              </>
+            )}
+          </section>
+        )}
+
+        {insight && structuredInsight && (
+          <section className="inspector-section inspector-structured">
+            <h3>Observed in the evidence</h3>
+            <ul>
+              {insight.observations!.map((observation) => (
+                <li key={observation.text}>
+                  {observation.text} {citeButtons(observation.citations)}
+                </li>
+              ))}
+            </ul>
+            {insight.inference && (
+              <>
+                <h3>Inference (not proof)</h3>
+                <p>{insight.inference}</p>
+              </>
+            )}
+            {(
+              [
+                ["Unknowns", insight.unknowns],
+                ["Counter-evidence", insight.counterevidence],
+                ["Assumptions", insight.assumptions],
+                ["Limitations", insight.limitations],
+              ] as const
+            ).map(([heading, entries]) =>
+              entries?.length ? (
+                <div key={heading}>
+                  <h3>{heading}</h3>
+                  <ul>
+                    {entries.map((entry) => (
+                      <li key={entry}>{entry}</li>
+                    ))}
+                  </ul>
+                </div>
+              ) : null,
+            )}
+          </section>
+        )}
+
+        {edge?.basis && (
+          <section className="inspector-section inspector-structured">
+            <h3>Why this thread is drawn</h3>
+            <p>{edge.basis}</p>
+          </section>
+        )}
 
         <section className="inspector-section sources-section">
           <h3>
@@ -211,10 +328,13 @@ export function Inspector({
                     </button>
                   )}
                   <p>
-                    <strong>Recorded:</strong> {source.timestamp}
+                    <strong>Recorded:</strong>{" "}
+                    {formatCaseTime(source.timestamp, data.timezone, "full")}
                   </p>
                   <p>
-                    <strong>Placeholder hash:</strong>{" "}
+                    <strong>
+                      {isMock ? "Placeholder hash:" : "File SHA-256:"}
+                    </strong>{" "}
                     <code>{source.hash}</code>
                   </p>
                   {Object.keys(source.metadata).length > 0 && (
@@ -253,7 +373,7 @@ export function Inspector({
                 {gap.suggestedEvidence.map((evidence) => (
                   <li key={evidence}>
                     {data.suggestions.find((s) => s.id === evidence)?.title ??
-                      evidence}
+                      humanize(evidence)}
                   </li>
                 ))}
               </ul>
@@ -302,16 +422,39 @@ export function Inspector({
           <section className="inspector-section">
             <h3>Example search</h3>
             <blockquote className="query-block">{suggestion.query}</blockquote>
-            {suggestion.gapId && (
-              <p>
-                Addresses gap:{" "}
-                {data.gaps.find((g) => g.id === suggestion.gapId)?.title ??
-                  suggestion.gapId}
-              </p>
+            {suggestion.description && !isMock && (
+              <>
+                <h3>Why it ranks here</h3>
+                <p>{suggestion.description}</p>
+              </>
+            )}
+            {suggestionGaps.length > 0 && (
+              <>
+                <h3>Addresses</h3>
+                <ul className="linked-suggestions">
+                  {suggestionGaps.map((entry) => (
+                    <li key={entry.id}>
+                      <button
+                        className="text-button"
+                        type="button"
+                        onClick={() => onSelect({ kind: "gap", id: entry.id })}
+                      >
+                        {entry.title}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </>
             )}
           </section>
         )}
       </div>
     </aside>
   );
+}
+
+/** `failed_extraction` → `Failed extraction`. */
+function humanize(value: string) {
+  const text = value.replace(/_/g, " ");
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

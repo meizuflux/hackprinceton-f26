@@ -393,3 +393,43 @@
     gap: 8px;
   }
 }
+.evidence-download {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 20px;
+  text-decoration: none;
+}
+.records-filter {
+  padding: 10px 16px 0;
+  color: #c0c9b5;
+  font-size: 12px;
+}
+.records-filter label {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.records-filter select {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 8px;
+  border: 1px solid #41483c;
+  border-radius: 5px;
+  background: #202720;
+  color: #e3edd2;
+  font: inherit;
+}
+.records-file-meta {
+  margin: 8px 0 0;
+  color: #9aa58f;
+  font-size: 11px;
+  overflow-wrap: anywhere;
+}
+.records-file-meta code {
+  font-size: 10px;
+}
+.records-more {
+  display: block;
+  margin: 6px auto 0;
+}

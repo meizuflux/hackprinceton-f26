@@ -4,11 +4,13 @@ import {
   FileText,
   GitBranch,
   Lightbulb,
+  Scale,
   Search,
   ShieldCheck,
   Target,
 } from "lucide-react";
-import type { CaseData } from "../api/types";
+import type { CaseData, ExplanationSet } from "../api/types";
+import { insightKind, insightStrength, scoreLabel } from "./presentation";
 import type { Selection } from "./Inspector";
 import "./insights-page.css";
 
@@ -89,6 +91,75 @@ export function InsightsPage({
         </div>
       </header>
 
+      {(data.explanations ?? []).map((set) => (
+        <ExplanationsSection
+          key={set.episode}
+          set={set}
+          sourceById={sourceById}
+          onOpenSource={onOpenSource}
+        />
+      ))}
+
+      {data.contradictions && data.contradictions.length > 0 && (
+        <section
+          className="insights-section"
+          aria-labelledby="contradictions-heading"
+        >
+          <div className="insights-section-heading">
+            <div>
+              <span className="insights-section-icon inference-icon">
+                <Scale size={16} />
+              </span>
+              <div>
+                <h2 id="contradictions-heading">Contradictions</h2>
+                <p>
+                  Accounts and records that disagree · each has several possible
+                  reasons
+                </p>
+              </div>
+            </div>
+            <span className="insights-count">{data.contradictions.length}</span>
+          </div>
+          <div className="insights-grid">
+            {data.contradictions
+              .filter((item) =>
+                matches([item.title, item.text, ...item.citations]),
+              )
+              .map((item) => (
+                <article className="insight-page-card" key={item.id}>
+                  <div className="insight-card-main as-static">
+                    <div className="insight-card-label">
+                      <span>{humanize(item.kind)}</span>
+                      <span className="illustrative-score">
+                        {humanize(item.severity)} severity
+                      </span>
+                    </div>
+                    <h3>{item.title}</h3>
+                    <p>{item.text}</p>
+                    <h4>Possible reasons</h4>
+                    <ul>
+                      {item.possibleReasons.map((reason) => (
+                        <li key={reason}>{reason}</li>
+                      ))}
+                    </ul>
+                    {item.resolvingEvidence.length > 0 && (
+                      <p className="explanation-meta">
+                        Would resolve it:{" "}
+                        {item.resolvingEvidence.map(humanize).join(", ")}
+                      </p>
+                    )}
+                  </div>
+                  <CitationLinks
+                    ids={item.citations}
+                    sourceById={sourceById}
+                    onOpenSource={onOpenSource}
+                  />
+                </article>
+              ))}
+          </div>
+        </section>
+      )}
+
       <section
         className="insights-section"
         aria-labelledby="inferences-heading"
@@ -114,9 +185,9 @@ export function InsightsPage({
                   onClick={() => onInspect({ kind: "insight", id: item.id })}
                 >
                   <div className="insight-card-label">
-                    <span>Inference</span>
+                    <span>{insightKind(item)}</span>
                     <span className="illustrative-score">
-                      Illustrative · {Math.round(item.score * 100)}%
+                      {insightStrength(item)}
                     </span>
                   </div>
                   <h3>{item.title}</h3>
@@ -188,7 +259,7 @@ export function InsightsPage({
                   <div className="insight-card-label">
                     <span>Question to verify</span>
                     <span className="illustrative-score">
-                      Illustrative · {Math.round(item.score * 100)}%
+                      {scoreLabel(item.score, "rank")}
                     </span>
                   </div>
                   <h3>{item.title}</h3>
@@ -331,4 +402,124 @@ function EmptyState({ query, label }: { query: string; label: string }) {
         : `No ${label} available for this case.`}
     </div>
   );
+}
+
+function ExplanationsSection({
+  set,
+  sourceById,
+  onOpenSource,
+}: {
+  set: ExplanationSet;
+  sourceById: Map<string, CaseData["sources"][number]>;
+  onOpenSource: (sourceId: string) => void;
+}) {
+  return (
+    <section
+      className="insights-section explanations-section"
+      aria-label={`Competing explanations: ${set.episode}`}
+    >
+      <div className="insights-section-heading">
+        <div>
+          <span className="insights-section-icon next-icon">
+            <GitBranch size={16} />
+          </span>
+          <div>
+            <h2>Competing explanations · {set.episode}</h2>
+            <p>
+              Scored from supporting and contradicting records, capped by
+              independent sources · inference, not a finding
+            </p>
+          </div>
+        </div>
+        <span className="insights-count">{set.hypotheses.length}</span>
+      </div>
+      <p className={`explanation-verdict ${set.decided ? "decided" : ""}`}>
+        <strong>{set.decided ? "Best supported" : "Undecided"}:</strong>{" "}
+        {set.verdict}
+      </p>
+      <div className="insights-grid">
+        {set.hypotheses.map((hypothesis) => {
+          const supporting = dedupe(hypothesis.supporting);
+          const contradicting = dedupe(hypothesis.contradicting);
+          return (
+            <article className="insight-page-card" key={hypothesis.id}>
+              <div className="insight-card-main as-static">
+                <div className="insight-card-label">
+                  <span>
+                    {hypothesis.id} · {humanize(hypothesis.label)}
+                  </span>
+                  <span className="illustrative-score">
+                    {hypothesis.independentSupport} independent source
+                    {hypothesis.independentSupport === 1 ? "" : "s"}
+                  </span>
+                </div>
+                <h3>{hypothesis.statement}</h3>
+                {supporting.length > 0 && (
+                  <>
+                    <h4>Supports</h4>
+                    <ul>
+                      {supporting.map((entry) => (
+                        <li key={entry.reason}>{entry.reason}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {contradicting.length > 0 && (
+                  <>
+                    <h4>Against</h4>
+                    <ul>
+                      {contradicting.map((entry) => (
+                        <li key={entry.reason}>{entry.reason}</li>
+                      ))}
+                    </ul>
+                  </>
+                )}
+                {hypothesis.assumptions.length > 0 && (
+                  <p className="explanation-meta">
+                    Assumes: {hypothesis.assumptions.join("; ")}
+                  </p>
+                )}
+              </div>
+              <CitationLinks
+                ids={[
+                  ...new Set(
+                    [...hypothesis.supporting, ...hypothesis.contradicting].map(
+                      (entry) => entry.citation,
+                    ),
+                  ),
+                ]}
+                sourceById={sourceById}
+                onOpenSource={onOpenSource}
+              />
+            </article>
+          );
+        })}
+      </div>
+      {set.discriminatingEvidence.length > 0 && (
+        <div className="explanation-discriminators">
+          <h4>Evidence that would tell them apart</h4>
+          <ul>
+            {set.discriminatingEvidence.map((entry) => (
+              <li key={`${entry.artifact}-${entry.why}`}>
+                <strong>{humanize(entry.artifact)}:</strong> {entry.why}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Several records can give the same reason; list each reason once. */
+function dedupe<T extends { reason: string }>(entries: T[]): T[] {
+  return [...new Map(entries.map((entry) => [entry.reason, entry])).values()];
+}
+
+/** `follow_up_interview` → `Follow up interview`. */
+function humanize(value: string) {
+  const text = value
+    .replace(/_/g, " ")
+    .replace(/\b(cctv|dna|lpr|ml)\b/gi, (acronym) => acronym.toUpperCase());
+  return text.charAt(0).toUpperCase() + text.slice(1);
 }

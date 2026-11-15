@@ -1,6 +1,7 @@
 import { memo } from "react";
 import { Handle, Position, type NodeProps, type Node } from "@xyflow/react";
 import { paperOutline } from "./paper-note";
+import { formatCaseTime } from "./presentation";
 import {
   UserRound,
   MapPin,
@@ -18,6 +19,8 @@ export type PinData = {
   summary: string;
   citations: string[];
   time?: string;
+  timeZone?: string;
+  certainty?: string;
   gapId?: string;
   active?: boolean;
   isFocused?: boolean;
@@ -68,11 +71,12 @@ export const EvidenceNode = memo(function EvidenceNode({
         <span>
           <Icon size={12} />
           {data.type}
+          {data.certainty === "inferred" && " · inferred"}
         </span>
         {data.time && (
           <span className="pin-time">
             <CalendarClock size={11} />
-            {data.time}
+            {formatCaseTime(data.time, data.timeZone)}
           </span>
         )}
       </div>

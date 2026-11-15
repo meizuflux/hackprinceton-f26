@@ -308,3 +308,40 @@
     justify-content: flex-start;
   }
 }
+.insight-card-main h4,
+.explanation-discriminators h4 {
+  margin: 12px 0 4px;
+  color: #d1dcb8;
+  font-size: 12px;
+  font-weight: 600;
+}
+.insight-card-main ul,
+.explanation-discriminators ul {
+  margin: 0;
+  padding-left: 18px;
+  color: #c0c9b5;
+  font-size: 12px;
+  line-height: 1.6;
+}
+.insight-card-main .explanation-meta {
+  color: #9aa58f;
+  font-size: 12px;
+}
+.explanation-verdict {
+  margin: 0 0 14px;
+  padding: 10px 12px;
+  border: 1px solid #75613b;
+  border-radius: 5px;
+  background: #453a2566;
+  color: #e4c58f;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.explanation-verdict.decided {
+  border-color: #566449;
+  background: #2d382566;
+  color: #d1dcb8;
+}
+.explanation-discriminators {
+  margin-top: 14px;
+}

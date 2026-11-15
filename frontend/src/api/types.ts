@@ -3,6 +3,9 @@ export type CitationId = string;
 
 export type NodeType = "person" | "location" | "device" | "event" | "statement";
 
+/** Backend label: `observed` comes straight from records, `inferred` is analysis. */
+export type Certainty = "observed" | "inferred";
+
 export interface EvidenceNode {
   id: string;
   type: NodeType;
@@ -14,6 +17,10 @@ export interface EvidenceNode {
   time?: string;
   gapId?: string;
   size?: { width: number; height: number };
+  certainty?: Certainty;
+  /** Backend stable key; investigator overrides target it. */
+  key?: string;
+  score?: number;
 }
 
 export interface EvidenceEdge {
@@ -25,6 +32,9 @@ export interface EvidenceEdge {
   citations: CitationId[];
   /** Arrowheads require an explicit direction from the adapter. */
   directed?: boolean;
+  certainty?: Certainty;
+  /** Why the backend drew this relationship. */
+  basis?: string;
 }
 
 export interface SourceRecord {
@@ -45,6 +55,22 @@ export interface EvidenceGap {
   affectedClaims: string[];
   suggestedEvidence: string[];
   citations: CitationId[];
+  gapType?:
+    "missing" | "failed_extraction" | "conflicting" | "uncertain" | string;
+  status?: string;
+  previousStatus?: string | null;
+  missing?: string;
+  whyItMatters?: string;
+  direction?: string;
+  answer?: string | null;
+  /** Board node IDs the gap concerns. */
+  nodeIds?: string[];
+  key?: string;
+}
+
+export interface CitedText {
+  text: string;
+  citations: CitationId[];
 }
 
 export interface Insight {
@@ -53,6 +79,17 @@ export interface Insight {
   text: string;
   score: number;
   citations: CitationId[];
+  certainty?: Certainty;
+  /** A label set by independent sources; never a probability. */
+  confidence?: "low" | "medium" | "high" | string;
+  status?: string;
+  observations?: CitedText[];
+  inference?: string;
+  unknowns?: string[];
+  counterevidence?: string[];
+  assumptions?: string[];
+  limitations?: string[];
+  key?: string;
 }
 
 export interface EvidenceSuggestion {
@@ -63,6 +100,10 @@ export interface EvidenceSuggestion {
   query: string;
   citations: CitationId[];
   gapId: string;
+  gapIds?: string[];
+  artifact?: string;
+  score?: number;
+  key?: string;
 }
 
 export interface AuditRecord {
@@ -81,6 +122,47 @@ export interface NormalizedEvidenceRecord {
   citations: Array<{ evidenceId: string; locator: string; sourceId?: string }>;
 }
 
+export interface Contradiction {
+  id: string;
+  title: string;
+  text: string;
+  severity: string;
+  kind: string;
+  possibleReasons: string[];
+  resolvingEvidence: string[];
+  citations: CitationId[];
+  status?: string;
+  key?: string;
+}
+
+export interface Hypothesis {
+  id: string;
+  statement: string;
+  /** e.g. best supported, plausible, weakly supported, contradicted. */
+  label: string;
+  points: number;
+  independentSupport: number;
+  supporting: Array<{ reason: string; citation: CitationId }>;
+  contradicting: Array<{ reason: string; citation: CitationId }>;
+  assumptions: string[];
+  key?: string;
+}
+
+/** Competing explanations of one key event, with the backend's verdict. */
+export interface ExplanationSet {
+  episode: string;
+  verdict: string;
+  /** False means the evidence does not separate the explanations. */
+  decided: boolean;
+  hypotheses: Hypothesis[];
+  /** Evidence that would tell the explanations apart. */
+  discriminatingEvidence: Array<{
+    artifact: string;
+    why: string;
+    params?: Record<string, string>;
+  }>;
+}
+
 export interface CaseData {
   id: string;
   title: string;
@@ -94,20 +176,100 @@ export interface CaseData {
   sources: SourceRecord[];
   audit: AuditRecord[];
   normalizedRecords?: NormalizedEvidenceRecord[];
+  contradictions?: Contradiction[];
+  explanations?: ExplanationSet[];
+  /** IANA time zone the case is displayed in. Times on the wire are ISO 8601. */
+  timezone?: string;
 }
 
-export type IngestionStatus = "processing" | "ready";
+export type IngestionStatus = "processing" | "ready" | "failed";
+export interface UploadOptions {
+  /** Shown as the case title; the backend derives the case ID from it. */
+  caseName?: string;
+}
 export interface UploadResult {
   jobId: string;
+  caseId?: string;
 }
 export interface IngestionProgress {
   status: IngestionStatus;
   progress: number;
   message: string;
+  stage?: string;
+  caseId?: string;
 }
 
+/** One entry in the case list. Only the live API persists cases. */
+export interface CaseSummary {
+  caseId: string;
+  title: string;
+  created: string;
+  versions: number;
+  ready: boolean;
+}
+
+/** One file from the authoritative ingestion inventory. */
+export interface EvidenceFile {
+  evidenceId: string;
+  fileId: number;
+  path: string;
+  filename: string;
+  sha256: string;
+  bytes: number;
+  format: string;
+  evidenceType: string;
+  parseStatus: string;
+  recordCount: number;
+  /** Null when the manifest lists no hash for the file. */
+  manifestMatch: boolean | null;
+  origin: string;
+  title?: string | null;
+}
+
+export interface RecordPage {
+  total: number;
+  limit: number;
+  offset: number;
+  items: NormalizedEvidenceRecord[];
+}
+
+export interface AuditChainEntry {
+  seq: number;
+  time: string;
+  stage: string;
+  action: string;
+  detail: Record<string, unknown>;
+  hash: string;
+  prevHash: string;
+  source: "ingest" | "analysis";
+}
+
+export interface AuditChain {
+  verified: boolean;
+  head: string;
+  checks: Array<{ source: string; ok: boolean; message: string }>;
+  entries: AuditChainEntry[];
+}
+
+export type ApiMode = "mock" | "live";
+
 export interface CaseApi {
-  createUpload(file: File): Promise<UploadResult>;
+  mode: ApiMode;
+  createUpload(file: File, options?: UploadOptions): Promise<UploadResult>;
   getStatus(jobId: string): Promise<IngestionProgress>;
-  getCase(): Promise<CaseData>;
+  /** Without an ID, returns the most recent ready case. */
+  getCase(caseId?: string): Promise<CaseData>;
+  listCases(): Promise<CaseSummary[]>;
+  /** Opens the demo case (a prepared snapshot with the live adapter) and returns its ID. */
+  openDemo(): Promise<string>;
+  /** Evidence file inventory; empty when the adapter has no ingestion output. */
+  listFiles(caseId: string): Promise<EvidenceFile[]>;
+  getRecords(
+    caseId: string,
+    query?: { evidenceId?: string; limit?: number; offset?: number },
+  ): Promise<RecordPage>;
+  /** Hash-chained audit log, re-verified; undefined without ingestion output. */
+  getAuditChain(caseId: string): Promise<AuditChain | undefined>;
+  /** URL of the original evidence file, when the adapter can serve bytes. */
+  evidenceFileUrl(caseId: string, evidenceId: string): string | undefined;
 }

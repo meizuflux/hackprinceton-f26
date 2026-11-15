@@ -1,5 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
-import { FileSearch, Files, Search, ShieldAlert } from "lucide-react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { Download, FileSearch, Files, Search, ShieldAlert } from "lucide-react";
+import { api } from "../api/client";
+import { formatCaseTime } from "./presentation";
 import type { CaseData } from "../api/types";
 import { listEvidenceFiles, type NormalizedEvidenceRecord } from "../api/files";
 import "./evidence-browser.css";
@@ -10,6 +12,12 @@ export type EvidenceBrowserProps = {
   selectedSourceId?: string;
   onInspect: (sourceId: string) => void;
   generalizedRecords?: NormalizedEvidenceRecord[];
+  /** Total records available from ingestion, when more can be loaded. */
+  recordTotal?: number;
+  /** Controls above the record list (file filter). */
+  recordFilter?: ReactNode;
+  /** Controls below the record list (paging). */
+  recordFooter?: ReactNode;
 };
 
 export function EvidenceBrowser({
@@ -18,6 +26,9 @@ export function EvidenceBrowser({
   selectedSourceId,
   onInspect,
   generalizedRecords = [],
+  recordTotal,
+  recordFilter,
+  recordFooter,
 }: EvidenceBrowserProps) {
   const [search, setSearch] = useState("");
   const [activeSourceId, setActiveSourceId] = useState(selectedSourceId);
@@ -70,9 +81,13 @@ export function EvidenceBrowser({
             <h2>Generalized files</h2>
           </div>
           <span className="evidence-state-chip">
-            {citedRecords.length
-              ? `${citedRecords.length} normalized records`
-              : "Unavailable in mock"}
+            {recordTotal !== undefined
+              ? `${citedRecords.length} of ${recordTotal} normalized records`
+              : citedRecords.length
+                ? `${citedRecords.length} normalized records`
+                : api.mode === "mock"
+                  ? "Unavailable in mock"
+                  : "Unavailable"}
           </span>
         </header>
         <label className="evidence-search">
@@ -85,6 +100,7 @@ export function EvidenceBrowser({
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
+        {recordFilter}
         {generalizedRecords.length > 0 ? (
           <div className="normalized-records" aria-label="Normalized records">
             <p className="normalized-records-intro">
@@ -133,6 +149,7 @@ export function EvidenceBrowser({
                 </footer>
               </article>
             ))}
+            {recordFooter}
           </div>
         ) : (
           <div className="evidence-empty-state">
@@ -233,13 +250,19 @@ export function EvidenceBrowser({
                     : "Choose a source to inspect its available citation."}
                 </p>
               );
+            const evidenceId = selected.metadata.evidence_id;
+            const originalUrl = evidenceId
+              ? api.evidenceFileUrl(data.id, evidenceId)
+              : undefined;
             return (
               <>
                 <div className="evidence-preview-topline">
                   <span className="evidence-source-id">{selected.id}</span>
-                  <span className="evidence-fiction-label">
-                    FICTIONAL EXCERPT
-                  </span>
+                  {api.mode === "mock" && (
+                    <span className="evidence-fiction-label">
+                      FICTIONAL EXCERPT
+                    </span>
+                  )}
                 </div>
                 <h3>{selected.filename}</h3>
                 <p className="evidence-path">{selected.path}</p>
@@ -251,10 +274,20 @@ export function EvidenceBrowser({
                   </div>
                   <div>
                     <dt>Timestamp</dt>
-                    <dd>{selected.timestamp}</dd>
+                    <dd>
+                      {formatCaseTime(
+                        selected.timestamp,
+                        data.timezone,
+                        "full",
+                      )}
+                    </dd>
                   </div>
                   <div>
-                    <dt>Illustrative hash</dt>
+                    <dt>
+                      {api.mode === "mock"
+                        ? "Illustrative hash"
+                        : "File SHA-256"}
+                    </dt>
                     <dd>
                       <code>{selected.hash}</code>
                     </dd>
@@ -264,14 +297,25 @@ export function EvidenceBrowser({
                     <dd>{selected.citationCount}</dd>
                   </div>
                 </dl>
-                <div className="evidence-unavailable">
-                  <ShieldAlert size={15} />
-                  <span>
-                    <strong>Original file unavailable.</strong> The mock upload
-                    does not read ZIP contents; this excerpt is synthetic and
-                    cannot open or download source bytes.
-                  </span>
-                </div>
+                {originalUrl ? (
+                  <a
+                    className="button button-secondary evidence-download"
+                    href={originalUrl}
+                    download
+                  >
+                    <Download size={15} aria-hidden="true" /> Download original{" "}
+                    {evidenceId} (read-only copy)
+                  </a>
+                ) : (
+                  <div className="evidence-unavailable">
+                    <ShieldAlert size={15} />
+                    <span>
+                      <strong>Original file unavailable.</strong> The mock
+                      upload does not read ZIP contents; this excerpt is
+                      synthetic and cannot open or download source bytes.
+                    </span>
+                  </div>
+                )}
               </>
             );
           })()}

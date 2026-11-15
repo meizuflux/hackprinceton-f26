@@ -10,6 +10,7 @@ import json
 import math
 import re
 import sqlite3
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from functools import cached_property
@@ -39,6 +40,45 @@ def haversine_m(lat1, lon1, lat2, lon2) -> float:
     dp, dl = p2 - p1, math.radians(lon2 - lon1)
     a = math.sin(dp / 2) ** 2 + math.cos(p1) * math.cos(p2) * math.sin(dl / 2) ** 2
     return 2 * r * math.asin(math.sqrt(a))
+
+
+def locator_label(locator: dict, attrs: dict) -> str:
+    """The human-readable locator used in citation ids (`EV-071:seq=40162`). `attrs` must already have protected
+    attributes removed (see PROTECTED_KEYS)."""
+    for k in _ID_KEYS:
+        if k in locator and k not in ("char_start",):
+            return f"{k}={locator[k]}"
+    for k in _ID_KEYS:
+        if attrs.get(k) not in (None, ""):
+            return f"{k}={attrs[k]}"
+    loc = locator
+    if "doc_line" in loc:
+        return f"line={loc['doc_line']}"
+    if "row" in loc:
+        return f"row={loc['row']}"
+    if "page" in loc:
+        return f"page={loc['page']}" + (f" line={loc['line']}" if "line" in loc else "")
+    if "paragraph" in loc:
+        return f"paragraph={loc['paragraph']}"
+    if "line" in loc:
+        return f"line={loc['line']}"
+    if "json_path" in loc:
+        return loc["json_path"]
+    return ",".join(f"{k}={v}" for k, v in loc.items()) or "file"
+
+
+def unique_labels(items) -> dict:
+    """Citation labels that identify exactly one record. `items` yields `(key, file_id, locator, attrs)`. An attribute
+    shared by several records of one file (an event code such as `event_id=9001`, not a record ID) would merge distinct
+    records into one citation, so those records fall back to their position in the file (`row=`, `line=`, ...)."""
+    first = {key: (file_id, locator_label(loc, attrs), loc) for key, file_id, loc, attrs in items}
+    counts = Counter((file_id, label) for file_id, label, _ in first.values())
+    return {key: label if counts[(file_id, label)] == 1 else locator_label(loc, {})
+            for key, (file_id, label, loc) in first.items()}
+
+
+def citation_id(evidence_id: str, label: str) -> str:
+    return f"{evidence_id}:{label}"
 
 
 @dataclass
@@ -142,34 +182,19 @@ class Case:
         return sorted((r for r in self.records.values() if r.ts and r.duplicate_of is None), key=lambda r: r.ts)
 
     # ------------------------------------------------------------ citations
+    @cached_property
+    def _labels(self) -> dict[int, str]:
+        return unique_labels((r.id, r.file_id, r.locator, r.attrs) for r in self.records.values())
+
     def locator_label(self, rec: Record) -> str:
-        for k in _ID_KEYS:
-            if k in rec.locator and k not in ("char_start",):
-                return f"{k}={rec.locator[k]}"
-        for k in _ID_KEYS:
-            if rec.attrs.get(k) not in (None, ""):
-                return f"{k}={rec.attrs[k]}"
-        loc = rec.locator
-        if "doc_line" in loc:
-            return f"line={loc['doc_line']}"
-        if "row" in loc:
-            return f"row={loc['row']}"
-        if "page" in loc:
-            return f"page={loc['page']}" + (f" line={loc['line']}" if "line" in loc else "")
-        if "paragraph" in loc:
-            return f"paragraph={loc['paragraph']}"
-        if "line" in loc:
-            return f"line={loc['line']}"
-        if "json_path" in loc:
-            return loc["json_path"]
-        return ",".join(f"{k}={v}" for k, v in loc.items()) or "file"
+        return self._labels[rec.id]
 
     def cite(self, rid: int) -> dict:
         rec = self.records[rid]
         f = self.files[rec.file_id]
         ev = f["external_id"] or f"FILE-{rec.file_id}"
         label = self.locator_label(rec)
-        return {"id": f"{ev}:{label}", "evidence_id": ev, "locator": label, "record_id": rid,
+        return {"id": citation_id(ev, label), "evidence_id": ev, "locator": label, "record_id": rid,
                 "path": f["original_path"], "sha256": f["sha256"]}
 
     def origin_of(self, rid: int) -> str:

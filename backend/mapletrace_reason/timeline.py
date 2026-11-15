@@ -26,6 +26,17 @@ _FLAG_TEXT = {
 }
 
 
+def _interval(seconds: float) -> str:
+    """A typical spacing between records, in words: 'under a second', '12 s', '14 min', '2.5 h'."""
+    if seconds < 1:
+        return "under a second"
+    if seconds < 60:
+        return f"{seconds:.0f} s"
+    if seconds < 90 * 60:
+        return f"{seconds / 60:.0f} min"
+    return f"{seconds / 3600:.1f} h"
+
+
 def _reasons(r: Record, tz: str) -> list[str]:
     out = [_FLAG_TEXT[f].format(tz=tz) for f in r.flags if f in _FLAG_TEXT]
     if r.precision == "day":
@@ -79,7 +90,7 @@ def missing_periods(ctx: Context, episodes: list[Item]) -> list[Item]:
             if len(rs) < 20:
                 continue
             gaps_all = [(b.ts - a.ts).total_seconds() for a, b in zip(rs, rs[1:])]
-            med = median(gaps_all) or 1
+            med = median(gaps_all)
             if not (rs[0].ts <= ws and rs[-1].ts >= we):
                 continue  # only judge silences inside the span a log actually covers
             inside = [r for r in rs if ws <= r.ts <= we]
@@ -91,7 +102,7 @@ def missing_periods(ctx: Context, episodes: list[Item]) -> list[Item]:
                     neighbours = [r for r in rs if r.ts <= a][-1:] + [r for r in rs if r.ts >= b][:1]
                     items.append(Item("missing_period", stable_key("silence", f["original_path"], iso(a), iso(b)),
                                       f"{f['original_path'].rsplit('/', 1)[-1]} is silent {a.astimezone(tz):%a %H:%M}–{b.astimezone(tz):%H:%M}",
-                                      f"This log usually has a record every {med / 60:.0f} min but has none for "
+                                      f"This log's records are usually {_interval(med)} apart, but it has none for "
                                       f"{gap / 3600:.1f} h around {ep.title.lower()}. That may be normal inactivity, an outage, "
                                       f"or missing data.", certainty="observed", score=round(min(1.0, gap / 3600 / 6), 2),
                                       citations=[case.cite(r.id) for r in neighbours],

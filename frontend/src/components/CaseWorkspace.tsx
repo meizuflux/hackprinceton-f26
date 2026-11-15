@@ -13,7 +13,9 @@ import {
 } from "lucide-react";
 import type { CaseData } from "../api/types";
 import { casePath, type WorkspaceView } from "../routing";
+import { isMock } from "../api/client";
 import { EvidenceBrowser } from "./EvidenceBrowser";
+import { RecordsBrowser } from "./RecordsBrowser";
 import { InsightsPage } from "./InsightsPage";
 import { ChatPanel } from "./ChatPanel";
 import { Inspector, type Selection } from "./Inspector";
@@ -51,6 +53,10 @@ export function CaseWorkspace({
   // React Flow needs a visible container for its initial fit. Retain it after
   // the first visit so later section changes preserve pan, zoom and selection.
   const [boardVisited, setBoardVisited] = useState(view === "board");
+  const [filesVisited, setFilesVisited] = useState(view === "files");
+  useEffect(() => {
+    if (view === "files") setFilesVisited(true);
+  }, [view]);
   useEffect(() => {
     if (view === "board") setBoardVisited(true);
   }, [view]);
@@ -307,12 +313,21 @@ export function CaseWorkspace({
           aria-label="Generalized files"
           hidden={view !== "files"}
         >
-          <EvidenceBrowser
-            data={data}
-            mode="generalized"
-            generalizedRecords={data.normalizedRecords}
-            onInspect={(id) => inspect({ kind: "source", id })}
-          />
+          {isMock ? (
+            <EvidenceBrowser
+              data={data}
+              mode="generalized"
+              generalizedRecords={data.normalizedRecords}
+              onInspect={(id) => inspect({ kind: "source", id })}
+            />
+          ) : (
+            (view === "files" || filesVisited) && (
+              <RecordsBrowser
+                data={data}
+                onInspect={(id) => inspect({ kind: "source", id })}
+              />
+            )
+          )}
         </section>
         <section
           className="case-content-panel"
