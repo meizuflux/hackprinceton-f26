@@ -32,17 +32,14 @@ make frontend-build
 
 ## Run with Docker Compose
 
-Requires Docker Compose and a running Docker daemon. The service binds to `127.0.0.1:5173`, so stop any other service using that port first.
+Requires Docker Compose and a running Docker daemon. Compose runs the backend API and the nginx-served frontend; only the frontend is published, on `127.0.0.1:5173`, so stop any other service using that port first.
 
 ```sh
-docker compose up --build -d
+make docker-up      # docker compose up --build -d
+make docker-down    # docker compose down (case data stays in the mapletrace-data volume)
 ```
 
-Open [http://localhost:5173](http://localhost:5173). Stop the service with:
-
-```sh
-docker compose down
-```
+Open [http://localhost:5173](http://localhost:5173). The demo buttons work without an API key; set `ANTHROPIC_API_KEY` in your environment only for new LLM analyses. See the Docker section of [frontend/README.md](frontend/README.md) for details.
 
 ## Synthetic case data
 

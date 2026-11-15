@@ -24,17 +24,36 @@ Without Make, run `bun install --frozen-lockfile` and `bun run --bun dev` from `
 
 ## Run with Docker
 
-Requires Docker with Compose and a running Docker daemon. The container serves the production build, which uses the mock adapter; the backend is not containerised. Stop any local Vite server using port 5173 first. From the repository root, build and start the production demo container:
+Docker is optional and is not needed for routine development. It requires Docker with Compose and a running daemon. The root `compose.yaml` runs two services:
+
+- `backend`: the FastAPI API (`backend/Dockerfile`, Python 3.12, dependencies installed with uv), run as a non-root user on port 8000 inside the Compose network only. Its build context is the repository root; the root `.dockerignore` admits only the backend code, `backend/demo/`, `backend/llm_cache/` and `cases/kestrel/kestrel_case_upload.zip`.
+- `frontend`: the production build with `VITE_API_BASE_URL=/api`, served by nginx at `127.0.0.1:5173`. nginx proxies `/api/` to the backend and strips the prefix as Vite's dev proxy does, accepts 100 MB uploads, and allows 600-second timeouts for analysis and chat. It starts after the backend reports healthy.
+
+Stop any local Vite server or `make dev` on port 5173 first. From the repository root:
 
 ```sh
-docker compose up --build -d
+export ANTHROPIC_API_KEY=...   # optional; see below
+make docker-up                 # docker compose up --build -d
+make docker-logs               # follow logs; Ctrl-C to stop following
+make docker-down               # stop; case data is kept
 ```
 
-Open [localhost:5173](http://localhost:5173). If using Docker to serve updated source changes, rebuild and restart with `docker compose up --build -d`. Docker is optional and is not needed for routine frontend development. Stop the container with:
+Open [localhost:5173](http://localhost:5173). Rebuild after source changes with `make docker-up`.
 
-```sh
-docker compose down
-```
+**Demo in Docker.** The demo buttons call `POST /demo`, which installs the committed Kestrel snapshot (`backend/demo/kestrel.tar.gz`) and restores its upload ZIP from the image after checking its hash. This needs no API key. Uploading `cases/kestrel/kestrel_case_upload.zip` through **New project** replays the recorded LLM responses in `backend/llm_cache/`, also without a key. Only LLM analysis of other archives needs `ANTHROPIC_API_KEY`.
+
+**Case data** lives in the named volume `mapletrace-data`, mounted at `/data` (`MAPLETRACE_DATA`). It survives `make docker-down` and rebuilds. Remove it with `docker compose down -v`.
+
+**Environment** (read by Compose from your shell or a git-ignored root `.env`; never commit keys):
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `ANTHROPIC_API_KEY` | empty | Optional. Needed only for new, unrecorded LLM analyses. |
+| `MAPLETRACE_LLM_MODEL` | `claude-sonnet-5-5` | Model for the LLM layer. |
+
+`MAPLETRACE_DATA=/data`, `MAPLETRACE_MAX_UPLOAD_MB=100` and `MAPLETRACE_CORS` are set in `compose.yaml`. If you raise the upload limit, also raise `client_max_body_size` in `nginx.conf`.
+
+**Mock-only image.** To serve the fixture adapter without a backend, build the frontend alone: `docker build --build-arg VITE_API_BASE_URL=mock -t mapletrace-mock frontend`, then `docker run --rm -p 127.0.0.1:5173:80 mapletrace-mock`.
 
 Commit `bun.lock` when changing dependencies. Use `bun add <package>` or `bun add -d <package>` inside `frontend/`. The Docker build uses the same pinned Bun version and frozen lockfile.
 
