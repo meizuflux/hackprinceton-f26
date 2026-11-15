@@ -122,3 +122,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 - Before any modification to root `SPEC.md`, present the proposed changes and ask both the user and team members for approval. Wait for explicit approval; silence is not approval.
 - If team members cannot be reached through an explicitly authorized channel, ask the user to obtain their approval. Do not contact anyone without authorization or assume team consent.
 - This rule governs `SPEC.md` only; routine implementation and other documentation proceed within the user's authorized scope.
+
+## Vultr deployment
+
+- `scripts/deploy-vultr.py` deploys committed revisions to a single Ubuntu instance using `scripts/compose.vultr.yaml`. It exposes unauthenticated HTTP and is for restricted, fictional-data prototype use; persistent case data stays in the Compose volume. Keep the deploy upload limit aligned with nginx.
