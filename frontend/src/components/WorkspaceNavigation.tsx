@@ -52,7 +52,7 @@ export function WorkspaceNavigation({
             navigate("/");
           }}
         >
-          <Fingerprint size={24} /> mapletrace
+          <Fingerprint size={24} /> MapleTrace
         </a>
         <button className="text-button" onClick={() => navigate("/projects")}>
           <ArrowLeft size={16} /> All projects

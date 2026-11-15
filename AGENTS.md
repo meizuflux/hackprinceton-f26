@@ -1,4 +1,4 @@
-# Mapletrace frontend
+# MapleTrace frontend
 
 - This is a hackathon prototype. Prioritize a clear, reliable three-minute demo.
 - Build with Vite, React, and TypeScript. Use React Flow for the inspectable pin-up board.
@@ -31,6 +31,7 @@
 - Raw evidence currently indexes fictional source excerpts; original bytes and normalized ingestion records remain unavailable until the authoritative ingestion adapter supplies them. Never synthesize normalized records from frontend fixture metadata. “Generalized files” means normalized ingestion records.
 - Chat in this pass is frontend UI and an optional HTTP contract only; no Deep Agents service or model calls are implemented. Keep keys server-side, avoid simulated replies, and show the unavailable state until a matching case service is connected. See `frontend/CHAT.md` for the handoff contract.
 - Case navigation lives in a compact floating left toolbar using the board controls' dark surface, border, and spacing. It is positioned dynamically underneath the workspace topbar using measured clearance (`--topbar-clearance-y`, defaulting to 68px on desktop with 16px vertical gap, expanding when the topbar wraps), preventing overlaps across all viewports and zoom levels. Expanding the toolbar from 48px to 192px never overlaps the topbar or obscures the case title. It has 34px rows and 16px icons; omit the large wordmark and project block. Keep accessible names and tooltips on collapsed icons; Escape collapses while focus is inside the toolbar. On small screens, selecting a section collapses it.
+- Brand casing is uniformly `MapleTrace` across UI wordmarks, landing page headers/prose, page title/metadata, and design tokens, distinguishing the user-facing product title from snake_case backend package identifiers (`mapletrace_ingest`, `mapletrace_reason`).
 
 ## Repository layout
 

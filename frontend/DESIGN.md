@@ -1,5 +1,5 @@
 ---
-name: Mapletrace
+name: MapleTrace
 description: A calm, evidence-first workspace for inspecting case material.
 colors:
   primary: "#d3dfaf"
@@ -89,13 +89,13 @@ components:
     height: "44px"
 ---
 
-# Design System: Mapletrace
+# Design System: MapleTrace
 
 ## Overview
 
 **Creative North Star: “The Evidence Pinboard”**
 
-Mapletrace pairs a dark moss workspace with a faint warm paper canvas and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.
+MapleTrace pairs a dark moss workspace with a faint warm paper canvas and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.
 
 Typography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.
 
