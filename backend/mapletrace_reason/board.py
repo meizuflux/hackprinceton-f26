@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import math
 
+from . import media as media_mod
 from .analytics import case_tz
 from .store import iso
 
@@ -160,6 +161,8 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
         for nid in gap_nodes[g.id]:
             nodes[nid].setdefault("gapId", g.id)
     _signal_and_insight_nodes(case, R, nodes, edges, cites)
+    # photos and video go on last: nothing above (gaps, leads) changes, and media never feeds the reasoning
+    extras["media_stats"] = media_mod.add_media(case, R, nodes, edges, src, extras.get("vision"))
     for obj in [*nodes.values(), *edges.values()]:
         obj["evidenceIds"] = list(dict.fromkeys(c.split(":", 1)[0] for c in obj["citations"]))
     _layout(nodes)
@@ -282,7 +285,7 @@ def _gap_nodes(case, R, nodes: dict) -> dict[str, list[str]]:
 def _layout(nodes: dict) -> None:
     cols: dict[int, list] = {}
     for n in nodes.values():
-        cols.setdefault(COLUMNS.get(n["type"], 2), []).append(n)
+        cols.setdefault(media_mod.MEDIA_COLUMN if n.get("media") else COLUMNS.get(n["type"], 2), []).append(n)
     for c, ns in cols.items():
         ns.sort(key=lambda n: (n.get("time") or "", n["label"]))
         for i, n in enumerate(ns):
