@@ -116,7 +116,7 @@ def claim_conflicts(ctx: Context, claims: list[Item]) -> list[Item]:
             "contradiction", stable_key("x-claim", cl.key),
             f"{case.name(subj)}'s account of {what} conflicts with records",
             f"{case.name(subj)} said: \"{d['quote'][:160]}\". {len(conflicting)} record(s) in the same window disagree, e.g. at "
-            f"{first.ts.astimezone(tz):%a %d %b %H:%M} {first.content[:70]}" + (f" @ {first.place}" if first.place else "")
+            f"{first.ts.astimezone(tz):%a %d %b %H:%M} {first.content[:70]}" + (f" @ {case.place_name(first.place)}" if first.place else "")
             + (f" ({conflicting[0][2]})." if conflicting[0][2] else ".")
             + (f" {len(consistent)} record(s) are consistent with the statement." if consistent else ""),
             certainty="inferred", score=0.8 if severity == "high" else 0.6,

@@ -43,6 +43,8 @@ Rules:
 - A gap in evidence is uncertainty, not proof. Missing records never count against a person.
 - Word findings neutrally ("conflicts with records", not "lied"). Present several explanations when they fit.
 - Never use nationality, ethnicity, religion or similar attributes.
+- Write for a person, not a database: name doors, readers, cabinets, cameras and workstations by the readable
+  name the tools give ("Secure demo cabinet (SC-EBC-01)"), keeping the ID in brackets the first time.
 - If the records do not answer the question, say so and set evidence_status to "insufficient".
 - Keep it short: at most five observations. Use as few tool calls as you need.
 

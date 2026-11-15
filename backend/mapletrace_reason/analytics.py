@@ -278,7 +278,7 @@ def access_anomalies(ctx: Context, max_items: int = 12, per_file: int = 2) -> li
         who = ", ".join(case.name(p) for p, _, _ in ctx.persons_for(r)) or (r.actor or "unattributed")
         items.append(Item(
             "finding", stable_key("anomaly", r.id),
-            f"Unusual event: {r.content[:70]}" + (f" @ {r.place}" if r.place and r.place not in r.content else ""),
+            f"Unusual event: {r.content[:70]}" + (f" @ {case.place_name(r.place)}" if r.place and r.place not in r.content else ""),
             f"{who}: {r.content}. Flagged because " + ("; ".join(why) or "its combination of time, place and event is rare") + ".",
             certainty="observed", score=round(float(min(1.0, severity)), 2), citations=[case.cite(r.id)],
             data={"method": ({"name": "IsolationForest (per log)", "contamination": round(cont, 3), "n_estimators": 200,
@@ -362,9 +362,9 @@ def concurrent_presence(ctx: Context) -> list[Item]:
                 bio = any(_BIOMETRIC.search(" ".join(map(str, x.attrs.values()))) for x in device_active
                           if abs((x.ts - e.ts).total_seconds()) < 1800)
                 add(pid, d0, e, "workstation", (
-                    f"{case.name(pid)}'s workstation {d0.place} shows activity at {d0.ts.astimezone(tz):%H:%M:%S} and "
+                    f"{case.name(pid)}'s workstation {case.place_name(d0.place)} shows activity at {d0.ts.astimezone(tz):%H:%M:%S} and "
                     f"{d1.ts.astimezone(tz):%H:%M:%S} ({d0.content[:50]}; {d1.content[:50]}), while at "
-                    f"{e.ts.astimezone(tz):%a %d %b %H:%M:%S} {e.content[:50]} was recorded at {e.place} ({basis[e.id]}). "
+                    f"{e.ts.astimezone(tz):%a %d %b %H:%M:%S} {e.content[:50]} was recorded at {case.place_name(e.place)} ({basis[e.id]}). "
                     "The same person is unlikely to be in both places; possible reasons: someone else used the credential "
                     "or the workstation session, the two places are adjacent, or one clock is off."
                     + (" The workstation session used a biometric sign-in, which is harder to share." if bio else "")),
@@ -378,7 +378,7 @@ def concurrent_presence(ctx: Context) -> list[Item]:
                     add(pid, h, e, "home", (
                         f"Location history places {case.name(pid)} at home from {hs.astimezone(tz):%a %d %b %H:%M} to "
                         f"{he.astimezone(tz):%H:%M}, but at {e.ts.astimezone(tz):%H:%M} {e.content[:50]} was recorded at "
-                        f"{e.place} ({basis[e.id]}). Either the credential was used by someone else, or the phone stayed "
+                        f"{case.place_name(e.place)} ({basis[e.id]}). Either the credential was used by someone else, or the phone stayed "
                         "home without its owner."), 0.75, [])
         # (c) two precise fixes far apart
         def acc(r):
@@ -512,9 +512,9 @@ def key_episodes(ctx: Context, findings: list[Item], top: int = 3) -> list[Item]
         persons = sorted({p for r in rids for p, _, _ in ctx.persons_for(case.records[r])})
         items.append(Item(
             "episode", stable_key("episode", iso(c[0][0])),
-            f"Key event {key_rec.ts.astimezone(tz):%a %d %b %H:%M}" + (f" at {places[0]}" if places else ""),
+            f"Key event {key_rec.ts.astimezone(tz):%a %d %b %H:%M}" + (f" at {case.place_name(places[0])}" if places else ""),
             f"{len(c)} unusual records between {start.astimezone(tz):%H:%M} and {end.astimezone(tz):%H:%M}"
-            + (f" involving {', '.join(places[:4])}" if places else "") + ".",
+            + (f" involving {', '.join(case.place_name(pl) for pl in places[:4])}" if places else "") + ".",
             certainty="observed", score=round(weight(c), 2),
             citations=[cc for _, f in c for cc in f.citations][:8],
             data={"start": iso(start), "end": iso(end), "places": places, "persons": persons, "record_ids": rids,

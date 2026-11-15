@@ -39,6 +39,8 @@ Rules:
 - A gap in evidence is uncertainty, not proof. Missing records never count against a person.
 - Word findings neutrally ("conflicts with records", not "lied"). Present several explanations when they fit.
 - Never use nationality, ethnicity, religion or similar attributes.
+- Write for a person, not a database: name doors, readers, cabinets, cameras and workstations by the readable
+  name the tools give ("Secure demo cabinet (SC-EBC-01)"), keeping the ID in brackets the first time.
 - Before recording an insight, ask the `verifier` subagent to confirm that each cited record supports its observation.
 
 Task: review the open questions and competing explanations, look for connections or contradictions the
@@ -114,7 +116,7 @@ def read_tools(case, ctx: Context, R, verdicts, log) -> dict:
             if words and not all(w in hay for w in words):
                 continue
             hits.append({"record_id": r.id, "time": r.ts.astimezone(tz).isoformat(timespec="minutes"), "type": r.type,
-                         "who": who, "what": r.content[:160], "where": r.place, "reliability": r.reliability,
+                         "who": who, "what": r.content[:160], "where": case.place_name(r.place), "reliability": r.reliability,
                          "citation": case.cite(r.id)["id"]})
             if len(hits) >= min(int(limit), 50):
                 break
@@ -128,7 +130,7 @@ def read_tools(case, ctx: Context, R, verdicts, log) -> dict:
         return log("get_record", {"record_id": record_id}, {
             "record_id": r.id, "type": r.type, "time": iso(r.ts), "window": [iso(r.start), iso(r.end)],
             "precision": r.precision, "time_flags": r.flags, "reliability": r.reliability, "text": r.content,
-            "place": r.place, "people": [[case.name(p), c, b] for p, c, b in ctx.persons_for(r)],
+            "place": case.place_name(r.place), "people": [[case.name(p), c, b] for p, c, b in ctx.persons_for(r)],
             "attributes": {k: v for k, v in r.attrs.items() if not isinstance(v, (dict, list))},
             "citation": case.cite(r.id)})
 
@@ -174,7 +176,7 @@ class LLMRun:
             return self._chat
         model = self.cfg.get("verifier_model" if verifier else "model", DEFAULT_MODEL)
         # Replay needs no key: the cache answers every request, and a miss raises before anything is sent.
-        cache = self.cache.tagged("verifier" if verifier else "investigator") if self.cache else None
+        cache = self.cache.tagged("verifier" if verifier else "investigator") if self.cache is not None else None
         m = make_chat_model(model, cache, "medium" if verifier else "high")
         if verifier:
             self._verifier_chat = m
@@ -367,4 +369,4 @@ class LLMRun:
                 "llm_calls": sum(1 for c in self.calls if c.get("stage") != "tool"),
                 "tool_calls": sum(1 for c in self.calls if c.get("stage") == "tool"),
                 "claims_added": self.claims_added, "insights_added": self.insights_added, "answers": self.answers,
-                "cache": self.cache.stats() if self.cache else None}
+                "cache": self.cache.stats() if self.cache is not None else None}

@@ -78,13 +78,13 @@ def explanations(ctx: Context, episodes: list[Item], findings: list[Item], contr
                          and abs((r.ts - key_t).total_seconds()) <= 180 and _is_presence(r)]
             homes = [r for r in window_recs if r.type == "place_visit" and any(q == p for q, _, _ in ctx.persons_for(r))
                      and _HOME.search(r.content + str(r.attrs.get("semanticType", "")))]
-            h = hyp("present", p, f"{case.name(p)} was physically at {place} at the key moment "
+            h = hyp("present", p, f"{case.name(p)} was physically at {case.place_name(place)} at the key moment "
                                   f"({key_t.astimezone(tz):%a %d %b %H:%M}).")
             for r, cert, basis in here:
                 w = 2.0 if (cert == "observed" or bio(r)) else 1.0
-                h["support"].append((r.id, f"{r.content[:60]} @ {r.place} ({basis}{', biometric' if bio(r) else ''})", w))
+                h["support"].append((r.id, f"{r.content[:60]} @ {case.place_name(r.place)} ({basis}{', biometric' if bio(r) else ''})", w))
             for r, cert, basis in elsewhere[:4]:
-                h["against"].append((r.id, f"at the same time, {r.content[:50]} @ {r.place} ({basis}"
+                h["against"].append((r.id, f"at the same time, {r.content[:50]} @ {case.place_name(r.place)} ({basis}"
                                            f"{', biometric' if bio(r) else ''})", 2.0 if bio(r) else 1.0))
             for r in homes[:1]:
                 h["against"].append((r.id, f"location history: {case.name(p)}'s phone at home", 2.0))
@@ -96,10 +96,10 @@ def explanations(ctx: Context, episodes: list[Item], findings: list[Item], contr
             hyps.append(h)
             if elsewhere or homes or any(c == "inferred" for _, c, _ in here) or \
                     any(f.data.get("person") == p for f in concurrent):
-                h2 = hyp("credential", p, f"Someone else used {case.name(p)}'s credential at {place} while {case.name(p)} "
+                h2 = hyp("credential", p, f"Someone else used {case.name(p)}'s credential at {case.place_name(place)} while {case.name(p)} "
                                           f"was elsewhere.")
                 for r, cert, basis in elsewhere[:3]:
-                    h2["support"].append((r.id, f"{case.name(p)} recorded at {r.place} at the key moment"
+                    h2["support"].append((r.id, f"{case.name(p)} recorded at {case.place_name(r.place)} at the key moment"
                                                 f"{' (biometric)' if bio(r) else ''}", 2.0 if bio(r) else 1.0))
                 for r in homes[:1]:
                     h2["support"].append((r.id, f"location history: {case.name(p)}'s phone at home", 1.5))
@@ -174,8 +174,8 @@ def _discriminators(case, top, place, when, ep) -> list[dict]:
     subj = [h.data["subject"] for h in top if h.data["subject"]]
     out = []
     if "present" in kinds or "credential" in kinds:
-        out.append({"artifact": "cctv_review", "why": f"shows who was physically at {place} ({when}), which separates "
-                    "presence from use of someone else's credential", "params": {"place": place, "window": when}})
+        out.append({"artifact": "cctv_review", "why": f"shows who was physically at {case.place_name(place)} ({when}), which separates "
+                    "presence from use of someone else's credential", "params": {"place": case.place_name(place), "window": when}})
     for p in subj[:2]:
         out.append({"artifact": "phone_location", "why": f"places {case.name(p)}'s phone during {when}; consistent location "
                     "elsewhere supports the shared-credential explanation", "params": {"person": case.name(p), "window": when}})
@@ -185,6 +185,6 @@ def _discriminators(case, top, place, when, ep) -> list[dict]:
     if "error" in kinds:
         out.append({"artifact": "system_clock_check", "why": "confirms whether system clocks were accurate, ruling the error "
                     "explanation in or out", "params": {"systems": ep.data.get("places", [])[:3]}})
-    out.append({"artifact": "forensic_lab", "why": f"DNA or fingerprints on the objects at {place} can identify who touched them",
-                "params": {"place": place}})
+    out.append({"artifact": "forensic_lab", "why": f"DNA or fingerprints on the objects at {case.place_name(place)} can identify who touched them",
+                "params": {"place": case.place_name(place)}})
     return out

@@ -59,15 +59,15 @@ def find_gaps(ctx: Context, episodes, findings, contradictions, hypotheses, verd
                            "only access logs identify anyone, and they identify credentials, not people")
             else:
                 gtype, missing = "uncertain", "only credential or account records, which identify a card or login, not a person"
-            arts = [{"artifact": "cctv_review", "params": {"place": place, "window": when}}]
+            arts = [{"artifact": "cctv_review", "params": {"place": case.place_name(place), "window": when}}]
             if vids:
                 arts.insert(0, {"artifact": "media_analysis", "params": {"files": [case.files[v.file_id]["original_path"] for v in vids]}})
-            arts.append({"artifact": "forensic_lab", "params": {"place": place}})
+            arts.append({"artifact": "forensic_lab", "params": {"place": case.place_name(place)}})
             gaps.append(_gap(
-                f"Who was physically at {place} during the key event ({when})?", gtype,
+                f"Who was physically at {case.place_name(place)} during the key event ({when})?", gtype,
                 f"Every explanation of the key event depends on who was actually there. It affects {len(hyps)} competing "
                 f"explanation(s).", missing,
-                f"Identify the people at {place} between {when}: review camera coverage of the approach routes and the room, "
+                f"Identify the people at {case.place_name(place)} between {when}: review camera coverage of the approach routes and the room, "
                 f"and compare with credential holders.", arts, 0.95,
                 ep.citations[:4] + [case.cite(v.id) for v in vids[:2]], affected, key_parts=("who-present", ep.key)))
         # Q2: where was each person of interest?
@@ -91,7 +91,7 @@ def find_gaps(ctx: Context, episodes, findings, contradictions, hypotheses, verd
                 f"Obtain an independent location source for {case.name(p)} covering {when} and put the conflicting records "
                 f"to them in a follow-up interview.",
                 [{"artifact": "phone_location", "params": {"person": case.name(p), "window": when}},
-                 {"artifact": "cctv_review", "params": {"place": place, "window": when}},
+                 {"artifact": "cctv_review", "params": {"place": case.place_name(place), "window": when}},
                  {"artifact": "follow_up_interview", "params": {"person": case.name(p), "topic": f"whereabouts {when}"}}],
                 0.85, [c for x in confl[:2] for c in x.citations[:2]] or h.citations[:2], [h.key] + [x.key for x in confl],
                 status=status, key_parts=("whereabouts", ep.key, case.name(p))))

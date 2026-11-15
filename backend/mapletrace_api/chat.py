@@ -204,7 +204,8 @@ def record(argv=None) -> int:
 def _record(command: str) -> int:
     from mapletrace_api import app as api  # imported after MAPLETRACE_DATA is set
 
-    case_id = api.open_demo()["caseId"]
+    from fastapi import BackgroundTasks
+    case_id = api.open_demo(BackgroundTasks())["caseId"]  # a fresh data dir: a clean install, no re-analysis job
     ingest_dir, analysis_dir = api._latest_dirs(case_id)
     service = ChatService()
     chat = service.case_chat(case_id, ingest_dir, analysis_dir)

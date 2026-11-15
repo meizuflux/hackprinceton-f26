@@ -161,6 +161,23 @@ class Case:
         e = self.entities.get(eid)
         return (e["display_name"] or e["value_norm"]) if e else f"entity {eid}"
 
+    @cached_property
+    def directory(self):
+        """Doors, readers, cameras, cabinets and workstations named in the case's own reference lists (`labels.py`)."""
+        from .labels import Directory
+        return Directory(self)
+
+    def place_name(self, value) -> str:
+        """A place or device ID in prose: "Secure demo cabinet (SC-EBC-01)" when a reference list names it, else the
+        value unchanged. The ID stays in brackets so the text still matches the cited records."""
+        if not value:
+            return value or ""
+        from .labels import short_name
+        p = self.directory.find(value)
+        if not p or p.name.casefold() == str(value).casefold():
+            return str(value)
+        return f"{short_name(p.name)} ({value})"
+
     def etype(self, eid: int) -> str:
         return self.entities[eid]["entity_type"] if eid in self.entities else "unknown"
 
