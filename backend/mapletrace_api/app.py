@@ -317,30 +317,83 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
     return {"jobId": job_id, "caseId": case_id}
 
 
+DEMO_STAMP = "demo_snapshot.sha256"  # in the installed demo case dir: the snapshot it was installed from
+_snapshot_sha: dict[tuple, str] = {}
+
+
+def _demo_snapshot_sha256() -> str:
+    st = DEMO_SNAPSHOT.stat()
+    memo = (st.st_mtime_ns, st.st_size)
+    if memo not in _snapshot_sha:
+        _snapshot_sha.clear()
+        _snapshot_sha[memo] = hashlib.sha256(DEMO_SNAPSHOT.read_bytes()).hexdigest()
+    return _snapshot_sha[memo]
+
+
+def _demo_current(case_dir: Path, snapshot_sha: str) -> bool:
+    """The installed demo came from this snapshot and has its run trace (installs from before the trace existed, or
+    from an older snapshot, are stale: their replay would never play or would show an old board)."""
+    stamp = case_dir / DEMO_STAMP
+    if not (case_dir / "case.json").exists() or not stamp.exists():
+        return False
+    if stamp.read_text(encoding="utf-8").strip() != snapshot_sha:
+        return False
+    meta = _read_json(case_dir / "case.json")
+    ingest_dirs = {v["ingest_dir"] for v in meta.get("versions", [])}
+    return bool(ingest_dirs) and all((case_dir / d / "trace.jsonl").exists() for d in ingest_dirs)
+
+
 @app.post("/demo")
-def open_demo():
-    """Install the committed Kestrel snapshot (ingestion + analysis with recorded LLM results) once, then reuse it."""
+def open_demo(background: BackgroundTasks):
+    """Install the committed Kestrel snapshot (ingestion + analysis with recorded LLM results), then reuse it until the
+    snapshot changes. A stale install (other snapshot, or no run trace) is replaced; its investigator overrides
+    (`overrides.jsonl`) are kept and re-applied by a re-analysis job (`jobId` in the reply)."""
     case_dir = _cases() / DEMO_CASE_ID
-    if (case_dir / "case.json").exists():
-        return {"caseId": DEMO_CASE_ID}
     if not DEMO_SNAPSHOT.exists():
+        if (case_dir / "case.json").exists():
+            return {"caseId": DEMO_CASE_ID}
         raise ApiError(404, "no_demo_snapshot", "no demo snapshot; build it with make backend-demo-snapshot")
+    snapshot_sha = _demo_snapshot_sha256()
+    if _demo_current(case_dir, snapshot_sha):
+        return {"caseId": DEMO_CASE_ID}
+    reapply = False
     with _lock:
-        tmp = Path(tempfile.mkdtemp(dir=_cases(), prefix=".demo-"))
-        try:
-            with tarfile.open(DEMO_SNAPSHOT) as t:
-                t.extractall(tmp, filter="data")
-            meta = _read_json(tmp / "case.json")
-            # the uploaded archive is not in the snapshot; it is the repository's Kestrel ZIP (checked by hash)
-            upload = meta["uploads"][0]
-            if DEMO_ARCHIVE.exists() and hashlib.sha256(DEMO_ARCHIVE.read_bytes()).hexdigest() == upload["sha256"]:
-                (tmp / "uploads").mkdir(exist_ok=True)
-                shutil.copyfile(DEMO_ARCHIVE, tmp / "uploads" / upload["stored"])
-            if not (case_dir / "case.json").exists():
-                shutil.rmtree(case_dir, ignore_errors=True)
-                tmp.rename(case_dir)
-        finally:
-            shutil.rmtree(tmp, ignore_errors=True)
+        if not _demo_current(case_dir, snapshot_sha):
+            tmp = Path(tempfile.mkdtemp(dir=_cases(), prefix=".demo-"))
+            old = _cases() / f".demo-old-{uuid.uuid4().hex[:8]}"
+            try:
+                with tarfile.open(DEMO_SNAPSHOT) as t:
+                    t.extractall(tmp, filter="data")
+                meta = _read_json(tmp / "case.json")
+                # the uploaded archive is not in the snapshot; it is the repository's Kestrel ZIP (checked by hash)
+                upload = meta["uploads"][0]
+                if DEMO_ARCHIVE.exists() and hashlib.sha256(DEMO_ARCHIVE.read_bytes()).hexdigest() == upload["sha256"]:
+                    (tmp / "uploads").mkdir(exist_ok=True)
+                    shutil.copyfile(DEMO_ARCHIVE, tmp / "uploads" / upload["stored"])
+                (tmp / DEMO_STAMP).write_text(snapshot_sha, encoding="utf-8")
+                overrides = case_dir / "overrides.jsonl"
+                if overrides.exists() and overrides.stat().st_size:
+                    shutil.copyfile(overrides, tmp / "overrides.jsonl")  # never lose an investigator's corrections
+                    reapply = True
+                if case_dir.exists():
+                    case_dir.rename(old)
+                try:
+                    tmp.rename(case_dir)
+                except OSError:
+                    if old.exists():
+                        old.rename(case_dir)  # keep the previous install rather than none
+                    raise
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+                shutil.rmtree(old, ignore_errors=True)
+            chat_service.forget(DEMO_CASE_ID)
+    if reapply:
+        meta = _read_json(case_dir / "case.json")
+        job_id = uuid.uuid4().hex
+        _job(job_id, status="processing", progress=0, stage="queued", message="Re-applying analysis",
+             caseId=DEMO_CASE_ID)
+        background.add_task(_reanalyse, job_id, DEMO_CASE_ID, meta["versions"][meta["latest"]])
+        return {"caseId": DEMO_CASE_ID, "jobId": job_id}
     return {"caseId": DEMO_CASE_ID}
 
 
