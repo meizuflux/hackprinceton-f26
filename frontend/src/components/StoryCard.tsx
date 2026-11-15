@@ -163,7 +163,7 @@ export const StoryCardNode = memo(function StoryCardNode({
         <button
           ref={toggleRef}
           type="button"
-          className="story-card-toggle nodrag nopan"
+          className="story-card-toggle"
           aria-expanded={Boolean(data.expanded)}
           aria-label={`${data.label}. ${data.type}${data.certainty === "inferred" ? ", inferred" : ""}${data.gapId ? ", open question" : ""}. ${data.expanded ? "Collapse card" : "Expand card"}`}
           onClick={(event) => {
@@ -286,7 +286,7 @@ export const StoryGroupNode = memo(function StoryGroupNode({
       <Handles />
       <button
         type="button"
-        className={`story-group kind-${cardKind(data.nodeType)} ${open ? "is-open" : ""} ${data.isFocused ? "is-focused" : ""} nodrag nopan`}
+        className={`story-group kind-${cardKind(data.nodeType)} ${open ? "is-open" : ""} ${data.isFocused ? "is-focused" : ""}`}
         aria-expanded={open}
         aria-label={`${data.title}: group of ${data.total} cards, ${data.hidden} hidden. ${data.rule}. ${open ? "Fold the cards back into the group" : `Show ${data.hidden} cards`}`}
         title={data.rule}
