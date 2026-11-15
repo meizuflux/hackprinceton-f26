@@ -125,4 +125,4 @@ Rules and durable decisions for agents working in this repository. How-to materi
 
 ## Vultr deployment
 
-- `scripts/deploy-vultr.py` deploys committed revisions to a single Ubuntu instance using `scripts/compose.vultr.yaml`. Caddy provides automatic TLS for the configured domain; the app remains unauthenticated. Persistent case data and Caddy certificates stay in Compose volumes. Keep the deploy upload limit aligned with Caddy.
+- `scripts/deploy-vultr.py` deploys committed revisions to a single Ubuntu instance using `scripts/compose.vultr.yaml`. Caddy provides automatic TLS for the configured domain; the app remains unauthenticated. Case data uses a mounted Vultr block storage volume; Caddy certificates stay in a Compose volume. Keep the deploy upload limit aligned with Caddy.

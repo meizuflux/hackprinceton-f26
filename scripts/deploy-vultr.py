@@ -27,7 +27,8 @@ def api(method, path, payload=None):
         "Authorization": "Bearer " + key, "Content-Type": "application/json"})
     try:
         with urllib.request.urlopen(request, timeout=30) as response:
-            return json.load(response)
+            body = response.read()
+            return json.loads(body) if body else {}
     except urllib.error.HTTPError as exc:
         raise RuntimeError(f"Vultr API returned HTTP {exc.code}: {exc.read(4096).decode(errors='replace')}") from exc
 
@@ -69,6 +70,41 @@ def wait_instance(instance_id, timeout):
     raise TimeoutError(f"Instance {instance_id} did not become active in {timeout}s")
 
 
+
+def prepare_volume(args, instance_id):
+    instance = api("GET", "/instances/" + instance_id)["instance"]
+    region = instance["region"]
+    created = False
+    if args.volume_id:
+        volume_id = args.volume_id
+    else:
+        volume = api("POST", "/blocks", {"region": region, "size_gb": args.volume_size_gb,
+                                         "label": args.label + "-data", "block_type": args.volume_type})["block"]
+        volume_id = volume["id"]
+        created = True
+        print(f"Created billable Vultr block storage {volume_id}. Save this ID for retries.", flush=True)
+    deadline = time.monotonic() + args.timeout
+    attach_requested = False
+    while time.monotonic() < deadline:
+        volume = api("GET", "/blocks/" + volume_id)["block"]
+        if volume.get("region") != region:
+            raise ValueError("Block storage and instance must be in the same region")
+        attached = volume.get("attached_to_instance") or ""
+        if attached and attached != instance_id:
+            raise ValueError(f"Block storage {volume_id} is attached to another instance")
+        if volume.get("status") == "active":
+            if not attached and not attach_requested:
+                api("POST", f"/blocks/{volume_id}/attach", {"instance_id": instance_id, "live": True})
+                attach_requested = True
+            elif attached == instance_id and volume.get("mount_id"):
+                mount_id = volume["mount_id"]
+                if not re.fullmatch(r"[A-Za-z0-9_-]+", mount_id):
+                    raise ValueError("Invalid Vultr block storage mount ID")
+                return volume_id, mount_id, created
+        time.sleep(10)
+    raise TimeoutError(f"Block storage {volume_id} did not become ready; retry with --volume-id {volume_id}")
+
+
 def deploy(args):
     # Deploy a committed snapshot: no untracked files or local secrets are uploaded.
     if subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT).strip():
@@ -88,6 +124,8 @@ def deploy(args):
         instance_id = api("POST", "/instances", payload)["instance"]["id"]
         print(f"Created billable Vultr instance {instance_id}. Save this ID for retries.", flush=True)
     host = wait_instance(instance_id, args.timeout)
+    volume_id, mount_id, created_volume = prepare_volume(args, instance_id)
+    print(f"Using block storage {volume_id} for case data.", flush=True)
     print(f"Instance {instance_id} is active at {host}; point {args.domain} to this IP and connect over SSH.", flush=True)
     ssh = ssh_base(args, host)
     deadline = time.monotonic() + args.timeout
@@ -110,6 +148,10 @@ def deploy(args):
     if archive.returncode:
         raise RuntimeError("git archive failed")
     run(ssh + [f"umask 077; cat > {REMOTE}/.env"], input=config)
+    storage_script = (ROOT / "scripts" / "mount-vultr-storage.sh").read_bytes()
+    storage_args = ["sh", "-s", "--", mount_id, "yes" if created_volume else "no",
+                    "yes" if args.local_data_migrated else "no"]
+    run(ssh + [" ".join(shlex.quote(arg) for arg in storage_args)], input=storage_script)
     remote_command = f'''set -eu
 command -v curl >/dev/null 2>&1 || {{ apt-get update; apt-get install -y curl ca-certificates; }}
 if ! command -v docker >/dev/null 2>&1; then
@@ -149,6 +191,11 @@ def parser():
     p.add_argument("--hostname", default="mapletrace")
     p.add_argument("--identity-file", help="local SSH private key")
     p.add_argument("--timeout", type=int, default=600, help="seconds to wait separately for instance and SSH (default: 600)")
+    storage = p.add_mutually_exclusive_group(required=True)
+    storage.add_argument("--volume-id", help="existing Vultr block storage ID, formatted as ext4")
+    storage.add_argument("--volume-size-gb", type=int, help="create a new billable block storage volume of this size")
+    p.add_argument("--volume-type", choices=("high_perf", "storage_opt"), default="high_perf")
+    p.add_argument("--local-data-migrated", action="store_true", help="confirm old local Docker volume was migrated or is not needed")
     p.add_argument("--domain", required=True, help="public DNS hostname pointing to the instance")
     return p
 
@@ -167,6 +214,8 @@ def main():
     args = parser().parse_args()
     if not valid_domain(args.domain):
         parser().error("--domain must be a public DNS hostname (no URL, wildcard, IP address, or localhost)")
+    if args.volume_size_gb is not None and args.volume_size_gb <= 0:
+        parser().error("--volume-size-gb must be positive")
     if args.timeout <= 0:
         parser().error("--timeout must be positive")
     try:

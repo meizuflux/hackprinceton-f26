@@ -11,7 +11,11 @@ services:
       MAPLETRACE_LLM_MODEL: ${MAPLETRACE_LLM_MODEL:-claude-sonnet-5-5}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
     volumes:
-      - mapletrace-data:/data
+      - type: bind
+        source: /mnt/mapletrace-data/mapletrace
+        target: /data
+        bind:
+          create_host_path: false
     healthcheck:
       test: ["CMD", "python", "-c", "import sys, urllib.request; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8000/health', timeout=2).status == 200 else 1)"]
       interval: 10s
@@ -37,6 +41,5 @@ services:
         condition: service_healthy
     restart: unless-stopped
 volumes:
-  mapletrace-data:
   caddy-data:
   caddy-config:
