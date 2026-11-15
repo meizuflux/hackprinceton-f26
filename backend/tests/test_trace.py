@@ -125,7 +125,7 @@ def test_call_stats_and_latency_roundtrip(tmp_path):
              "input_token_details": {"cache_read": 400, "cache_creation": 100}}
     s = call_stats(AIMessage("x", usage_metadata=usage))
     assert s["inputTokens"] == 500 and s["cacheReadTokens"] == 400 and s["cacheWriteTokens"] == 100
-    assert s["durationSource"] == "estimated" and s["durationMs"] == 800 + 10000
+    assert s["durationSource"] == "estimated" and s["durationMs"] == 600 + 2750
     assert s["costUsd"] == round((500 * 2 + 550 * 10 + 400 * 0.2 + 100 * 2.5) / 1e6, 6)
     assert call_stats(AIMessage("x"), 1234)["durationSource"] == "recorded"
 

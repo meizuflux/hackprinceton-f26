@@ -217,7 +217,7 @@ uvicorn mapletrace_api.app:app --port 8000      # CORS allows localhost:5173 and
 
 | Method | Path | Purpose |
 |---|---|---|
-| POST | `/upload` (multipart `file`, optional `case_name`, `timezone`, `llm`) | New case → `{jobId, caseId}`. Ingestion and analysis run in the background (100 MB limit) |
+| POST | `/upload` (multipart `file`, optional `case_name`, `timezone`, `llm`, `analysis_mode=replay\|live`) | New case → `{jobId, caseId}`. Ingestion and analysis run in the background (100 MB limit) |
 | GET | `/status/{jobId}` | `{status: processing \| ready \| failed, progress, stage, message, caseId}` |
 | GET | `/case` | Latest ready case as `CaseData` (drop-in for the frontend's `getCase()`) |
 | GET | `/cases`, `/cases/{caseId}` | List cases; one case as `CaseData` |
@@ -230,7 +230,8 @@ uvicorn mapletrace_api.app:app --port 8000      # CORS allows localhost:5173 and
 | GET | `/cases/{caseId}/audit-chain` | `{verified, head, checks: [{source, ok, message}], entries: [{seq, time, stage, action, fileId, detail, hash, prevHash, source: ingest \| analysis}]}`. `verified` re-runs `mapletrace_ingest verify` (database hash, chain, evidence hashes), checks the analysis chain continues from the ingestion head, and checks the board/analysis outputs against their logged hashes |
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
 | POST | `/demo` | Install the committed Kestrel snapshot once and return `{caseId}` (`404 no_demo_snapshot` if it is missing) |
-| GET | `/health` | Liveness check (used by Docker) |
+| GET | `/health` | Liveness check (used by Docker); `llmLive` is true when a server API key allows `analysis_mode=live` |
+| GET | `/cases/{caseId}/trace?after=N` | Run trace events (ingestion and analysis) with a replay clock, readable while the job runs: `{status, timing, events, next}`. See [`TRACE.md`](TRACE.md) |
 | GET | `/chat/status?case_id=` | Case chat availability, mode (`live` with a key, `replay` without) and suggested questions with a `recorded` flag. See [`frontend/CHAT.md`](../frontend/CHAT.md) |
 | POST | `/cases/{caseId}/chat` (`{message, thread_id?}`) | Cited answer `{thread_id, message: {role, content, evidence_status, citations, summary, observations, inference, unknowns}, suggested, replayed, model_calls}`. `503 needs_api_key` when the answer is not recorded and no key is set. See [`frontend/CHAT.md`](../frontend/CHAT.md) |
 | GET / POST | `/cases/{caseId}/overrides` | Read or record investigator corrections (`dismiss`, `confirm`, `set_status`, `set_label`, `note`, `reject_link`) |
@@ -249,6 +250,7 @@ Errors are always `{"error": {"code", "message"}}`. Uploads are capped at `MAPLE
 - **`insights[]`:** `certainty`, `confidence`, `observations[]` (each cited), `inference`, `unknowns`, `counterevidence`, `assumptions`, `limitations`, and `explanations` for verdict insights.
 - **`suggestions[]`:** `gapIds`, `artifact`, `score`.
 - **Top-level:** `contradictions`, `explanations`, `timeline`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `changes`, `overrides`, `signals` (ML leads: `type`, `method`, `score`, `certainty`, `citations`).
+- **Provenance:** every node and edge has `origin` (`record` \| `rules` \| `ml` \| `llm` \| `agent`), `stage` and `evidenceIds`; `insights[]` and `signals[]` carry `origin`. ML signals (except identity clusters, which are threads between people) and agent insights are inferred nodes (`sig-<key>`, `ins-<key>`, with `itemId`) joined by `inference` edges to the nodes they share citations with.
 - **`key`:** every item has a stable key, which is what overrides target.
 
 ## Not done yet

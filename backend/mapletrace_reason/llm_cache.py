@@ -18,10 +18,11 @@ original call, stored beside the response (never part of the key; older entries 
 turns a response (or a chat message) into the camelCase numbers the trace and the chat `steps` show. Entries without a
 latency get an estimate, flagged `durationSource: "estimated"`:
 
-    estimated duration = 800 ms + output_tokens / 55 tokens per second
+    estimated duration = 600 ms + output_tokens / 200 tokens per second
 
-(output tokens include reasoning tokens; 55 tok/s and 0.8 s time-to-first-token are typical Sonnet-class figures, not
-a measurement). Cost uses backend/LLM_COSTS.md: $2 input, $10 output, $0.20 cache read and $2.50 five-minute cache
+(output tokens include reasoning tokens). The two constants are not a measurement: the original recording did not
+keep latencies, so they are calibrated so that the Kestrel recording's 38 calls (about 60k output tokens) add up to
+roughly the five minutes that run took. Entries recorded from now on keep their real `latency_ms`. Cost uses backend/LLM_COSTS.md: $2 input, $10 output, $0.20 cache read and $2.50 five-minute cache
 write per million tokens.
 """
 
@@ -43,7 +44,7 @@ Mode = Literal["record", "replay"]
 
 # $ per million tokens (Sonnet 5.5, backend/LLM_COSTS.md)
 PRICE_PER_MTOK = {"input": 2.0, "output": 10.0, "cache_read": 0.20, "cache_write": 2.50}
-EST_BASE_MS, EST_TOKENS_PER_S = 800, 55
+EST_BASE_MS, EST_TOKENS_PER_S = 600, 200
 
 
 def _usage_of(obj) -> dict:

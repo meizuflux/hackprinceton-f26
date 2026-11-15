@@ -37,9 +37,9 @@ see below), `phase`, `type`.
 | `entities_linked` | ingest | `entities` (int), `links` (int) |
 | `stage_finished` | rules, ml, llm, agent | `stage` (pipeline stage name, e.g. `connections`, `findings`, `ml_signals`, `claims`, `contradictions`, `gaps`, `insights`, `agent_insights`), `label`, `counts` ({name: int}), `durationMs` |
 | `ml_signal` | ml | `id` (`ML-xx`), `signalType`, `title`, `method` (model name) |
-| `llm_call` | llm, agent | `purpose` (`claim_extraction`, `investigator`, `verifier`), `model`, `inputTokens`, `outputTokens`, `cacheReadTokens`, `cacheWriteTokens`, `costUsd`, `durationMs`, `durationSource` (`recorded`, `estimated`, `live`), `replayed` (bool) |
+| `llm_call` | llm, agent | `purpose` (`claim_extraction`, `investigator`, `verifier`), `model`, `inputTokens`, `outputTokens`, `cacheReadTokens`, `cacheWriteTokens`, `costUsd`, `durationMs`, `durationSource` (`recorded`, `estimated`, `live`), `replayed` (bool), `startMs` (replay-clock start; `tMs` is the end) |
 | `agent_tool` | agent | `tool` (tool name), `args` (short object; strings truncated to 120 chars), `resultChars` (int) |
-| `insight_recorded` | agent | `id`, `key`, `title` |
+| `insight_recorded` | agent | `id` (always `null`: display IDs are assigned when the run ends, match the board insight by `key`), `key`, `title` |
 | `run_finished` | output | `status` (`ready` or `failed`), `durationMs`, `totals` ({`records`, `nodes`, `edges`, `gaps`, `insights`, `signals`, `llmCalls`, `toolCalls`, `costUsd`}) |
 
 ### Replay clock
@@ -47,7 +47,7 @@ see below), `phase`, `type`.
 `tMs` is the wall clock of the run, except that a replayed LLM call (served from the committed cache) advances the
 clock by its *recorded* duration instead of the near-zero replay time. Cache entries keep `latency_ms` from the
 recording run when they have it (`durationSource: "recorded"`). Older entries have no latency, so the duration is
-estimated from the recorded token counts (`durationSource: "estimated"`, formula in `mapletrace_reason/llm_cache.py`).
+estimated from the recorded token counts (`durationSource: "estimated"`, formula in `mapletrace_reason/llm_cache.py`: 600 ms + output tokens / 200 per second, calibrated to the roughly five minutes the Kestrel recording took). Replayed calls are placed one after another: the cache does not record start times, so overlap in the original run cannot be reconstructed.
 A live billed run reports real durations (`"live"`). The response's top-level `timing` is `recorded` only when every
 replayed call had a recorded latency, `estimated` if any did not, and `live` for a live run. The UI must label
 estimated timing as estimated.
@@ -65,7 +65,7 @@ Every board node and edge carries
 
 `origin` is independent of `certainty`: an `ml` item is always inferred, but a `rules` item may be observed or
 inferred. ML signals and agent insights appear on the board as inferred nodes joined to the nodes whose citations
-they share (edge `basis` says so). Insights and signals in the side lists carry the same `origin`.
+they share (edge `basis` says so). These nodes have `id` `sig-<key>` or `ins-<key>`, `itemId` (`ML-xx`/`I-xx`) and `key`; their edges have type `inference` and are undirected. The trace endpoint returns an empty `events` list with status `processing` while a new case has not written its first event yet. Insights and signals in the side lists carry the same `origin`.
 
 ## Upload mode
 
