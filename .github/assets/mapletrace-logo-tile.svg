@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="200" height="200" role="img" aria-label="MapleTrace">
+  <!-- The unchanged MapleTrace mark (frontend/public/mapletrace-mark.svg) on a dark tile, for light backgrounds. -->
+  <defs>
+    <linearGradient id="mt-tile" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1b2633"/>
+      <stop offset="1" stop-color="#10151c"/>
+    </linearGradient>
+    <linearGradient id="mt-upper" gradientUnits="userSpaceOnUse" x1="18" y1="50" x2="89" y2="29">
+      <stop offset="0" stop-color="#a4e0ff"/>
+      <stop offset="0.42" stop-color="#81cdff"/>
+      <stop offset="0.68" stop-color="#6fc0ff"/>
+      <stop offset="0.87" stop-color="#48a5fb"/>
+      <stop offset="1" stop-color="#3b96ee"/>
+    </linearGradient>
+    <linearGradient id="mt-lower" gradientUnits="userSpaceOnUse" x1="18" y1="50" x2="89" y2="71">
+      <stop offset="0" stop-color="#9cdcff"/>
+      <stop offset="0.22" stop-color="#78c6ff"/>
+      <stop offset="0.36" stop-color="#48a3f6"/>
+      <stop offset="0.52" stop-color="#3d92e3"/>
+      <stop offset="0.7" stop-color="#57aff2"/>
+      <stop offset="0.8" stop-color="#74c7fd"/>
+      <stop offset="1" stop-color="#7acbff"/>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="44" fill="url(#mt-tile)"/>
+  <rect x="0.75" y="0.75" width="198.5" height="198.5" rx="43.25" fill="none" stroke="#33414f" stroke-width="1.5"/>
+  <!-- Mark viewBox is 10 22 80 56 (centre 50,50); scale 1.75 gives a 140 x 98 mark centred on the tile. -->
+  <g transform="translate(100 100) scale(1.75) translate(-50 -50)">
+    <path d="M82 50 32 24H11v10h18l30 16-30 16H11v10h21z" fill="#f4f2ec"/>
+    <path d="M18 50 68 24h21v10H71L41 50z" fill="url(#mt-upper)"/>
+    <path d="M18 50h23l30 16h18v10H68z" fill="url(#mt-lower)"/>
+  </g>
+</svg>
