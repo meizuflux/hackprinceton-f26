@@ -3,7 +3,7 @@
   z-index: 12;
   top: var(--topbar-clearance-y, 68px);
   right: 16px;
-  bottom: 118px;
+  bottom: 16px;
   width: min(400px, calc(100% - 32px));
   display: flex;
   flex-direction: column;
@@ -327,10 +327,10 @@
 }
 .audit-step {
   position: relative;
-  padding: 0 0 22px 24px;
+  padding: 0 0 16px 24px;
 }
 .audit-step:not(:last-child) {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   border-bottom: 1px solid var(--line);
 }
 .audit-step > svg {
@@ -347,7 +347,7 @@
 .audit-step h3 {
   font-size: 14px;
   font-weight: 550;
-  margin: 8px 0;
+  margin: 2px 0 6px;
 }
 .audit-step button {
   display: inline-flex;
@@ -422,7 +422,7 @@
   color: #e6eef6;
 }
 .audit-chain {
-  margin: 0 0 16px;
+  margin: 16px 16px 0;
   padding: 12px;
   border: 1px solid #3f5266;
   border-radius: 5px;
@@ -454,4 +454,39 @@
 }
 .audit-step p {
   overflow-wrap: anywhere;
+}
+.audit-fields {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 12px;
+}
+.audit-fields > div {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+  gap: 12px;
+}
+.audit-fields dt {
+  color: var(--muted);
+}
+.audit-fields dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #c3cdd8;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  line-height: 1.7;
+}
+/* The step from a cited source to its file: a quiet brand action under the excerpt. */
+.source-meta .open-raw-button {
+  margin: -4px 0 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--brand-border);
+  background: var(--brand-hover);
+  color: var(--brand-text);
+}
+.source-meta .open-raw-button:hover {
+  background: var(--brand-selected);
+  color: var(--brand-100);
 }

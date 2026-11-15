@@ -1,4 +1,10 @@
-import { ArrowLeft, ChevronDown, GitBranch, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ChevronDown,
+  GitBranch,
+  X,
+} from "lucide-react";
 import { useEffect, useRef } from "react";
 import { isMock } from "../api/client";
 import type { CaseData } from "../api/types";
@@ -320,11 +326,11 @@ export function Inspector({
                   <blockquote>{source.excerpt}</blockquote>
                   {onOpenSource && (
                     <button
-                      className="text-button"
+                      className="text-button open-raw-button"
                       type="button"
                       onClick={() => onOpenSource(source.id)}
                     >
-                      Open in raw evidence →
+                      Open in raw evidence <ArrowUpRight size={14} />
                     </button>
                   )}
                   <p>
