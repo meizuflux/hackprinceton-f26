@@ -46,7 +46,7 @@ from mapletrace_ingest.db import GENESIS_HASH, verify_audit_chain
 from mapletrace_ingest.pipeline import ingest_zip
 from mapletrace_reason import history
 from mapletrace_reason.pipeline import analyze
-from mapletrace_reason.store import PROTECTED_KEYS, citation_id, locator_label
+from mapletrace_reason.store import PROTECTED_KEYS, citation_id, unique_labels
 
 DATA = Path(os.environ.get("MAPLETRACE_DATA", Path(__file__).resolve().parents[1] / "data"))
 MAX_UPLOAD = int(os.environ.get("MAPLETRACE_MAX_UPLOAD_MB", "100")) * 1024 * 1024
@@ -359,16 +359,23 @@ def get_records(case_id: str, evidenceId: Optional[str] = None, limit: int = 100
         total = con.execute(f"SELECT COUNT(*) FROM records r{where}", args).fetchone()[0]
         rows = con.execute(f"SELECT r.*, f.external_id FROM records r JOIN evidence_files f ON f.file_id = r.file_id"
                            f"{where} ORDER BY r.record_id LIMIT ? OFFSET ?", args + [limit, offset]).fetchall()
+        def attrs_of(raw):
+            return {k: v for k, v in json.loads(raw or "{}").items() if not PROTECTED_KEYS.search(k)}
+        file_ids = sorted({r["file_id"] for r in rows})
+        labels = unique_labels(
+            (x["record_id"], x["file_id"], json.loads(x["locator_json"] or "{}"), attrs_of(x["attributes_json"]))
+            for x in con.execute(f"SELECT record_id, file_id, locator_json, attributes_json FROM records "
+                                 f"WHERE file_id IN ({','.join('?' * len(file_ids))})", file_ids)) if file_ids else {}
         items = []
         for r in rows:
-            attrs = {k: v for k, v in json.loads(r["attributes_json"] or "{}").items() if not PROTECTED_KEYS.search(k)}
+            attrs = attrs_of(r["attributes_json"])
             fields = {k: r[k] for k in _RECORD_FIELDS if r[k] is not None}
             flags = json.loads(r["ts_flags"] or "[]")
             if flags:
                 fields["ts_flags"] = ", ".join(flags)
             fields.update({k: v for k, v in attrs.items() if _scalar(v) and v is not None and k not in fields})
             ev = r["external_id"] or f"FILE-{r['file_id']}"
-            label = locator_label(json.loads(r["locator_json"] or "{}"), attrs)
+            label = labels[r["record_id"]]
             cit = {"evidenceId": ev, "locator": label}
             if citation_id(ev, label) in source_ids:
                 cit["sourceId"] = citation_id(ev, label)

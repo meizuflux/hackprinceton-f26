@@ -358,3 +358,15 @@ def test_deep_agent_loop_records_cited_insights(sample):
     assert out[0].data["generated_by"] == "agent:fake" and out[0].certainty == "inferred"
     actions = [r[0] for r in con.execute("SELECT action FROM audit_log ORDER BY seq")]
     assert actions == ["list_explanations", "record_insight", "record_insight"]
+
+
+def test_citation_labels_identify_one_record():
+    from mapletrace_reason.store import unique_labels
+
+    labels = unique_labels([
+        (1, 7, {"row": 4}, {"event_id": "9001"}),   # event code shared by two rows -> position
+        (2, 7, {"row": 5}, {"event_id": "9001"}),
+        (3, 7, {"row": 6}, {"event_id": "BDG-1"}),  # unique record ID is kept
+        (4, 8, {"row": 4}, {"event_id": "9001"}),   # another file: no collision
+    ])
+    assert labels == {1: "row=4", 2: "row=5", 3: "event_id=BDG-1", 4: "event_id=9001"}

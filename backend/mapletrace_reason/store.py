@@ -10,6 +10,7 @@ import json
 import math
 import re
 import sqlite3
+from collections import Counter
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 from functools import cached_property
@@ -64,6 +65,16 @@ def locator_label(locator: dict, attrs: dict) -> str:
     if "json_path" in loc:
         return loc["json_path"]
     return ",".join(f"{k}={v}" for k, v in loc.items()) or "file"
+
+
+def unique_labels(items) -> dict:
+    """Citation labels that identify exactly one record. `items` yields `(key, file_id, locator, attrs)`. An attribute
+    shared by several records of one file (an event code such as `event_id=9001`, not a record ID) would merge distinct
+    records into one citation, so those records fall back to their position in the file (`row=`, `line=`, ...)."""
+    first = {key: (file_id, locator_label(loc, attrs), loc) for key, file_id, loc, attrs in items}
+    counts = Counter((file_id, label) for file_id, label, _ in first.values())
+    return {key: label if counts[(file_id, label)] == 1 else locator_label(loc, {})
+            for key, (file_id, label, loc) in first.items()}
 
 
 def citation_id(evidence_id: str, label: str) -> str:
@@ -171,8 +182,12 @@ class Case:
         return sorted((r for r in self.records.values() if r.ts and r.duplicate_of is None), key=lambda r: r.ts)
 
     # ------------------------------------------------------------ citations
+    @cached_property
+    def _labels(self) -> dict[int, str]:
+        return unique_labels((r.id, r.file_id, r.locator, r.attrs) for r in self.records.values())
+
     def locator_label(self, rec: Record) -> str:
-        return locator_label(rec.locator, rec.attrs)
+        return self._labels[rec.id]
 
     def cite(self, rid: int) -> dict:
         rec = self.records[rid]
