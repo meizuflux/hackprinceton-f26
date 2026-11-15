@@ -1,0 +1,334 @@
+/*
+ * Board color coding. Values come from board-colors.ts through custom
+ * properties on .canvas-wrap; these rules only decide where each ink appears.
+ * Card hue marks the record type, a dashed outline and an "Inferred" chip mark
+ * inferred cards, and an amber outline plus a question flag mark open questions.
+ */
+.canvas-wrap {
+  --question-ink: #9a6418;
+}
+.kind-person,
+.board-minimap-node.person {
+  --pin-ink: var(--card-person);
+  --pin-tint: var(--card-person-tint);
+}
+.kind-device,
+.board-minimap-node.device {
+  --pin-ink: var(--card-device);
+  --pin-tint: var(--card-device-tint);
+}
+.kind-event,
+.board-minimap-node.event {
+  --pin-ink: var(--card-event);
+  --pin-tint: var(--card-event-tint);
+}
+.kind-location,
+.board-minimap-node.location {
+  --pin-ink: var(--card-location);
+  --pin-tint: var(--card-location-tint);
+}
+.kind-statement,
+.board-minimap-node.statement {
+  --pin-ink: var(--card-statement);
+  --pin-tint: var(--card-statement-tint);
+}
+.kind-other,
+.board-minimap-node.other {
+  --pin-ink: var(--card-other);
+  --pin-tint: var(--card-other-tint);
+}
+.board-minimap-node:not(.person, .device, .event, .location, .statement) {
+  --pin-ink: var(--card-other);
+  --pin-tint: var(--card-other-tint);
+}
+.evidence-pin .pin-outline {
+  fill: var(--pin-tint, #faf8f1);
+}
+.evidence-pin .pushpin {
+  top: 5px;
+  left: calc(50% - 4.5px);
+  width: 9px;
+  height: 9px;
+  background: var(--pin-ink, #ad604a);
+  box-shadow:
+    0 1px 2px #3d302840,
+    inset 0 -1px 0 #00000026;
+}
+.pin-kind {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+}
+.pin-kind-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px 2px 5px;
+  border-radius: 3px;
+  color: var(--pin-ink);
+  background: color-mix(in srgb, var(--pin-ink) 11%, transparent);
+  font-weight: 600;
+}
+.pin-certainty {
+  padding: 1px 5px;
+  border: 1px dashed var(--pin-ink);
+  border-radius: 3px;
+  color: #3f4238;
+  font-size: 10px;
+}
+.evidence-pin.is-inferred .pin-outline {
+  stroke: var(--pin-ink);
+  stroke-opacity: 0.85;
+  stroke-width: 1.5;
+  stroke-dasharray: 7 5;
+  vector-effect: non-scaling-stroke;
+}
+.evidence-pin.has-gap .pin-outline {
+  stroke: var(--question-ink);
+  stroke-opacity: 1;
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.pin-gap-flag {
+  position: absolute;
+  top: -9px;
+  right: 14px;
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--amber);
+  color: #3b280b;
+  box-shadow: 0 2px 4px #4e443b40;
+}
+.pin-gap {
+  color: #6b440f;
+}
+
+/* Threads: hue names the relationship family; dashes mark claims and inferences. */
+.thread-communication,
+.board-minimap-thread.communication {
+  --thread-ink: var(--thread-communication);
+}
+.thread-spatial,
+.board-minimap-thread.spatial {
+  --thread-ink: var(--thread-spatial);
+}
+.thread-temporal,
+.board-minimap-thread.temporal {
+  --thread-ink: var(--thread-temporal);
+}
+.thread-identity,
+.board-minimap-thread.identity {
+  --thread-ink: var(--thread-identity);
+}
+.thread-claim,
+.board-minimap-thread.claim {
+  --thread-ink: var(--thread-claim);
+}
+.thread-contradicts,
+.board-minimap-thread.contradicts {
+  --thread-ink: var(--thread-contradicts);
+}
+.thread-other,
+.board-minimap-thread.other {
+  --thread-ink: var(--thread-other);
+}
+.thread-label > span,
+.thread-label strong {
+  color: var(--thread-ink, #5d493c);
+}
+.thread-label:not(.observed) {
+  box-shadow: inset 0 0 0 1px
+    color-mix(in srgb, var(--thread-ink, #79442f) 35%, transparent);
+}
+.thread-label {
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+.thread-label.is-dimmed {
+  opacity: 0.18;
+}
+.thread-label.is-dimmed:is(:hover, :focus-visible) {
+  opacity: 1;
+}
+.thread-label.thread-contradicts > span {
+  display: block;
+  margin-top: 2px;
+}
+.react-flow__edge:hover .react-flow__edge-path,
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke-width: 4.5 !important;
+}
+.focused-edge path.react-flow__edge-path {
+  stroke-width: 4.5px !important;
+  filter: drop-shadow(0 2px 5px rgba(196, 140, 52, 0.6));
+}
+
+/* The minimap mirrors the same inks at overview scale. */
+.board-minimap-pin {
+  fill: color-mix(in srgb, var(--pin-ink) 24%, #faf8f1);
+  stroke: color-mix(in srgb, var(--pin-ink) 60%, #9c9584);
+}
+.board-minimap-pin.is-inferred {
+  stroke-dasharray: 2.5 1.5;
+}
+.board-minimap-pin.is-gap {
+  stroke: var(--question-ink);
+  stroke-width: 1.5;
+}
+.board-minimap-pin.is-active {
+  stroke: #c28a2e;
+  stroke-width: 2;
+}
+.board-minimap-pushpin {
+  fill: var(--pin-ink);
+}
+.board-minimap-thread {
+  stroke: var(--thread-ink, #a1372f);
+}
+.board-minimap-thread.is-inference {
+  stroke-dasharray: 3 2;
+}
+.board-minimap-thread.is-claim {
+  stroke-dasharray: 1 2;
+}
+.board-minimap-thread.is-active {
+  stroke: var(--thread-ink, #782a23);
+  stroke-width: 2;
+}
+
+/* Legend: a paper key pinned to the board, in the same inks as the cards. */
+.board-legend {
+  position: absolute;
+  z-index: 5;
+  bottom: var(--chrome-bottom, var(--board-inset));
+  left: var(--board-inset);
+  max-width: calc(
+    100% - var(--board-inset) * 2 - var(--minimap-width) - 36px -
+      var(--zoom-gap) * 2
+  );
+  border: 1px solid #b4ab9a;
+  border-radius: var(--radius);
+  background: #faf8f1;
+  color: #3f4238;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+}
+.board-legend-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 0 10px;
+  background: transparent;
+  color: #3f4238;
+  font-size: 12px;
+  font-weight: 600;
+}
+.board-legend-toggle svg {
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.board-legend[data-open="false"] .board-legend-toggle svg {
+  transform: rotate(-90deg);
+}
+.board-legend-toggle:focus-visible {
+  outline-color: #4f5f3c;
+}
+.board-legend-body {
+  display: grid;
+  gap: 6px;
+  padding: 0 12px 10px;
+}
+.board-legend-body[hidden] {
+  display: none;
+}
+.board-legend-row {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+}
+.board-legend-row h3 {
+  flex: 0 0 52px;
+  font-size: 11px;
+  font-weight: 600;
+  color: #5b604f;
+}
+.board-legend-row ul {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.board-legend-row li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+.board-legend-row li.legend-divider {
+  padding-left: 14px;
+  border-left: 1px solid #d9d2c3;
+}
+.legend-card,
+.legend-question {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 18px;
+  height: 16px;
+  border-radius: 2px;
+}
+.legend-card {
+  color: var(--pin-ink);
+  background: color-mix(in srgb, var(--pin-ink) 14%, #faf8f1);
+  border: 1px solid color-mix(in srgb, var(--pin-ink) 45%, transparent);
+}
+.legend-card.is-inferred {
+  background: #faf8f1;
+  border: 1.5px dashed #6b5d4f;
+}
+.legend-question {
+  width: 16px;
+  border-radius: 50%;
+  background: var(--amber);
+  color: #3b280b;
+}
+.legend-thread {
+  display: block;
+  flex-shrink: 0;
+  width: 24px;
+  height: 0;
+  border-top: 3px solid var(--thread-ink);
+  border-radius: 2px;
+}
+.legend-thread.is-inference {
+  border-top-style: dashed;
+}
+.legend-thread.is-claim {
+  height: 3px;
+  border: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--thread-ink) 0 3px,
+    transparent 3px 7px
+  );
+}
+
+/* List view: the same record-type ink as a small swatch. */
+.list-record-type[class*="kind-"] {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.list-record-type[class*="kind-"]::before {
+  content: "";
+  flex-shrink: 0;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pin-ink) 50%, #f4f1e8);
+}

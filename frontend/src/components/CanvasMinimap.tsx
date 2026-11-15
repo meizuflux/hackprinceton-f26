@@ -1,5 +1,6 @@
-import { useId, useMemo, useRef } from "react";
+import { useId, useMemo, useRef, type KeyboardEvent } from "react";
 import {
+  ControlButton,
   getBezierPath,
   Position,
   useReactFlow,
@@ -10,12 +11,26 @@ import {
 import { relationshipKind } from "./relationships";
 import { PIN_WIDTH, PIN_HEIGHT, threadHandles } from "./board-layout";
 import { paperOutline } from "./paper-note";
+import {
+  THREAD_CATEGORIES,
+  threadCategory,
+  threadColors,
+} from "./board-colors";
+import {
+  boundsOf,
+  clampViewToContent,
+  dragView,
+  flowToMap,
+  frameContent,
+  grabOffset,
+  mapToFlow,
+  viewRect,
+  type Bounds,
+  type MapFrame,
+  type Point,
+} from "./minimap-geometry";
 
-const MAP_WIDTH = 240;
-const MAP_HEIGHT = 148;
-const MAP_PADDING = 22;
-
-type Bounds = { x: number; y: number; width: number; height: number };
+export { clampViewToContent } from "./minimap-geometry";
 
 function nodeSize(node: Node) {
   return {
@@ -24,237 +39,226 @@ function nodeSize(node: Node) {
   };
 }
 
-function sceneBounds(nodes: Node[]): Bounds {
-  let minX = Infinity;
-  let minY = Infinity;
-  let maxX = -Infinity;
-  let maxY = -Infinity;
-  for (const node of nodes) {
-    const { width, height } = nodeSize(node);
-    minX = Math.min(minX, node.position.x);
-    minY = Math.min(minY, node.position.y);
-    maxX = Math.max(maxX, node.position.x + width);
-    maxY = Math.max(maxY, node.position.y + height);
-  }
-  if (!Number.isFinite(minX)) return { x: 0, y: 0, width: 1, height: 1 };
+/** Current viewport in flow units. */
+function useFlowView(): Bounds & { zoom: number } {
+  const transform = useStore((state) => state.transform);
+  const flowWidth = useStore((state) => state.width);
+  const flowHeight = useStore((state) => state.height);
+  const zoom = transform[2] || 1;
   return {
-    x: minX,
-    y: minY,
-    width: Math.max(maxX - minX, 1),
-    height: Math.max(maxY - minY, 1),
+    x: -transform[0] / zoom,
+    y: -transform[1] / zoom,
+    width: Math.max(flowWidth, 1) / zoom,
+    height: Math.max(flowHeight, 1) / zoom,
+    zoom,
   };
 }
 
-function unionBounds(a: Bounds, b: Bounds): Bounds {
-  const minX = Math.min(a.x, b.x);
-  const minY = Math.min(a.y, b.y);
-  const maxX = Math.max(a.x + a.width, b.x + b.width);
-  const maxY = Math.max(a.y + a.height, b.y + b.height);
-  return {
-    x: minX,
-    y: minY,
-    width: Math.max(maxX - minX, 1),
-    height: Math.max(maxY - minY, 1),
-  };
-}
-
-function clamp(value: number, min: number, max: number) {
-  return Math.min(Math.max(value, min), max);
-}
-
-function clampSpan(
-  origin: number,
-  size: number,
-  contentOrigin: number,
-  contentSize: number,
-) {
-  const span = Math.max(size, 0);
-  const contentSpan = Math.max(contentSize, 1);
-  // A view larger than the pins may slide only until the pins touch its edge.
-  // A smaller view stays inside the pins, so the minimap cannot leave the board.
-  if (span >= contentSpan) {
-    return clamp(origin, contentOrigin + contentSpan - span, contentOrigin);
-  }
-  return clamp(origin, contentOrigin, contentOrigin + contentSpan - span);
-}
-
-/** Keep a minimap-driven viewport over the pins. Canvas panning is not clamped. */
-export function clampViewToContent(view: Bounds, content: Bounds) {
-  return {
-    x: clampSpan(view.x, view.width, content.x, content.width),
-    y: clampSpan(view.y, view.height, content.y, content.height),
-  };
-}
-
-function frameScene(bounds: Bounds) {
-  const scale = Math.min(
-    (MAP_WIDTH - MAP_PADDING * 2) / bounds.width,
-    (MAP_HEIGHT - MAP_PADDING * 2) / bounds.height,
-  );
-  const offsetX = (MAP_WIDTH - bounds.width * scale) / 2;
-  const offsetY = (MAP_HEIGHT - bounds.height * scale) / 2;
-  return { scale, offsetX, offsetY };
-}
-
-/** Overview of the pins, with a viewport rectangle that tracks pan and zoom. */
+/**
+ * Overview of the pins. The map frames the pins alone, so its scale holds still
+ * while the view moves; the viewport rectangle tracks pan and zoom, and dragging
+ * it moves the board as if holding the rectangle.
+ */
 export function CanvasMinimap() {
   const rawId = useId();
   const markerId = `minimap-arrow-${rawId.replace(/:/g, "")}`;
   const nodes = useStore((state) => state.nodes);
   const edges = useStore((state) => state.edges);
-  const transform = useStore((state) => state.transform);
-  const flowWidth = useStore((state) => state.width);
-  const flowHeight = useStore((state) => state.height);
+  const view = useFlowView();
   const { setViewport } = useReactFlow();
-  const dragging = useRef(false);
-  const zoom = transform[2] || 1;
-  const view = {
-    x: -transform[0] / zoom,
-    y: -transform[1] / zoom,
-    width: Math.max(flowWidth, 1) / zoom,
-    height: Math.max(flowHeight, 1) / zoom,
-  };
-  // Frame the pins and the visible area together, then scale just enough
-  // that the viewport rectangle stays inside the map. Navigation uses the
-  // pins alone, so a drag cannot follow the rectangle off the board.
-  const scene = useMemo(() => sceneBounds(nodes), [nodes]);
-  const bounds = unionBounds(scene, view);
-  const { scale, offsetX, offsetY } = frameScene(bounds);
-  const frame = useRef({
-    bounds,
-    scene,
-    scale,
-    offsetX,
-    offsetY,
-    flowWidth,
-    flowHeight,
-  });
-  frame.current = {
-    bounds,
-    scene,
-    scale,
-    offsetX,
-    offsetY,
-    flowWidth,
-    flowHeight,
-  };
-
-  const viewX = (view.x - bounds.x) * scale + offsetX;
-  const viewY = (view.y - bounds.y) * scale + offsetY;
-  const viewWidth = view.width * scale;
-  const viewHeight = view.height * scale;
+  const frame = useMemo(
+    () =>
+      frameContent(
+        boundsOf(
+          nodes.map((node) => ({ ...node.position, ...nodeSize(node) })),
+        ),
+      ),
+    [nodes],
+  );
+  const latest = useRef({ frame, view });
+  latest.current = { frame, view };
+  const drag = useRef<{ offset: Point; pointerId: number } | null>(null);
   const byId = useMemo(
     () => new Map(nodes.map((node) => [node.id, node])),
     [nodes],
   );
+  const rect = viewRect(frame, view);
 
-  function focusAt(clientX: number, clientY: number, target: Element) {
-    const rect = target.getBoundingClientRect();
-    const current = frame.current;
-    const mapX = ((clientX - rect.left) / rect.width) * MAP_WIDTH;
-    const mapY = ((clientY - rect.top) / rect.height) * MAP_HEIGHT;
-    const flowX = current.bounds.x + (mapX - current.offsetX) / current.scale;
-    const flowY = current.bounds.y + (mapY - current.offsetY) / current.scale;
-    const nextZoom = transform[2] || 1;
-    const nextView = clampViewToContent(
-      {
-        x: flowX - Math.max(current.flowWidth, 1) / nextZoom / 2,
-        y: flowY - Math.max(current.flowHeight, 1) / nextZoom / 2,
-        width: Math.max(current.flowWidth, 1) / nextZoom,
-        height: Math.max(current.flowHeight, 1) / nextZoom,
-      },
-      current.scene,
-    );
-    void setViewport({
-      x: -nextView.x * nextZoom,
-      y: -nextView.y * nextZoom,
-      zoom: nextZoom,
+  function pointerToFlow(clientX: number, clientY: number, target: Element) {
+    const box = target.getBoundingClientRect();
+    const { frame: current } = latest.current;
+    return mapToFlow(current, {
+      x: ((clientX - box.left) / box.width) * current.width,
+      y: ((clientY - box.top) / box.height) * current.height,
     });
+  }
+
+  function moveTo(origin: Point, duration = 0) {
+    const zoom = latest.current.view.zoom;
+    void setViewport(
+      { x: -origin.x * zoom, y: -origin.y * zoom, zoom },
+      duration ? { duration } : undefined,
+    );
+  }
+
+  function onKeyDown(event: KeyboardEvent<SVGSVGElement>) {
+    const step = event.shiftKey ? 0.5 : 0.2;
+    const { view: current, frame: currentFrame } = latest.current;
+    const delta =
+      event.key === "ArrowLeft"
+        ? { x: -current.width * step, y: 0 }
+        : event.key === "ArrowRight"
+          ? { x: current.width * step, y: 0 }
+          : event.key === "ArrowUp"
+            ? { x: 0, y: -current.height * step }
+            : event.key === "ArrowDown"
+              ? { x: 0, y: current.height * step }
+              : null;
+    if (!delta) return;
+    event.preventDefault();
+    moveTo(
+      clampViewToContent(
+        { ...current, x: current.x + delta.x, y: current.y + delta.y },
+        currentFrame.content,
+      ),
+      180,
+    );
   }
 
   return (
     <div className="board-minimap nopan nodrag nowheel">
       <svg
         className="board-minimap-map"
-        viewBox={`0 0 ${MAP_WIDTH} ${MAP_HEIGHT}`}
+        viewBox={`0 0 ${frame.width} ${frame.height}`}
+        style={{ aspectRatio: `${frame.width} / ${frame.height}` }}
         role="application"
-        aria-label="Canvas overview. Drag to move the view."
+        tabIndex={0}
+        aria-label="Canvas overview. Drag the highlighted area, or use the arrow keys, to move the view."
+        onKeyDown={onKeyDown}
         onPointerDown={(event) => {
           if (event.button !== 0) return;
           event.stopPropagation();
-          dragging.current = true;
+          event.preventDefault();
+          event.currentTarget.focus({ preventScroll: true });
           event.currentTarget.setPointerCapture(event.pointerId);
-          focusAt(event.clientX, event.clientY, event.currentTarget);
+          const pointer = pointerToFlow(
+            event.clientX,
+            event.clientY,
+            event.currentTarget,
+          );
+          const { view: current, frame: currentFrame } = latest.current;
+          const offset = grabOffset(current, pointer);
+          drag.current = { offset, pointerId: event.pointerId };
+          moveTo(dragView(current, pointer, offset, currentFrame.content));
         }}
         onPointerMove={(event) => {
-          if (!dragging.current) return;
-          focusAt(event.clientX, event.clientY, event.currentTarget);
+          if (drag.current?.pointerId !== event.pointerId) return;
+          const pointer = pointerToFlow(
+            event.clientX,
+            event.clientY,
+            event.currentTarget,
+          );
+          const { view: current, frame: currentFrame } = latest.current;
+          moveTo(
+            dragView(
+              current,
+              pointer,
+              drag.current.offset,
+              currentFrame.content,
+            ),
+          );
         }}
         onPointerUp={() => {
-          dragging.current = false;
+          drag.current = null;
         }}
         onPointerCancel={() => {
-          dragging.current = false;
+          drag.current = null;
         }}
         onWheel={(event) => {
           event.stopPropagation();
         }}
       >
         <defs>
-          <marker
-            id={markerId}
-            viewBox="0 0 8 8"
-            refX={7}
-            refY={4}
-            markerWidth={4}
-            markerHeight={4}
-            orient="auto"
-          >
-            <path d="M0 0 L8 4 L0 8 Z" fill="#a1372f" />
-          </marker>
+          {THREAD_CATEGORIES.map((category) => (
+            <marker
+              key={category}
+              id={`${markerId}-${category}`}
+              viewBox="0 0 8 8"
+              refX={7}
+              refY={4}
+              markerWidth={4}
+              markerHeight={4}
+              orient="auto"
+            >
+              <path d="M0 0 L8 4 L0 8 Z" fill={threadColors[category].ink} />
+            </marker>
+          ))}
         </defs>
         {edges.map((edge) => (
           <MinimapEdge
             key={edge.id}
             edge={edge}
             nodes={byId}
-            frame={{ bounds, scale, offsetX, offsetY }}
+            frame={frame}
             markerId={markerId}
           />
         ))}
         {nodes.map((node) => {
           const { width, height } = nodeSize(node);
-          const x = offsetX + (node.position.x - bounds.x) * scale;
-          const y = offsetY + (node.position.y - bounds.y) * scale;
+          const { x, y } = flowToMap(frame, node.position);
           const isFocused = Boolean(node.data?.active || node.data?.isFocused);
           return (
-            <g key={node.id}>
+            <g
+              key={node.id}
+              className={`board-minimap-node ${String(node.data?.type ?? "")}`}
+            >
               <path
                 d={paperOutline(node.id)}
-                transform={`translate(${x} ${y}) scale(${(width * scale) / PIN_WIDTH} ${(height * scale) / PIN_HEIGHT})`}
-                className={`board-minimap-pin ${node.data.gapId ? "is-gap" : ""} ${isFocused ? "is-active" : ""}`}
+                transform={`translate(${x} ${y}) scale(${(width * frame.scale) / PIN_WIDTH} ${(height * frame.scale) / PIN_HEIGHT})`}
+                className={`board-minimap-pin ${node.data.gapId ? "is-gap" : ""} ${node.data.certainty === "inferred" ? "is-inferred" : ""} ${isFocused ? "is-active" : ""}`}
                 vectorEffect="non-scaling-stroke"
               />
               <circle
                 className="board-minimap-pushpin"
-                cx={x + (width * scale) / 2}
-                cy={y + ((9.5 * height) / PIN_HEIGHT) * scale}
-                r={Math.max(0.65, 3.5 * scale)}
+                cx={x + (width * frame.scale) / 2}
+                cy={y + ((9.5 * height) / PIN_HEIGHT) * frame.scale}
+                r={Math.max(0.9, 4 * frame.scale)}
               />
             </g>
           );
         })}
+        <path
+          className="board-minimap-mask"
+          fillRule="evenodd"
+          d={`M0 0H${frame.width}V${frame.height}H0Z M${rect.x} ${rect.y}h${rect.width}v${rect.height}h${-rect.width}Z`}
+        />
         <rect
           className="board-minimap-view"
-          x={viewX}
-          y={viewY}
-          width={Math.max(viewWidth, 1)}
-          height={Math.max(viewHeight, 1)}
-          rx={3}
+          x={rect.x}
+          y={rect.y}
+          width={rect.width}
+          height={rect.height}
+          rx={2}
         />
       </svg>
-      <span className="board-minimap-zoom">{Math.round(zoom * 100)}%</span>
     </div>
+  );
+}
+
+/** Zoom readout inside the zoom controls; pressing it returns to 100%. */
+export function ZoomReadout() {
+  const zoom = useStore((state) => state.transform[2] || 1);
+  const { zoomTo } = useReactFlow();
+  const percent = Math.round(zoom * 100);
+  return (
+    <ControlButton
+      className="zoom-readout"
+      onClick={() => void zoomTo(1, { duration: 200 })}
+      aria-label={`Zoom ${percent}%. Reset zoom to 100%`}
+      title="Reset zoom to 100%"
+    >
+      <span>{percent}%</span>
+    </ControlButton>
   );
 }
 
@@ -266,45 +270,36 @@ function MinimapEdge({
 }: {
   edge: Edge;
   nodes: Map<string, Node>;
-  frame: { bounds: Bounds; scale: number; offsetX: number; offsetY: number };
+  frame: MapFrame;
   markerId: string;
 }) {
   const source = nodes.get(edge.source);
   const target = nodes.get(edge.target);
   if (!source || !target) return null;
-  const sourceSize = nodeSize(source);
-  const targetSize = nodeSize(target);
   const handles = threadHandles(source.position, target.position);
   const sourceSide = handles.sourceHandle.slice("source-".length) as Position;
   const targetSide = handles.targetHandle.slice("target-".length) as Position;
-  const attachment = (
-    node: Node,
-    size: { width: number; height: number },
-    side: Position,
-  ) => ({
-    x:
-      frame.offsetX +
-      (node.position.x +
+  const attachment = (node: Node, side: Position) => {
+    const size = nodeSize(node);
+    return flowToMap(frame, {
+      x:
+        node.position.x +
         (side === Position.Left
           ? 0
           : side === Position.Right
             ? size.width
-            : size.width / 2) -
-        frame.bounds.x) *
-        frame.scale,
-    y:
-      frame.offsetY +
-      (node.position.y +
+            : size.width / 2),
+      y:
+        node.position.y +
         (side === Position.Top
           ? 0
           : side === Position.Bottom
             ? size.height
-            : size.height / 2) -
-        frame.bounds.y) *
-        frame.scale,
-  });
-  const start = attachment(source, sourceSize, sourceSide);
-  const end = attachment(target, targetSize, targetSide);
+            : size.height / 2),
+    });
+  };
+  const start = attachment(source, sourceSide);
+  const end = attachment(target, targetSide);
   const [path] = getBezierPath({
     sourceX: start.x,
     sourceY: start.y,
@@ -314,15 +309,17 @@ function MinimapEdge({
     targetPosition: targetSide,
     curvature: 0.22,
   });
-  const inferred = edge.data?.kind
-    ? edge.data.kind !== "observed"
-    : relationshipKind(edge.type ?? "") !== "observed";
+  const kind = edge.data?.kind ?? relationshipKind(edge.type ?? "");
   const isEdgeActive = Boolean(edge.selected || edge.data?.isFocused);
   return (
     <path
       d={path}
-      className={`board-minimap-thread ${inferred ? "is-inferred" : ""} ${isEdgeActive ? "is-active" : ""}`}
-      markerEnd={edge.data?.directed === true ? `url(#${markerId})` : undefined}
+      className={`board-minimap-thread ${String(edge.data?.category ?? "")} ${kind !== "observed" ? `is-${kind}` : ""} ${isEdgeActive ? "is-active" : ""}`}
+      markerEnd={
+        edge.data?.directed === true
+          ? `url(#${markerId}-${threadCategory(String(edge.data?.category ?? edge.type ?? ""))})`
+          : undefined
+      }
     />
   );
 }

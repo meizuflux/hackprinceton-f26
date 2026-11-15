@@ -20,7 +20,6 @@
 .canvas-wrap {
   --board-inset: 16px;
   --minimap-width: 240px;
-  --minimap-height: 148px;
   --zoom-gap: 10px;
   height: 100%;
   background-color: #eee8de;
@@ -112,28 +111,6 @@
   min-height: 26px;
   min-width: 24px;
   padding: 3px;
-}
-.review-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  border-radius: var(--radius);
-  background: var(--brand-gradient);
-  color: var(--brand-ink);
-  box-shadow: inset 0 1px 0 #ffffff59;
-  padding: 7px 12px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.review-toggle:hover,
-.review-toggle[aria-expanded="true"] {
-  background: var(--brand-gradient-hover);
-}
-.review-toggle strong {
-  border-left: 1px solid #04203a40;
-  padding-left: 8px;
-  font-size: 12px;
 }
 .workspace-navigation {
   position: absolute;
@@ -242,7 +219,7 @@
 }
 .board-minimap-map {
   width: 100%;
-  height: var(--minimap-height);
+  height: auto;
   display: block;
   overflow: hidden;
   border: 1px solid #b4ab9a;
@@ -251,109 +228,41 @@
   box-shadow: var(--shadow);
   cursor: grab;
   touch-action: none;
+  user-select: none;
 }
 .board-minimap-map:active {
   cursor: grabbing;
 }
+.board-minimap-map:focus-visible {
+  outline: 2px solid var(--green);
+  outline-offset: 2px;
+}
 .board-minimap-thread {
   fill: none;
-  stroke: #a1372f;
   stroke-width: 1.2;
   stroke-linecap: round;
-}
-.board-minimap-thread.is-inferred {
-  stroke-dasharray: 3 2;
-}
-.board-minimap-thread.is-active {
-  stroke: #782a23;
-  stroke-width: 1.8;
 }
 .board-minimap-pin {
   fill: #faf8f1;
   stroke: #9c9584;
   stroke-width: 0.75;
 }
-.board-minimap-pin.is-gap {
-  stroke: #a57838;
-}
-.board-minimap-pin.is-active {
-  stroke: #a57838;
-  stroke-width: 1.8;
-}
-.board-minimap-pushpin {
-  fill: #ad604a;
-}
 .board-minimap-map rect.board-minimap-view {
-  fill: #6978550c;
-  stroke: #697855;
+  fill: none;
+  stroke: #4f5f3c;
   stroke-width: 1.5;
   pointer-events: none;
 }
-.board-minimap-zoom {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  min-height: 26px;
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 8px;
-  background: #e8ecdf;
-  color: #3f4b36;
-  font-size: 12px;
+.board-minimap-mask {
+  fill: #2b2a2222;
+  pointer-events: none;
+}
+.react-flow__controls-button.zoom-readout {
+  font:
+    500 11px/1 "DM Sans",
+    sans-serif;
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-.board-legend {
-  position: absolute;
-  z-index: 5;
-  bottom: var(--board-inset);
-  left: var(--board-inset);
-  max-width: calc(
-    100% - var(--board-inset) - var(--minimap-width) - 40px - var(--zoom-gap) -
-      28px
-  );
-  padding: 9px 12px;
-  background: var(--surface);
-  border: 1px solid var(--chrome-border);
-  border-radius: var(--radius);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  color: var(--text);
-  font-size: 12px;
-  box-shadow: var(--shadow);
-  pointer-events: none;
-}
-.board-legend > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-}
-.legend-line,
-.legend-gap {
-  display: block;
-  flex-shrink: 0;
-}
-.legend-line {
-  width: 22px;
-  height: 2px;
-  background: #a84e40;
-}
-.legend-line.dashed {
-  background: repeating-linear-gradient(
-    90deg,
-    #a84e40 0 5px,
-    transparent 5px 9px
-  );
-}
-.legend-gap {
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--amber);
-  border-radius: 1px;
+  letter-spacing: 0;
 }
 .search-feedback {
   position: absolute;
@@ -505,24 +414,17 @@
   .board-actions > .text-button {
     flex: 1;
   }
-  .review-toggle {
-    flex: 1;
-    justify-content: center;
-  }
   .canvas-wrap {
     --board-inset: 12px;
     --minimap-width: 188px;
-    --minimap-height: 116px;
     --zoom-gap: 8px;
     --chrome-bottom: 54px;
   }
   .board-legend {
     right: 12px;
+    bottom: var(--board-inset);
     max-width: none;
-    gap: 8px 10px;
-    padding: 8px;
     font-size: 11px;
-    justify-content: center;
   }
   .search-feedback {
     top: calc(var(--topbar-clearance-y, 160px) + 8px);

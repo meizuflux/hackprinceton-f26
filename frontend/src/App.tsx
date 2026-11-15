@@ -24,7 +24,6 @@ import {
   Lightbulb,
   LoaderCircle,
   Minus,
-  PanelRightOpen,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -35,7 +34,7 @@ import {
 import { api, isMock } from "./api/client";
 import { isApiError } from "./api/http";
 import type { CaseData } from "./api/types";
-import { CanvasMinimap } from "./components/CanvasMinimap";
+import { CanvasMinimap, ZoomReadout } from "./components/CanvasMinimap";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
@@ -47,6 +46,15 @@ import {
 } from "./components/board-layout";
 import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
+import {
+  boardColorVars,
+  cardKind,
+  threadBadge,
+  threadCategory,
+  threadColors,
+  threadDash,
+} from "./components/board-colors";
+import { BoardLegend } from "./components/BoardLegend";
 import {
   formatCaseTime,
   insightKind,
@@ -62,6 +70,10 @@ import {
 import { casePath, useRouter } from "./routing";
 import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
 import { CaseWorkspace } from "./components/CaseWorkspace";
+import { AnalysisEntries } from "./components/AnalysisEntries";
+
+/** A request from another section to open the board's review dock. */
+export type ReviewRequest = { panel: Tab | "audit"; id: number };
 import {
   Landing,
   ProjectManager,
@@ -76,6 +88,8 @@ function BoardCanvas({
   active,
   focusSelection,
   onClearFocusSelection,
+  reviewRequest,
+  onClearReviewRequest,
 }: {
   data: CaseData;
   projectName?: string;
@@ -83,6 +97,8 @@ function BoardCanvas({
   active: boolean;
   focusSelection?: Selection | null;
   onClearFocusSelection?: () => void;
+  reviewRequest?: ReviewRequest | null;
+  onClearReviewRequest?: () => void;
 }) {
   const { fitView } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -115,7 +131,10 @@ function BoardCanvas({
   }, [dockMode]);
   const searchRef = useRef<HTMLInputElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
-  const reviewButtonRef = useRef<HTMLButtonElement>(null);
+  const focusAnalysisEntry = useCallback(
+    () => document.getElementById(`analysis-entry-${tab}`)?.focus(),
+    [tab],
+  );
 
   const focusTarget = useCallback(
     (
@@ -200,9 +219,55 @@ function BoardCanvas({
     requestAnimationFrame(() => {
       if (openerRef.current?.isConnected) openerRef.current.focus();
       else if (returnMode === "analysis") analysisRef.current?.focus();
-      else reviewButtonRef.current?.focus();
+      else focusAnalysisEntry();
     });
-  }, [returnMode, resetBoardView, tab, data, focusTarget]);
+  }, [returnMode, resetBoardView, tab, data, focusTarget, focusAnalysisEntry]);
+
+  /** Opens the dock on one analysis tab; pressing the open tab's entry closes it. */
+  const openAnalysis = useCallback(
+    (next: Tab, options?: { toggle?: boolean }) => {
+      if (
+        options?.toggle !== false &&
+        dockMode === "analysis" &&
+        tab === next
+      ) {
+        setDockMode("closed");
+        resetBoardView();
+        return;
+      }
+      setDockMode("analysis");
+      setSelection(null);
+      setTab(next);
+      focusTarget(getNodesForTab(next, data), { dockOpen: true });
+    },
+    [dockMode, tab, data, focusTarget, resetBoardView],
+  );
+  const toggleAudit = useCallback(
+    (options?: { toggle?: boolean }) => {
+      if (dockMode === "audit") {
+        if (options?.toggle !== false) setDockMode(auditReturnMode);
+        return;
+      }
+      setAuditReturnMode(
+        dockMode === "analysis" ||
+          (dockMode === "inspector" && returnMode === "analysis")
+          ? "analysis"
+          : "closed",
+      );
+      setDockMode("audit");
+    },
+    [dockMode, auditReturnMode, returnMode],
+  );
+  const analysisShown =
+    dockMode === "analysis" ||
+    (dockMode === "inspector" && returnMode === "analysis");
+
+  useEffect(() => {
+    if (!reviewRequest || !active) return;
+    if (reviewRequest.panel === "audit") toggleAudit({ toggle: false });
+    else openAnalysis(reviewRequest.panel, { toggle: false });
+    onClearReviewRequest?.();
+  }, [reviewRequest, active, openAnalysis, toggleAudit, onClearReviewRequest]);
 
   useEffect(() => {
     if (focusSelection && active) {
@@ -247,37 +312,41 @@ function BoardCanvas({
   );
   const initialEdges: Edge<ThreadData>[] = useMemo(
     () =>
-      data.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        data: {
-          kind: relationshipKind(e.type, e.certainty),
-          label: e.label,
-          directed: e.directed === true,
-          onInspect: () => inspect("edge", e.id),
-        },
-        ariaLabel: `${e.label}. Inspect relationship and sources`,
-        type: "thread",
-        markerEnd:
-          e.directed === true
-            ? {
-                type: MarkerType.ArrowClosed,
-                color: "#a1372f",
-                width: 12,
-                height: 12,
-              }
-            : undefined,
-        style: {
-          stroke: "#a1372f",
-          strokeWidth: 3,
-          strokeLinecap: "round",
-          strokeDasharray:
-            relationshipKind(e.type, e.certainty) === "observed"
-              ? undefined
-              : "8 7",
-        },
-      })),
+      data.edges.map((e) => {
+        const kind = relationshipKind(e.type, e.certainty);
+        const category = threadCategory(e.type);
+        const ink = threadColors[category].ink;
+        return {
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          data: {
+            kind,
+            category,
+            badge: threadBadge(e.type, e.certainty),
+            label: e.label,
+            directed: e.directed === true,
+            onInspect: () => inspect("edge", e.id),
+          },
+          ariaLabel: `${threadColors[category].label}: ${e.label}. Inspect relationship and sources`,
+          type: "thread",
+          markerEnd:
+            e.directed === true
+              ? {
+                  type: MarkerType.ArrowClosed,
+                  color: ink,
+                  width: 12,
+                  height: 12,
+                }
+              : undefined,
+          style: {
+            stroke: ink,
+            strokeWidth: 3,
+            strokeLinecap: "round",
+            strokeDasharray: threadDash(kind),
+          },
+        };
+      }),
     [data],
   );
   const [nodes, setNodes] = useNodesState(initialNodes);
@@ -368,6 +437,7 @@ function BoardCanvas({
           ? {
               ...edge.data,
               isFocused,
+              isDimmed: Boolean(isDimmed),
               onInspect: () => inspect("edge", edge.id),
             }
           : undefined,
@@ -425,56 +495,23 @@ function BoardCanvas({
               </button>
               <button
                 className="text-button"
-                aria-expanded={
+                aria-pressed={
                   dockMode === "audit" ||
                   (dockMode === "inspector" && returnMode === "audit")
                 }
                 aria-controls="review-dock"
-                onClick={() => {
-                  if (dockMode === "audit") setDockMode(auditReturnMode);
-                  else {
-                    setAuditReturnMode(
-                      dockMode === "analysis"
-                        ? "analysis"
-                        : dockMode === "inspector"
-                          ? returnMode === "analysis"
-                            ? "analysis"
-                            : "closed"
-                          : "closed",
-                    );
-                    setDockMode("audit");
-                  }
-                }}
+                onClick={() => toggleAudit()}
               >
                 <History size={15} /> Audit trail
               </button>
-              <button
-                ref={reviewButtonRef}
-                className={`review-toggle ${dockMode === "analysis" ? "selected" : ""}`}
-                aria-expanded={
-                  dockMode === "analysis" ||
-                  (dockMode === "inspector" && returnMode === "analysis")
-                }
-                aria-controls="review-dock"
-                onClick={() => {
-                  if (dockMode === "analysis") {
-                    setDockMode("closed");
-                    resetBoardView();
-                  } else {
-                    setDockMode("analysis");
-                    setSelection(null);
-                    setTab("gaps");
-                    const targetNodes = getNodesForTab("gaps", data);
-                    focusTarget(targetNodes, { dockOpen: true });
-                  }
-                }}
-              >
-                <PanelRightOpen size={15} /> Review gaps{" "}
-                <strong>{data.gaps.length}</strong>
-              </button>
+              <AnalysisEntries
+                data={data}
+                active={analysisShown ? tab : null}
+                onOpen={(next) => openAnalysis(next)}
+              />
             </div>
           </div>
-          <div className="canvas-wrap">
+          <div className="canvas-wrap" style={boardColorVars()}>
             {boardView === "list" ? (
               <div className="evidence-list">
                 <h2>Evidence & connections</h2>
@@ -489,7 +526,11 @@ function BoardCanvas({
                     }
                     onClick={() => inspect("node", n.id)}
                   >
-                    <span className="list-record-type">{n.data.type}</span>
+                    <span
+                      className={`list-record-type kind-${cardKind(n.data.type)}`}
+                    >
+                      {n.data.type}
+                    </span>
                     <strong>{n.data.label}</strong>
                     <span>
                       {n.data.citations.length} sources{" "}
@@ -583,7 +624,9 @@ function BoardCanvas({
                     minZoom: 0.5,
                     maxZoom: 1.1,
                   }}
-                />
+                >
+                  <ZoomReadout />
+                </Controls>
                 <CanvasMinimap />
               </ReactFlow>
             )}
@@ -595,20 +638,7 @@ function BoardCanvas({
               </div>
             )}
             {boardView === "graph" && (
-              <div className="board-legend">
-                <span>
-                  <i className="legend-line" />
-                  Observed link
-                </span>
-                <span>
-                  <i className="legend-line dashed" />
-                  Claim / inference
-                </span>
-                <span>
-                  <i className="legend-gap" />
-                  Evidence gap
-                </span>
-              </div>
+              <BoardLegend nodes={data.nodes} edges={data.edges} />
             )}
           </div>
         </div>
@@ -623,7 +653,7 @@ function BoardCanvas({
           {dockMode !== "inspector" && (
             <div className="review-dock-header">
               <div>
-                <h2>{dockMode === "audit" ? "Audit trail" : "Case review"}</h2>
+                <h2>{dockMode === "audit" ? "Audit trail" : "Analysis"}</h2>
               </div>
               <button
                 className="icon-button"
@@ -640,7 +670,7 @@ function BoardCanvas({
                   setSelection(null);
                   setDockMode("closed");
                   resetBoardView();
-                  reviewButtonRef.current?.focus();
+                  focusAnalysisEntry();
                 }}
               >
                 <X size={16} />
@@ -651,7 +681,7 @@ function BoardCanvas({
             className="analysis-panel"
             ref={analysisRef}
             tabIndex={-1}
-            aria-label="Case review"
+            aria-label="Analysis"
             hidden={dockMode !== "analysis"}
           >
             <div
@@ -663,7 +693,7 @@ function BoardCanvas({
                 [
                   ["gaps", "Gaps", data.gaps.length],
                   ["insights", "Insights", data.insights.length],
-                  ["suggestions", "Next evidence", null],
+                  ["suggestions", "Next evidence", data.suggestions.length],
                 ] as const
               ).map(([id, label, count]) => (
                 <button
@@ -898,6 +928,8 @@ function Board(props: {
   active: boolean;
   focusSelection?: Selection | null;
   onClearFocusSelection?: () => void;
+  reviewRequest?: ReviewRequest | null;
+  onClearReviewRequest?: () => void;
 }) {
   return (
     <ReactFlowProvider>
@@ -911,6 +943,9 @@ export default function App() {
   const queryClient = useQueryClient();
   const [openingCase, setOpeningCase] = useState(false);
   const [focusSelection, setFocusSelection] = useState<Selection | null>(null);
+  const [reviewRequest, setReviewRequest] = useState<ReviewRequest | null>(
+    null,
+  );
   const uploadOpen = route.kind === "new-project";
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState<SessionProject[]>([]);
@@ -1176,6 +1211,10 @@ export default function App() {
                   route.kind === "case" ? route.insightsTab : undefined
                 }
                 navigate={navigate}
+                onOpenReview={(panel) => {
+                  setReviewRequest({ panel, id: Date.now() });
+                  navigate(casePath(caseQuery.data.id));
+                }}
                 onFocusOnBoard={(sel) => {
                   setFocusSelection(sel);
                   if (route.kind !== "case" || route.view) {
@@ -1193,6 +1232,8 @@ export default function App() {
                   active={route.kind === "case" && !route.view}
                   focusSelection={focusSelection}
                   onClearFocusSelection={() => setFocusSelection(null)}
+                  reviewRequest={reviewRequest}
+                  onClearReviewRequest={() => setReviewRequest(null)}
                   projectName={
                     projects.find(
                       (project) => project.caseId === caseQuery.data.id,

@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { clampViewToContent } from "./CanvasMinimap";
+import {
+  clampViewToContent,
+  dragView,
+  flowToMap,
+  frameContent,
+  grabOffset,
+  mapToFlow,
+  viewRect,
+} from "./minimap-geometry";
 
 const pins = { x: 100, y: 200, width: 800, height: 500 };
 
@@ -29,5 +37,88 @@ describe("minimap navigation bounds", () => {
         pins,
       ),
     ).toEqual({ x: -1100, y: -500 });
+  });
+});
+
+describe("minimap framing", () => {
+  it("sizes the map to the pins so a wide board has no vertical margins", () => {
+    const frame = frameContent(
+      { x: 0, y: 0, width: 3000, height: 1500 },
+      { width: 240, inset: 7 },
+    );
+    expect(frame.height).toBe(Math.round((1500 / 3000) * 226 + 14));
+    const topLeft = flowToMap(frame, { x: 0, y: 0 });
+    const bottomRight = flowToMap(frame, { x: 3000, y: 1500 });
+    expect(topLeft.x).toBeCloseTo(7);
+    expect(bottomRight.x).toBeCloseTo(233);
+    expect(topLeft.y).toBeCloseTo(7, 0);
+    expect(bottomRight.y).toBeCloseTo(frame.height - 7, 0);
+  });
+
+  it("clamps very tall or very flat boards and centres them", () => {
+    const flat = frameContent({ x: 0, y: 0, width: 10000, height: 100 });
+    expect(flat.height).toBe(96);
+    expect(flat.offsetY).toBeGreaterThan(40);
+    const tall = frameContent({ x: 0, y: 0, width: 100, height: 10000 });
+    expect(tall.height).toBe(176);
+    expect(tall.offsetX).toBeGreaterThan(100);
+  });
+
+  it("keeps one scale regardless of where the view is", () => {
+    const frame = frameContent({ x: -200, y: 50, width: 2400, height: 1200 });
+    const point = { x: 900, y: 600 };
+    const back = mapToFlow(frame, flowToMap(frame, point));
+    expect(back.x).toBeCloseTo(point.x);
+    expect(back.y).toBeCloseTo(point.y);
+  });
+
+  it("clips the view rectangle to the map so every edge stays visible", () => {
+    const frame = frameContent({ x: 0, y: 0, width: 2000, height: 1000 });
+    const rect = viewRect(frame, {
+      x: -5000,
+      y: -5000,
+      width: 20000,
+      height: 20000,
+    });
+    expect(rect.x).toBeCloseTo(0.75);
+    expect(rect.y).toBeCloseTo(0.75);
+    expect(rect.x + rect.width).toBeCloseTo(frame.width - 0.75);
+    expect(rect.y + rect.height).toBeCloseTo(frame.height - 0.75);
+  });
+});
+
+describe("minimap dragging", () => {
+  const content = { x: 0, y: 0, width: 2000, height: 1000 };
+  const view = { x: 400, y: 200, width: 600, height: 400 };
+
+  it("keeps the grabbed point under the pointer inside the view", () => {
+    const pointer = { x: 500, y: 300 };
+    const offset = grabOffset(view, pointer);
+    expect(offset).toEqual({ x: 100, y: 100 });
+    expect(dragView(view, pointer, offset, content)).toEqual({
+      x: 400,
+      y: 200,
+    });
+    expect(dragView(view, { x: 800, y: 450 }, offset, content)).toEqual({
+      x: 700,
+      y: 350,
+    });
+  });
+
+  it("centres the view on a press outside it", () => {
+    const pointer = { x: 1500, y: 700 };
+    const offset = grabOffset(view, pointer);
+    expect(dragView(view, pointer, offset, content)).toEqual({
+      x: 1200,
+      y: 500,
+    });
+  });
+
+  it("stops at the pin edges while dragging", () => {
+    const offset = { x: 300, y: 200 };
+    expect(dragView(view, { x: 5000, y: -900 }, offset, content)).toEqual({
+      x: 1400,
+      y: 0,
+    });
   });
 });
