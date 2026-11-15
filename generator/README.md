@@ -69,3 +69,5 @@ while the scripted case events and their key tags stay the same.
 - Keep scripted events consistent across sources (`cast.T` holds the shared anchors).
 - Do not add real people, companies or contact details. Do not make protected attributes predictive.
 - Bump `GENERATOR_VERSION` in `build.py` when the output changes on purpose.
+
+Known consistency issues in the committed case, and a suggested fix order, are in [EVALUATION.md](EVALUATION.md). Like the generator source, it describes the solution: never give it to the model.

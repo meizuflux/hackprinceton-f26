@@ -1,83 +1,122 @@
-# MapleTrace frontend
+# MapleTrace agent instructions
+
+Rules and durable decisions for agents working in this repository. How-to material lives in the READMEs listed in [README.md](README.md#docs); do not repeat it here.
+
+## Ground rules
 
 - This is a hackathon prototype. Prioritize a clear, reliable three-minute demo.
-- Build with Vite, React, and TypeScript. Use React Flow for the inspectable pin-up board.
-- Keep backend contracts and temporary synthetic fixtures separate from presentation. All current case data is fictional and disposable.
-- Every graph relationship, gap, and insight must expose original source citations. Distinguish observed evidence from inference; a gap is not proof.
-- Support ZIP upload, ingestion progress, the evidence board, ranked gaps, suggested evidence, source inspection, and an audit trail.
-- Keep the board usable on laptop screens with pan, zoom, fit view, and a minimap.
-- Record durable implementation decisions here as work proceeds.
-- Commit incremental changes with `git commit -S -m "message"`.
-- Do not imply that mock ingestion parses ZIP files or performs real analysis. The live adapter talks to the Python backend; the mock stays available as a fallback.
+- Build the frontend with Vite, React, TypeScript and TanStack Query, and the board with React Flow. Keep backend contracts and disposable fixtures separate from presentation. All case data is fictional.
+- Every graph relationship, gap and insight must expose original source citations. Distinguish observed evidence from inference; a gap is not proof.
+- Support ZIP upload, ingestion progress, the evidence board, ranked gaps, suggested evidence, source inspection and an audit trail. Keep the board usable on laptop screens with pan, zoom, fit view and a minimap.
+- Commit incremental changes with `git commit -S -m "message"`, one signed commit per feature.
+- Luna subagents are requested for delegated work. Fetch remote refs at task start and before coordinating or integrating shared work; do not run `git fetch` continuously or poll on a timer.
+- Record durable implementation decisions here as work proceeds, replacing lines they make stale.
+- Never imply that the mock adapter parses ZIP files or performs real analysis. Keep prototype labelling to upload behaviour and the explicit fictional-case entry points; avoid repeating "demo" in the case workspace chrome. The frontend bundles no real source files or computed hashes.
 
-## Implementation decisions
+## Repository layout and tooling
 
-- The single canonical product spec and Impeccable product context live in root `SPEC.md`; do not create a second `PRODUCT.md`; app-specific settings live in `frontend/.impeccable/`. Future landing pages use the confirmed code-first workflow. Keep the root skill installation and `AGENTS.md` at the repository root.
-- Impeccable initialization and design work are frontend-only. If its context loader does not discover root `SPEC.md` or the frontend artifacts, read them directly rather than creating another product record or reopening init. Backend documentation updates are not a prerequisite. The next design pass should make the existing frontend cohesive and clear while preserving its confirmed identity and evidence-review behavior.
-- Evidence cards combine self-hosted Excalifont titles, summaries, question links, and thread annotations with upright sans-serif metadata and a single gently uneven paper silhouette; the centered pushpin sits 6px inside the top edge, and clarity takes priority over decorative imperfections. Cards use role-tailored dimensions (e.g. 276 × 236px for hub locations, 256 × 252px for statements, 264 × 244px for incident events with open questions, 236 × 216px for people, defaulting to 248 × 224px) with 40px clearance after initial placement and drops. Red threads attach to facing edges, use smooth 3px curves against faint paper, and expose source inspection through standard label buttons; claims and inferences remain explicitly labeled and dashed. Card inspection uses an arrow-only button with an accessible name and a pointer cursor; omit inset frames and footer dividers. Arrowheads require API `directed: true`, defaulting to an undirected thread otherwise. Never reverse an edge from card positions; list and inspector notation follow the same metadata. The minimap shares paper geometry, inset pins, smooth attachment paths, API direction, and selection state with the board. Layout code is presentation-only and never creates case facts.
-- API seam: `CaseApi` in `frontend/src/api/types.ts`. `frontend/src/api/http.ts` is the live adapter for `backend/mapletrace_api`; `frontend/src/api/client.ts` selects it from `VITE_API_BASE_URL` (development defaults to `/api`, proxied by Vite to `MAPLETRACE_API_URL`, default `http://127.0.0.1:8000`; `mock` or an unset value outside development selects the mock) and owns mock jobs. UI loads cases by ID through TanStack Query and never imports fixtures directly. Mock-only disclosures (ZIP not read, fictional excerpts, illustrative scores and hashes) render only when `api.mode === "mock"`.
-- Mock uploads never read ZIP contents. Keep this limitation visible beside upload controls. Fixture hashes and confidence scores are illustrative, not computed.
-- Luna subagents are requested for delegated work. Fetch remote refs at task start and before coordinating or integrating shared work; do not run `git fetch` continuously or poll on a timer. Make one signed commit per feature.
-- Board uses React Flow custom pinned cards on a faint paper surface inside a dark workspace. Relationships and ranked analysis open the shared source inspector.
-- Frontend design preserves dark workspace controls around a faint paper canvas. The source inspector occupies the review dock, with source excerpts first; below 900px it stacks under the board. Keep search available at every width. The list view exposes evidence and relationships through standard buttons, and illustrative scores are labeled beside their values. Design tokens live in `frontend/DESIGN.md`; baseline findings live in `frontend/EVALUATION.md`.
-- The case board is the primary canvas. Analysis, source inspection, and audit share a collapsible review dock; opening it must preserve the graph viewport and the analysis context. Reviewing gaps, switching analysis tabs, or inspecting insights automatically moves the mind map to center the relevant evidence cluster in the visible canvas (accounting for review dock width) with smooth animated pan and zoom. Active targets and connecting threads are highlighted with amber outlines and warm drop shadows while non-target nodes and edges dim to preserve focus. The welcome page uses `/` and case workspaces use `/cases/:caseId`; validate case IDs against the API result, and keep browser history and direct-load fallback working.
-- Validate API fixture links and mock upload state transitions from `frontend/` with `bun run --bun test`; use `bun run --bun build` for TypeScript and the production bundle.
-- Browser-verified demo path: synthetic ZIP selection → staged mock progress → board; gap and insight inspection; original source expansion; edge inspection; audit trail. Upload modal traps keyboard focus and supports Escape when idle/ready; inspector supports Escape.
-- Run `bun run --bun format` from `frontend/` after changes. No real source files or computed hashes are bundled; source excerpts live only in disposable fixtures.
+- Keep `AGENTS.md` and the skill installation at the repository root. Frontend files, dependencies, build output and docs live in `frontend/`; backend code, dependencies and docs live in `backend/`; the case generator lives in `generator/`.
+- Run Make from the repository root (`make help` lists every target). Do not add nested Makefiles.
+- Frontend: Bun 1.4.4, run from `frontend/`. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Test with `bun run --bun test` (Vitest, not `bun test`), build with `bun run --bun build`, and run `bun run --bun format` after changes. Docker uses the same pinned Bun image.
+- Backend: Python 3.11+ with `backend/requirements.txt`; `make backend-install` creates `backend/.venv` with uv and Python 3.12. Run `make backend-test` after backend changes.
+- Docker and `compose.yaml` are optional. Do not start Docker, run Compose or rebuild images for routine work unless the user asks.
 
-- Onboarding lives in `frontend/src/onboarding/` with isolated styles: `/` is a standalone landing page, `/projects` is the session project manager, and `/projects/new` opens project naming plus ZIP selection. Direct fictional case entry stays on `/projects` until that case is already in the session; do not repeat it in the upload modal. The mock adapter exposes one case; the manager keeps one entry for it in React session state. Carry a session project name into the matching case workspace title; direct case routes fall back to the API title. Contact sales is not part of the prototype; do not add an enquiry form or a fake destination. The mock upload adapter validates a ZIP extension and a nonempty file only. It does not enforce a size cap, and it never reads ZIP contents.
-- Keep prototype labeling focused on upload behavior and explicit fictional case entry points; avoid repeating “demo” in the case workspace chrome. Clearly disclose that ZIP contents are not read and results use fictional data.
-- Case sections use browser-history routes: the mind map stays at `/cases/:caseId`, with `/evidence`, `/files`, `/insights`, and `/chat` subpages. Evidence citation links append the encoded source ID under `/evidence/:sourceId`. Keep the board mounted across section changes to preserve its viewport and review context. Case sections preserve workspace continuity: the persistent topbar acts as a grounded flat header across the top (`top: 0; left: 0; right: 0; border-radius: 0; border-bottom: 1px solid var(--line);`), maintaining case title, metadata, quick return to Mind Map, and gap reviews across all views. Non-board sections render inside framed floating workspace panels with generous 16px clearance and margins. Corner radius is reserved strictly to explain structural floating containers (the side toolbar, content panels, review docks, and pinned evidence cards), avoiding decorative rounded rectangles around icons, status chips, or internal boundaries.
-- Raw evidence indexes cited source records; with the live adapter it links to the read-only original file (`GET /cases/{caseId}/evidence/{evidenceId}`). “Generalized files” means normalized ingestion records, paged from `GET /cases/{caseId}/records` and filtered by the `/files` inventory. Never synthesize normalized records from frontend fixture metadata.
-- Chat in this pass is frontend UI and an optional HTTP contract only; no Deep Agents service or model calls are implemented. Keep keys server-side, avoid simulated replies, and show the unavailable state until a matching case service is connected. See `frontend/CHAT.md` for the handoff contract.
-- Case navigation lives in a compact floating left toolbar using the board controls' dark surface, border, and spacing. It is positioned dynamically underneath the workspace topbar using measured clearance (`--topbar-clearance-y`, defaulting to 68px on desktop with 16px vertical gap, expanding when the topbar wraps), preventing overlaps across all viewports and zoom levels. Expanding the toolbar from 48px to 192px never overlaps the topbar or obscures the case title. It has 34px rows and 16px icons; omit the large wordmark and project block. Keep accessible names and tooltips on collapsed icons; Escape collapses while focus is inside the toolbar. On small screens, selecting a section collapses it.
-- Brand casing is uniformly `MapleTrace` across UI wordmarks, landing page headers/prose, page title/metadata, and design tokens, distinguishing the user-facing product title from snake_case backend package identifiers (`mapletrace_ingest`, `mapletrace_reason`).
+## Backend authority and evidence
 
-## Frontend–backend integration
+- **The backend is authoritative.** Case facts (records, times, entities, citations, hashes) come only from the backend. `case.db` (written by `backend/mapletrace_ingest`), its `ingest_report.json`, and the analysis outputs are the source of truth. `frontend/src/api/types.ts` is a presentation contract: when it and the backend disagree, change the frontend types or adapter, never the backend data. The frontend must not compute, infer or hard-code case facts.
+- Ingestion never alters evidence. Working copies are read-only, every file is SHA-256 hashed before parsing, `MANIFEST.csv` hashes are checked, and every step is written to the hash-chained `audit_log`. `python -m mapletrace_ingest verify <run>` must pass. `backend/tests/test_formats.py` re-ingests the Kestrel ZIP and requires every file to parse and every manifest hash to match.
+- Every record carries `locator_json` (row, line, `doc_line`, page, JSON path, ...); its file carries `external_id` (the manifest evidence ID). Citations are `{evidence_id, locator}`, written as `EV-071 seq=40162` or source ID `EV-071:seq=40162`. Uncited facts must not reach the frontend. Every citation ID must identify exactly one record: `unique_labels` in `backend/mapletrace_reason/store.py` falls back to the record's position when an ID-like attribute is shared within a file.
+- Timestamps are stored in UTC with an uncertainty window and a flag for every assumption. Each file's `time_basis` in `MANIFEST.csv` decides UTC versus local wall time. Human-reported times are `reliability = 'asserted'`, never machine records.
+- Identity merges happen only on explicit evidence (contacts, email display names, unambiguous name forms) and are recorded in `entity_links` with a rule and confidence. Fuzzy linkage belongs in the ML stage.
+- Reasoning (`backend/mapletrace_reason`) never writes to `case.db`. Each run writes `analysis/vN/` with `board.json`, `analysis.json`, `graph.json` and `analysis.db`, whose audit chain continues from the ingestion head. Deterministic stages (traditional ML and rules) must work without an API key.
+- Traditional ML (`mapletrace_reason/ml.py`) writes cited `signal` items (`ML-xx`) only. Signals go to the board and the agent's `list_ml_signals` tool and are never fed to later stages, so they cannot change findings, explanations or gaps (`backend/tests/test_ml.py` checks this). Models use fixed seeds, learn only from the case's own evidence, and never use protected attributes or the answer key.
+- Contradictions list several possible reasons and never conclude that someone lied. Explanations return "insufficient evidence" rather than forcing a verdict. Gaps are typed missing, failed_extraction, conflicting or uncertain. Corroboration counts independent origins, not records.
+- Investigator overrides go to `overrides.jsonl` and are applied on every run. Never delete them or the machine result they annotate. Items match across versions by their stable `key`.
+- API errors are always `{"error": {"code", "message"}}`.
+- Backend run outputs (`backend/runs/`, `backend/data/`) and generated sample ZIPs are not committed.
 
-- `frontend/INTEGRATION.md` records the integration scope and remaining work. Run both servers with `make dev`. Demo buttons call `POST /demo` (the committed snapshot, instant); uploading `kestrel_case_upload.zip` replays the recorded LLM results. `make backend-seed-kestrel` uploads Kestrel from the command line.
-- Observed versus inferred comes from the API's `certainty` on nodes and edges; claims stay claims. Never infer certainty from edge type names when the API supplies it. Arrowheads use the API's `directed`.
-- Backend node positions are column placeholders. Live cases use the presentation-only banded layout `layoutCaseGraph` in `frontend/src/components/board-layout.ts`; fixture positions are hand-placed and kept.
-- Gap focus uses the backend's `gaps[].nodeIds`; shared citations are only a fixture fallback, because entity nodes cite every record behind their threads.
-- Backend scores are computed ranks; show insight `confidence` as a label, never a percentage. Times render in the case `timezone` via `formatCaseTime`.
-- Insights show cited observations separately from the inference. Competing explanations show the backend verdict, which may be undecided; never present a hypothesis as a finding.
-- Every citation ID must identify exactly one record. `unique_labels` in `backend/mapletrace_reason/store.py` falls back to the record's position when an ID-like attribute is shared within a file.
+## LLM layer and cache
 
-## Repository layout
-
-- Keep `AGENTS.md` at the repository root. All frontend application files, dependencies, build outputs, and frontend documentation live in `frontend/`. All backend code lives in `backend/` (see "Backend").
-- Run Bun commands from `frontend/`. Root-level orchestration may reference that directory.
-- The root `Makefile` provides `frontend-install`, `frontend-dev`, `frontend-build`, `frontend-test`, `frontend-preview`, and `frontend-format`. Run Make from the repository root; recipes enter `frontend/` automatically. Do not add a nested frontend Makefile. Docker and the root `compose.yaml` are optional for server deployment; do not start Docker, run Compose, or rebuild container images for routine frontend work unless the user explicitly requests it.
-- Use Bun 1.4.4 for frontend dependencies and script execution. Commit `frontend/bun.lock`; install with `bun install --frozen-lockfile`. Use `bun run --bun test` to run the Vitest suite (not the separate `bun test` runner). Docker uses the same pinned Bun build image.
+- The LLM layer (`--llm`, deepagents + Anthropic) only adds claims and agent insights, and both must cite resolvable record IDs. The default model is `claude-sonnet-5-5`.
+- Never put upload-form values (such as the case name) into model prompts: replay keys must match across uploads of the same archive.
+- Recorded responses are committed on purpose: `backend/llm_cache/<archive sha256>.jsonl` (analysis), `backend/llm_cache/chat-<archive sha256>.jsonl` (chat), and `backend/demo/kestrel.tar.gz` (the finished Kestrel case served by `POST /demo`). After changing anything the model sees, rebuild with `make backend-llm-record` (billed), `make backend-demo-snapshot` (free) and `make backend-chat-record` (billed).
+- Tool names, docstrings (whitespace included) and outputs in `llm.read_tools` are part of the cache keys of both the investigator and chat caches. Editing them invalidates both.
 
 ## Case data and generator
 
-- Generated case data under `cases/` is the authoritative data for backend work. Frontend fixtures (`frontend/src/api/fixtures.ts`) are disposable mocks; never use them as a backend data source or reconcile backend data to them.
-- `generator/` deterministically builds `cases/kestrel/` (Python 3.12+; the pinned NumPy does not support 3.11). Pinned dependencies live in the PEP 723 block of `generator/generate.py` and are installed with `uv` (`make data-install`). There is no `generator/requirements.txt`. Never hand-edit files under `cases/`; change the generator, run `make data-generate`, and confirm with `make data-verify` (byte-for-byte hash check against `BUILD_INFO.json`). The root `Makefile` also provides `data-install`, `data-generate`, `data-verify`, and `data-truth`; set `UV=uv` where needed. Backend targets still use `PYTHON`.
-- `cases/kestrel/evidence/` and `kestrel_case_upload.zip` are the pipeline inputs. The repository holds no answer key: the model must work the case out from the evidence. `make data-truth` writes one to the git-ignored `.truth/kestrel/` for scoring only. Never commit it, and never give it or the `generator/` source (which encodes the solution) to the model.
+- Generated data under `cases/` is the authoritative data for backend work. Never hand-edit it: change `generator/`, run `make data-generate`, and confirm with `make data-verify` (byte-for-byte check against `BUILD_INFO.json`). The generator needs Python 3.12+ and uv; its pins are the PEP 723 block in `generator/generate.py`.
+- Frontend fixtures (`frontend/src/api/fixtures.ts`) are disposable mocks. Never use them as a backend data source or reconcile backend data to them.
+- `cases/kestrel/evidence/` and `kestrel_case_upload.zip` are the pipeline inputs. The repository holds no answer key. `make data-truth` writes one to the git-ignored `.truth/kestrel/` for scoring only. Never commit it, and never give it or anything under `generator/` (which encodes the solution) to the model.
 - All people, companies, numbers (555-01xx), plates and domains (`.example`) are fictional. Do not add real people or organizations to case data.
-- Protected attributes (for example `id_issuing_country`, nationality) must never be model features. The case includes a deliberate bias trap (RH-03).
-- Cite evidence as `evidence_id` plus locator (for example `EV-071 seq=40162`, `EV-090 line=15`).
+- Protected attributes (for example `id_issuing_country`, nationality) must never be model features or be returned by the API. The case includes a deliberate bias trap (RH-03).
 
-## Backend
+## Frontend decisions
 
-- **The backend is authoritative over the frontend.** Case facts (records, times, entities, citations, hashes) are produced only by the backend. The SQLite schema written by `backend/mapletrace_ingest` (`case.db`) and its `ingest_report.json` are the source of truth. `frontend/src/api/types.ts` is a presentation contract: when it and the backend disagree, change the frontend types or adapter, never the backend data. The frontend must not compute, infer or hard-code case facts. Fixtures stay disposable placeholders until the real adapter lands.
-- All backend code, dependencies and backend docs live in `backend/` (Python 3.11+, `backend/requirements.txt`). The ingestion package is `backend/mapletrace_ingest`. Root `Makefile` targets: `backend-install`, `backend-test`, `backend-ingest-kestrel`. Do not add a nested backend Makefile.
-- Ingestion must never alter evidence. Working copies are read-only, every file is SHA-256 hashed before parsing, `MANIFEST.csv` hashes are checked, and every pipeline step is written to the hash-chained `audit_log`. `python -m mapletrace_ingest verify <run>` must pass.
-- Every record carries `locator_json` (row, line, `doc_line`, page, JSON path, ...). Its file carries `external_id` (the manifest evidence ID). Downstream citations are `{evidence_id, locator}`. Uncited facts must not reach the frontend.
-- Timestamps are stored in UTC with an uncertainty window and flags for every assumption. Per-file `time_basis` from `MANIFEST.csv` decides UTC versus local wall time. Human-reported times are `reliability = 'asserted'`, never treated as machine records.
-- Identity merges happen only on explicit evidence (contacts, email display names, unambiguous name forms) and are recorded in `entity_links` with a rule and confidence. Fuzzy linkage belongs in the ML stage.
-- Run `make backend-test` after changes. `backend/tests/test_formats.py` re-ingests `cases/kestrel/kestrel_case_upload.zip` and requires every file to parse and every manifest hash to match.
-- Backend run outputs (`backend/runs/`, `backend/data/`) and generated sample zips are not committed. Two exceptions are committed on purpose: `backend/llm_cache/*.jsonl` (recorded LLM responses, replayed for matching uploads so the demo never pays twice) and `backend/demo/kestrel.tar.gz` (the finished Kestrel case served by `POST /demo`). Rebuild them with `make backend-llm-record` (billed) and `make backend-demo-snapshot` (free) after changing anything the model sees.
-- The LLM layer defaults to `claude-sonnet-5-5`. Never put upload-form values (case name) into model prompts; replay keys must match across uploads of the same archive.
-- Reasoning lives in `backend/mapletrace_reason` and never writes to `case.db`. Each run writes a numbered version (`analysis/vN/`) with `board.json` (CaseData plus extra fields), `analysis.json`, `graph.json` and `analysis.db`, whose audit chain continues from the ingestion audit head. Deterministic stages (traditional ML and rules) must work without an API key. The LLM layer (`--llm`, deepagents + Anthropic) only adds claims and agent insights, and both must cite resolvable record IDs.
-- Traditional ML runs first in `mapletrace_reason/ml.py` (DBSCAN place clusters, IsolationForest routine outliers, weakly labelled TF-IDF + logistic regression message triage, surname-blocked record linkage). It writes cited `signal` items (`ML-xx`) only: signals go to the board and the agent's `list_ml_signals` tool and are never fed to later stages, so they cannot change findings, explanations or gaps (`backend/tests/test_ml.py` checks this). Models use fixed seeds, learn only from the case's own evidence, and never use protected attributes or the answer key.
-- Contradictions list several possible reasons and never conclude that someone lied. Explanations return "insufficient evidence" instead of forcing a verdict. Gaps are typed missing / failed_extraction / conflicting / uncertain. Corroboration counts independent origins, not records.
-- Investigator overrides go to `overrides.jsonl` and are applied on every run. Never delete them or the machine result they annotate. Items are matched across versions by their stable `key`.
-- The HTTP API is `backend/mapletrace_api` (FastAPI). Errors are `{"error": {"code", "message"}}`. `GET /case` mirrors the frontend's `getCase()`. Root Makefile targets: `backend-analyze-kestrel`, `backend-serve`.
+### Adapters and data
+
+- API seam: `CaseApi` in `frontend/src/api/types.ts`. `http.ts` is the live adapter for `backend/mapletrace_api`; `client.ts` selects it from `VITE_API_BASE_URL` (development defaults to `/api`; `mock`, or an unset value outside development, selects the mock) and owns the mock jobs. UI loads cases by ID through TanStack Query and never imports fixtures directly.
+- Mock-only disclosures (ZIP not read, fictional excerpts, illustrative scores and hashes) render only when `api.mode === "mock"`, and the ZIP limitation stays visible beside upload controls. The mock upload validates a `.zip` extension and a nonempty file only, enforces no size cap, and never reads contents.
+- Observed versus inferred comes from the API's `certainty` on nodes and edges; claims stay claims. Never infer certainty from edge type names. Arrowheads require API `directed: true`; never reverse an edge from card positions.
+- Backend node positions are column placeholders. Live cases use the presentation-only layout `layoutCaseGraph` in `frontend/src/components/board-layout.ts`; fixture positions are hand-placed. Layout code never creates case facts.
+- Gap focus uses the backend's `gaps[].nodeIds`; shared citations are only a fixture fallback.
+- Backend scores are computed ranks. Show insight `confidence` as a label and ML scores as "Model score 0.xx", never as percentages. Times render in the case `timezone` via `formatCaseTime`.
+- Competing explanations show the backend verdict, which may be undecided; never present a hypothesis as a finding.
+
+### Routes and workspace
+
+- `/` is the landing page, `/projects` the project manager and `/projects/new` project naming plus ZIP selection (onboarding lives in `frontend/src/onboarding/`). Demo buttons call `openDemo()` (`POST /demo` with the live adapter). Carry a session project name into the matching case title; direct case routes fall back to the API title. The fictional-case entry stays on `/projects` until that case is in the session; do not repeat it in the upload modal. Contact sales is not part of the prototype: no enquiry form or fake destination.
+- A case is `/cases/:caseId` (the mind map), with `/evidence`, `/evidence/:sourceId`, `/files`, `/insights/{questions,evidence,inferences}` and `/chat`. Bare `/insights` shows Questions; build links with `insightsPath()`. Validate case IDs against the API and keep browser history and direct loads working. Keep the board mounted across sections to preserve its viewport and review context.
+- Left toolbar order: Mind map, Insights, Raw evidence, Generalized files, Chat. It floats below the top bar (measured clearance `--topbar-clearance-y`), is 48px collapsed and 192px expanded with 34px rows and 16px icons, overlays the canvas when expanded, keeps accessible names and tooltips on collapsed icons, collapses on Escape while focused, and collapses after a selection on small screens.
+- The top bar is a flat full-width header. On the mind map it holds Search, List/Board, Audit trail, and a "Case analysis" group with one entry per kind with its count (Gaps, Insights, Next evidence). Each entry opens the review dock, titled "Analysis", on its own tab; other sections show Mind map, Audit trail and the same entries, which return to the mind map with that panel open. There is no single "Review gaps" button. Keep search available at every width.
+- Analysis, source inspection and audit share a collapsible review dock that preserves the graph viewport; source excerpts come first, and below 900px the dock stacks under the board. Opening analysis items pans and zooms the map to the relevant cluster (accounting for the dock), highlighting targets in amber and dimming the rest.
+- The list view exposes evidence and relationships through standard buttons. The upload modal traps focus and supports Escape when idle or ready; the inspector supports Escape.
+
+### Board
+
+- Evidence cards: Excalifont titles, summaries, question links and thread annotations, with upright sans-serif metadata, a gently uneven paper silhouette, and a centered pushpin 6px inside the top edge. Sizes are role-tailored in `board-layout.ts` (default 248 × 224px) with 40px clearance after placement and drops. Inspection is an arrow-only button with an accessible name; the card shows a pointer cursor; omit inset frames and footer dividers.
+- Card colour comes only from API type and certainty, via the inks in `board-colors.ts`: person purple, device blue, event teal, location olive, statement grey. Each thread family shares the hue of its card type. Red means contradiction only.
+- Inferred cards are dashed with an "Inferred" chip; cards with an open question get an amber outline and flag. Observed threads are solid, inferences dashed `8 7`, claims dashed `3 6`. Every thread label is a source-inspection button.
+- Colour always travels with an icon, label or pattern, and every ink keeps 4.5:1 contrast against the paper (`board-colors.test.ts` enforces it).
+- A collapsible legend at the bottom left lists only the types present; the minimap mirrors the board colours, direction and selection.
+- Minimap: frames the pins only, so it never rescales while panning, with a clipped viewport rectangle. Pressing grabs the rectangle or centres the view there; minimap navigation clamps the view to the pins; arrow keys pan. The zoom readout sits in the zoom controls.
+- The "Ask a question" widget sits above the minimap, moves left of an open review dock, and must not cover the minimap, zoom controls or legend.
+
+### Insights
+
+- Questions: gaps plus the suggestions tied to them. Evidence: contradictions, cited observations, source groups, missing periods and uncertain times. Inferences: insight inferences, competing explanations with the backend verdict, and ML signals as leads; dashed borders.
+- Cited observations always stay separate from the inference. One search covers all tabs. `insights-sections.ts` only groups API data; it never creates or scores facts.
+
+### Raw evidence and generalized files
+
+- Raw evidence lists files from `GET /cases/{id}/files` and opens them with `GET /cases/{id}/evidence/{evidenceId}/view`. `/evidence/:sourceId` accepts a citation (`EV-xxx:locator`) or a bare evidence ID.
+- Positions come only from each record's `locator_json` on the backend. The cited row, line or sentence is highlighted; records sharing a label are marked more lightly.
+- Originals are served inline only for images, video, audio and PDF; everything else is a `nosniff` attachment, sandboxed by CSP.
+- "Generalized files" means normalized ingestion records: a table whose citations link to the raw file at that row, filtered by type with `GET /records?recordType=`. Never synthesize normalized records from fixture metadata.
+- The mock adapter keeps its cited-source list and "unavailable" states.
+
+### Chat
+
+- Implemented. Contract: [`frontend/CHAT.md`](frontend/CHAT.md); code: `backend/mapletrace_api/chat.py` and `backend/mapletrace_reason/chat.py`. Keys stay server-side and the frontend never simulates replies.
+- Suggested questions are deterministic and always answered without thread history, so they replay. Free typing is live and billed and needs a server key; without one the server only replays, and a miss returns `needs_api_key`.
+
+### Brand and visual design
+
+- Tokens and the full design system live in [`frontend/DESIGN.md`](frontend/DESIGN.md); `SPEC.md` is the single product spec and Impeccable product context (do not create a `PRODUCT.md`). App-specific Impeccable settings live in `frontend/.impeccable/`. Impeccable work is frontend-only; if its loader misses `SPEC.md` or the frontend artifacts, read them directly instead of reopening init. Future landing pages use the confirmed code-first workflow.
+- The product name is `MapleTrace` in all UI, titles and tokens; snake_case package names (`mapletrace_ingest`, ...) stay as they are.
+- The mark is `frontend/public/mapletrace-mark.svg`, rendered inline by `BrandMark.tsx`. Use it on dark surfaces only, never recolour it, and never use stock icons as a stand-in logo.
+- Blue (`--brand-*` in `src/styles/base.css`) means interaction, selection and focus; amber means open questions; status greens and reds stay separate. `--green` is a legacy alias of the brand blue; migrate away from it.
+- Glass (`--glass-fill`, `--glass-edge`, blur) is for chrome only, never for reading surfaces, cards or the paper canvas.
+- Dark workspace chrome surrounds a faint paper canvas. Non-board sections render in framed floating panels with 16px clearance. Corner radius is for structural floating containers (toolbar, panels, dock, cards), not icons, chips or internal boundaries.
+
+## Docker
+
+- The backend image is built from the repo root and mirrors the repo layout under `/app`. The root `.dockerignore` is an allowlist: add any new runtime file to it.
+- Data lives in the `mapletrace-data` volume at `/data`; the image runs as a non-root user.
+- The frontend image is built with `VITE_API_BASE_URL=/api` (`mock` is a build arg). nginx strips `/api` the way Vite does, and its `client_max_body_size 100m` must follow `MAPLETRACE_MAX_UPLOAD_MB`.
+- Only the frontend is published, on `127.0.0.1:5173`. `ANTHROPIC_API_KEY` is optional.
 
 ## Specification change approval
 
-- Before any future modification to root `SPEC.md`, always present the proposed changes and ask both the user and team members for approval. Wait for their explicit approval before editing; silence is not approval.
+- Before any modification to root `SPEC.md`, present the proposed changes and ask both the user and team members for approval. Wait for explicit approval; silence is not approval.
 - If team members cannot be reached through an explicitly authorized channel, ask the user to obtain their approval. Do not contact anyone without authorization or assume team consent.
-- This rule governs changes to `SPEC.md`; routine implementation work and other documentation can proceed within the user's authorized scope.
+- This rule governs `SPEC.md` only; routine implementation and other documentation proceed within the user's authorized scope.

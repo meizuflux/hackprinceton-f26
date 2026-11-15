@@ -3,7 +3,7 @@
 The backend (`backend/mapletrace_api/chat.py`, `backend/mapletrace_reason/chat.py`) answers questions about the latest analysis of an ingested case with `claude-sonnet-5-5` and read-only tools. The frontend never supplies answers, fixtures or fallbacks. Two views share one adapter (`src/api/chat.ts`) and one hook (`src/components/useCaseChat.ts`):
 
 - **`/cases/:caseId/chat`:** the chat page (`ChatPanel`), with cited excerpts under each answer.
-- **The mind map:** the floating "Ask a question" widget (`AskWidget`), mounted in `Board` in `src/App.tsx`. It sits above the minimap and zoom controls, expands upward, moves left of the review dock when the dock is open, and closes with Escape (focus returns to its button).
+- **The mind map:** the floating "Ask a question" widget (`AskWidget`), mounted in `Board` in `src/App.tsx`. It sits above the minimap and zoom controls, expands upward, moves left of the review dock when the dock is open, never covers the minimap, zoom controls or legend, and closes with Escape (focus returns to its button).
 
 The adapter calls same-origin `/api` (the Vite proxy strips it), or `VITE_CHAT_API_BASE_URL` when set. Model credentials live only on the server.
 
