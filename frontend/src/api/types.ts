@@ -9,6 +9,30 @@ export type Origin = "record" | "rules" | "ml" | "llm" | "agent";
 /** Backend label: `observed` comes straight from records, `inferred` is analysis. */
 export type Certainty = "observed" | "inferred";
 
+/** A photo or video behind a board card (backend/MEDIA.md). */
+export interface MediaInfo {
+  evidenceId: string;
+  kind: "photo" | "video";
+  mediaType?: string | null;
+  capturedUtc?: string | null;
+  captureSource?: string | null;
+  timeFlags?: string[];
+  durationS?: number | null;
+  width?: number | null;
+  height?: number | null;
+  deviceMake?: string | null;
+  deviceModel?: string | null;
+  gps?: { lat: number; lon: number } | null;
+  /** LLM description: always inferred, never fed to findings. */
+  vision?: {
+    text: string;
+    observations: Array<{ text: string; frameS?: number | null }>;
+    model?: string;
+    origin: Origin;
+    certainty: Certainty;
+  } | null;
+}
+
 export interface EvidenceNode {
   id: string;
   type: NodeType;
@@ -28,6 +52,7 @@ export interface EvidenceNode {
   origin?: Origin;
   stage?: string;
   evidenceIds?: string[];
+  media?: MediaInfo;
 }
 
 export interface EvidenceEdge {
