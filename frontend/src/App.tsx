@@ -48,6 +48,15 @@ import {
 import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
 import {
+  boardColorVars,
+  cardKind,
+  threadBadge,
+  threadCategory,
+  threadColors,
+  threadDash,
+} from "./components/board-colors";
+import { BoardLegend } from "./components/BoardLegend";
+import {
   formatCaseTime,
   insightKind,
   insightStrength,
@@ -247,37 +256,41 @@ function BoardCanvas({
   );
   const initialEdges: Edge<ThreadData>[] = useMemo(
     () =>
-      data.edges.map((e) => ({
-        id: e.id,
-        source: e.source,
-        target: e.target,
-        data: {
-          kind: relationshipKind(e.type, e.certainty),
-          label: e.label,
-          directed: e.directed === true,
-          onInspect: () => inspect("edge", e.id),
-        },
-        ariaLabel: `${e.label}. Inspect relationship and sources`,
-        type: "thread",
-        markerEnd:
-          e.directed === true
-            ? {
-                type: MarkerType.ArrowClosed,
-                color: "#a1372f",
-                width: 12,
-                height: 12,
-              }
-            : undefined,
-        style: {
-          stroke: "#a1372f",
-          strokeWidth: 3,
-          strokeLinecap: "round",
-          strokeDasharray:
-            relationshipKind(e.type, e.certainty) === "observed"
-              ? undefined
-              : "8 7",
-        },
-      })),
+      data.edges.map((e) => {
+        const kind = relationshipKind(e.type, e.certainty);
+        const category = threadCategory(e.type);
+        const ink = threadColors[category].ink;
+        return {
+          id: e.id,
+          source: e.source,
+          target: e.target,
+          data: {
+            kind,
+            category,
+            badge: threadBadge(e.type, e.certainty),
+            label: e.label,
+            directed: e.directed === true,
+            onInspect: () => inspect("edge", e.id),
+          },
+          ariaLabel: `${threadColors[category].label}: ${e.label}. Inspect relationship and sources`,
+          type: "thread",
+          markerEnd:
+            e.directed === true
+              ? {
+                  type: MarkerType.ArrowClosed,
+                  color: ink,
+                  width: 12,
+                  height: 12,
+                }
+              : undefined,
+          style: {
+            stroke: ink,
+            strokeWidth: 3,
+            strokeLinecap: "round",
+            strokeDasharray: threadDash(kind),
+          },
+        };
+      }),
     [data],
   );
   const [nodes, setNodes] = useNodesState(initialNodes);
@@ -474,7 +487,7 @@ function BoardCanvas({
               </button>
             </div>
           </div>
-          <div className="canvas-wrap">
+          <div className="canvas-wrap" style={boardColorVars()}>
             {boardView === "list" ? (
               <div className="evidence-list">
                 <h2>Evidence & connections</h2>
@@ -489,7 +502,11 @@ function BoardCanvas({
                     }
                     onClick={() => inspect("node", n.id)}
                   >
-                    <span className="list-record-type">{n.data.type}</span>
+                    <span
+                      className={`list-record-type kind-${cardKind(n.data.type)}`}
+                    >
+                      {n.data.type}
+                    </span>
                     <strong>{n.data.label}</strong>
                     <span>
                       {n.data.citations.length} sources{" "}
@@ -597,20 +614,7 @@ function BoardCanvas({
               </div>
             )}
             {boardView === "graph" && (
-              <div className="board-legend">
-                <span>
-                  <i className="legend-line" />
-                  Observed link
-                </span>
-                <span>
-                  <i className="legend-line dashed" />
-                  Claim / inference
-                </span>
-                <span>
-                  <i className="legend-gap" />
-                  Evidence gap
-                </span>
-              </div>
+              <BoardLegend nodes={data.nodes} edges={data.edges} />
             )}
           </div>
         </div>

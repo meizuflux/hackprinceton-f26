@@ -260,31 +260,13 @@
 }
 .board-minimap-thread {
   fill: none;
-  stroke: #a1372f;
   stroke-width: 1.2;
   stroke-linecap: round;
-}
-.board-minimap-thread.is-inferred {
-  stroke-dasharray: 3 2;
-}
-.board-minimap-thread.is-active {
-  stroke: #782a23;
-  stroke-width: 1.8;
 }
 .board-minimap-pin {
   fill: #faf8f1;
   stroke: #9c9584;
   stroke-width: 0.75;
-}
-.board-minimap-pin.is-gap {
-  stroke: #a57838;
-}
-.board-minimap-pin.is-active {
-  stroke: #a57838;
-  stroke-width: 1.8;
-}
-.board-minimap-pushpin {
-  fill: #ad604a;
 }
 .board-minimap-map rect.board-minimap-view {
   fill: none;
@@ -302,57 +284,6 @@
     sans-serif;
   font-variant-numeric: tabular-nums;
   letter-spacing: 0;
-}
-.board-legend {
-  position: absolute;
-  z-index: 5;
-  bottom: var(--board-inset);
-  left: var(--board-inset);
-  max-width: calc(
-    100% - var(--board-inset) - var(--minimap-width) - 40px - var(--zoom-gap) -
-      28px
-  );
-  padding: 9px 12px;
-  background: var(--surface);
-  border: 1px solid #424b3d;
-  border-radius: var(--radius);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  color: var(--text);
-  font-size: 12px;
-  box-shadow: var(--shadow);
-  pointer-events: none;
-}
-.board-legend > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-}
-.legend-line,
-.legend-gap {
-  display: block;
-  flex-shrink: 0;
-}
-.legend-line {
-  width: 22px;
-  height: 2px;
-  background: #a84e40;
-}
-.legend-line.dashed {
-  background: repeating-linear-gradient(
-    90deg,
-    #a84e40 0 5px,
-    transparent 5px 9px
-  );
-}
-.legend-gap {
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--amber);
-  border-radius: 1px;
 }
 .search-feedback {
   position: absolute;
@@ -516,11 +447,9 @@
   }
   .board-legend {
     right: 12px;
+    bottom: var(--board-inset);
     max-width: none;
-    gap: 8px 10px;
-    padding: 8px;
     font-size: 11px;
-    justify-content: center;
   }
   .search-feedback {
     top: calc(var(--topbar-clearance-y, 160px) + 8px);

@@ -12,6 +12,11 @@ import { relationshipKind } from "./relationships";
 import { PIN_WIDTH, PIN_HEIGHT, threadHandles } from "./board-layout";
 import { paperOutline } from "./paper-note";
 import {
+  THREAD_CATEGORIES,
+  threadCategory,
+  threadColors,
+} from "./board-colors";
+import {
   boundsOf,
   clampViewToContent,
   dragView,
@@ -174,17 +179,20 @@ export function CanvasMinimap() {
         }}
       >
         <defs>
-          <marker
-            id={markerId}
-            viewBox="0 0 8 8"
-            refX={7}
-            refY={4}
-            markerWidth={4}
-            markerHeight={4}
-            orient="auto"
-          >
-            <path d="M0 0 L8 4 L0 8 Z" fill="#a1372f" />
-          </marker>
+          {THREAD_CATEGORIES.map((category) => (
+            <marker
+              key={category}
+              id={`${markerId}-${category}`}
+              viewBox="0 0 8 8"
+              refX={7}
+              refY={4}
+              markerWidth={4}
+              markerHeight={4}
+              orient="auto"
+            >
+              <path d="M0 0 L8 4 L0 8 Z" fill={threadColors[category].ink} />
+            </marker>
+          ))}
         </defs>
         {edges.map((edge) => (
           <MinimapEdge
@@ -307,7 +315,11 @@ function MinimapEdge({
     <path
       d={path}
       className={`board-minimap-thread ${String(edge.data?.category ?? "")} ${kind !== "observed" ? `is-${kind}` : ""} ${isEdgeActive ? "is-active" : ""}`}
-      markerEnd={edge.data?.directed === true ? `url(#${markerId})` : undefined}
+      markerEnd={
+        edge.data?.directed === true
+          ? `url(#${markerId}-${threadCategory(String(edge.data?.category ?? edge.type ?? ""))})`
+          : undefined
+      }
     />
   );
 }

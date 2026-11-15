@@ -187,11 +187,6 @@
 .react-flow__edge {
   cursor: pointer;
 }
-.react-flow__edge:hover .react-flow__edge-path,
-.react-flow__edge.selected .react-flow__edge-path {
-  stroke: #782a23 !important;
-  stroke-width: 3.5 !important;
-}
 .thread-label {
   position: absolute;
   pointer-events: all;
@@ -244,11 +239,6 @@
 }
 .dimmed-edge {
   opacity: 0.14 !important;
-}
-.focused-edge path.react-flow__edge-path {
-  stroke: #c43224 !important;
-  stroke-width: 4px !important;
-  filter: drop-shadow(0 2px 6px rgba(161, 55, 47, 0.5));
 }
 .evidence-list button.is-focused {
   border-color: var(--amber);

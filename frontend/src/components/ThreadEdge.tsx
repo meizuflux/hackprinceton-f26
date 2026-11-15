@@ -7,9 +7,13 @@ import {
   type Edge,
   type EdgeProps,
 } from "@xyflow/react";
+import { threadColors, type ThreadCategory } from "./board-colors";
 
 export type ThreadData = {
   kind: "observed" | "claim" | "inference";
+  category: ThreadCategory;
+  /** Color-independent wording for claims, inferences and contradictions. */
+  badge?: string;
   label: string;
   directed: boolean;
   isFocused?: boolean;
@@ -40,7 +44,7 @@ export const ThreadEdge = memo(function ThreadEdge(
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`thread-label nodrag nopan ${data.kind} ${props.selected || data.isFocused ? "is-selected" : ""}`}
+          className={`thread-label nodrag nopan ${data.kind} thread-${data.category} ${props.selected || data.isFocused ? "is-selected" : ""}`}
           style={{
             transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
             maxWidth: labelWidth,
@@ -49,12 +53,10 @@ export const ThreadEdge = memo(function ThreadEdge(
             event.stopPropagation();
             data.onInspect();
           }}
-          aria-label={`${data.kind === "observed" ? "Observed link" : data.kind === "claim" ? "Claim" : "Inference"}: ${data.label}. Inspect relationship and sources`}
-          title={data.label}
+          aria-label={`${data.kind === "observed" ? "Observed" : data.kind === "claim" ? "Claim" : "Inference"}, ${threadColors[data.category].label.toLowerCase()}: ${data.label}. Inspect relationship and sources`}
+          title={`${threadColors[data.category].label}: ${data.label}`}
         >
-          {data.kind !== "observed" && (
-            <strong>{data.kind === "claim" ? "Claim" : "Inference"}</strong>
-          )}
+          {data.badge && <strong>{data.badge}</strong>}
           <span>{data.label}</span>
         </button>
       </EdgeLabelRenderer>
