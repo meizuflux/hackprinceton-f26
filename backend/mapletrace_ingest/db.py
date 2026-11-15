@@ -1,4 +1,4 @@
-"""SQLite schema and low-level helpers for the Compstat evidence store.
+"""SQLite schema and low-level helpers for the Mapletrace evidence store.
 
 One database per case. Every row that the reasoning layer will cite carries
 enough provenance (file_id + locator) to be traced back to the original bytes.

@@ -1,4 +1,4 @@
-# Compstat
+# Mapletrace
 
 <!-- impeccable:product-schema 1 -->
 
@@ -10,7 +10,7 @@ Web.
 
 ## Users
 
-Compstat serves people reviewing evidence across domains, including insurance fraud investigators, crime scene investigators, detectives, and lawyers. It is not tied to one profession or case type. The immediate audience is hackathon judges watching a three-minute demonstration. The prototype must work reliably and look appealing.
+Mapletrace serves people reviewing evidence across domains, including insurance fraud investigators, crime scene investigators, detectives, and lawyers. It is not tied to one profession or case type. The immediate audience is hackathon judges watching a three-minute demonstration. The prototype must work reliably and look appealing.
 
 ## Product Purpose
 
@@ -38,7 +38,7 @@ Demo success means a clear, reliable path from selecting a synthetic ZIP through
 
 ## Brand Commitments
 
-The product name is Compstat. Keep language useful across evidence-review domains rather than assuming every user works in law enforcement. The demo must combine working interactions with an appealing presentation.
+The product name is Mapletrace. Keep language useful across evidence-review domains rather than assuming every user works in law enforcement. The demo must combine working interactions with an appealing presentation.
 
 ## Product Principles
 

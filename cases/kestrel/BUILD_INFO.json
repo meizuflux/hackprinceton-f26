@@ -2,28 +2,28 @@
   "generator_version": "1.0.0",
   "seed": "kestrel-v1",
   "case_id": "SBRPD-26-104417",
-  "python": "3.13.3",
+  "python": "3.15.2",
   "libraries": {
     "numpy": "2.5.4",
     "Pillow": "13.0.0",
     "piexif": "1.1.3",
     "imageio-ffmpeg": "0.8.1",
-    "ffmpeg": "9.0.2-essentials_build-www.gyan.dev"
+    "ffmpeg": "9.0"
   },
   "note": "Text, CSV and JSON outputs are byte-stable across platforms. JPEG, MP4 and ZIP bytes are stable for the pinned library versions in generator/requirements.txt.",
   "files": {
-    "README.md": "c10c4a478d24f8d8eb42f89bb8cf6b2226fee515d79503145c3e11320cf1bd1a",
+    "README.md": "7083c7889406e32472f17c8fe5bc0a4cdeda40f613b1285c6502bed02f01e2a8",
     "evidence/00_intake/custody_log.csv": "d326a7b3662718e8ecd5e9954c17d90835fcebfd47bf693ceb9ce7f503c61751",
     "evidence/00_intake/incident_report.txt": "f5683b213544f1d645c5a92ca2699336912ee07cdf3039c66ec5cd284409b64f",
     "evidence/00_intake/insurer_fnol.txt": "47f524ff777b02c05b65cbe2a00895a141f3d41a951c87a552f583dc90ad3d7c",
     "evidence/01_bio/lab_report_dna.txt": "c617d9ae28bbe6754090d80a1a82e4ca69055883527d52e2149126eb42b4f242",
     "evidence/01_bio/str_profiles.csv": "95bfce2f6b8b30a8520365f3b5241ba2f6bc4cb90988d1f360446bf6984ae452",
-    "evidence/02_video/f4cam01_2059.mp4": "77b7d20747a7e9966c146978eae6df11b5d99a59e502a259d02a05f8c561329e",
-    "evidence/02_video/lobby01_1900.mp4": "f9e512c2d509e6c05abfa582e95a9822b58b6d8f4a62684cb4ccb1b9bd06f666",
-    "evidence/02_video/p2cam02_2135.mp4": "5372c9ec109e5bd54e07d123ac35ae8d382461eaf15fbc6407b62586739acad1",
-    "evidence/02_video/p2cam02_2302.mp4": "05ff019f9dd7291c57c9c183a98983a6a4dff5a67bd8dad451eac9d7be10156a",
+    "evidence/02_video/f4cam01_2059.mp4": "8a643475bac14a2df568d781c98c1566a6c1c519c12dda3d41501968ec5b9d69",
+    "evidence/02_video/lobby01_1900.mp4": "032ba4d600d8af6fb21b843c3c2e52f1388a5432e7ff17ffd4ddf81f0c5b72e2",
+    "evidence/02_video/p2cam02_2135.mp4": "a31d13b561750d69d598b1a12269d1e1c5b111a95840a5b2bbdc93649f11ba8d",
+    "evidence/02_video/p2cam02_2302.mp4": "4264016a87dc2c21b5f97b790119c7e1c9cb870c588baa028f05bb1513bc0fcb",
     "evidence/02_video/vms_analytics.csv": "b1929aabbf7e0c2fff9abfb4f1f74468b59635c5f42165f2c779ebc8ccd9b46f",
-    "evidence/02_video/vms_export_index.csv": "333b8d3c5b6119791ba9432e7cc8f3817d54afaa11b834048de2a796a7c0210d",
+    "evidence/02_video/vms_export_index.csv": "669b1f90f2f7efe2c05f70526476751f1906ac9bd8fcbc927afaaa1dda6e9d79",
     "evidence/03_photo/IMG_4402.jpg": "f3b83f6641771b7ae28b8ea327eb744d7fba09357ae8ec57bb302db55b5817cb",
     "evidence/03_photo/IMG_4433.jpg": "95f6a0ff9e7948e4e675f51fd306b8668da8b517447e1c1a22cccf297b7426e9",
     "evidence/03_photo/IMG_4458.jpg": "d04d99b9e779bd45054ccd2958abb3eec76944b01760d89a2b8ff13533746c87",
@@ -69,7 +69,7 @@
     "evidence/09_email/ellis_brandt.eml": "b2162f4392afc76dad6574e8c7fca2503d440f9e11acf136c7761bb4125b6b09",
     "evidence/09_email/halvorsen_2255.eml": "43eb43ce2e4cd2805ce8fbf698be6ee5dea9f9945066bcaa463e36188b10520a",
     "evidence/09_email/inv_alert.eml": "aa29b8c3d0b624e7289d7bf80673d4b2125509137e599a01283c90545220023a",
-    "evidence/MANIFEST.csv": "d73b031cf606f0c48a8a0fafaa5a16618f4150820f46329e94ae5d345730d460",
-    "kestrel_case_upload.zip": "e9ad1b2322bde843d4b29dc5baf9e61f5d05228edc07e6e45ed8414ec439526f"
+    "evidence/MANIFEST.csv": "d5861093f3392fbe221199a88ff47b085bad71925a37dad862d91bc6a531de2b",
+    "kestrel_case_upload.zip": "0102a956aa860fe390a5086d8e18d46ca4941e1f8992893b2e8a589004a758e2"
   }
 }

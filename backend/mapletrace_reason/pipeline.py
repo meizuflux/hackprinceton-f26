@@ -18,7 +18,7 @@ import sqlite3
 from datetime import datetime, timezone
 from pathlib import Path
 
-from compstat_ingest.db import AuditLog, canonical_json
+from mapletrace_ingest.db import AuditLog, canonical_json
 
 from . import analytics, board as board_mod, claims as claims_mod, contradictions as contra_mod, gaps as gaps_mod
 from . import history, hypotheses as hyp_mod, insights as insights_mod, ml, recommend, sources, timeline as tl

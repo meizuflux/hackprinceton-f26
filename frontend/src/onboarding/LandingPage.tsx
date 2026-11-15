@@ -684,7 +684,7 @@ export function LandingPage({
                   </div>
                   <div className="pipeline-code-card">
                     <div className="code-header">
-                      <span>compstat_ingest :: intake.py</span>
+                      <span>mapletrace_ingest :: intake.py</span>
                       <span className="code-tag">STAGE 1</span>
                     </div>
                     <pre>
@@ -739,7 +739,7 @@ export function LandingPage({
                   </div>
                   <div className="pipeline-code-card">
                     <div className="code-header">
-                      <span>compstat_reason :: analytics.py</span>
+                      <span>mapletrace_reason :: analytics.py</span>
                       <span className="code-tag">STAGE 2</span>
                     </div>
                     <pre>
@@ -797,7 +797,7 @@ for (swipe, ws_session) in spatiotemporal_join(swipes, sessions):
                   </div>
                   <div className="pipeline-code-card">
                     <div className="code-header">
-                      <span>compstat_reason :: hypotheses.py</span>
+                      <span>mapletrace_reason :: hypotheses.py</span>
                       <span className="code-tag">STAGE 3</span>
                     </div>
                     <pre>
@@ -854,7 +854,7 @@ if score_gap(explanations[0], explanations[1]) < THRESHOLD:
                   </div>
                   <div className="pipeline-code-card">
                     <div className="code-header">
-                      <span>compstat_reason :: recommend.py</span>
+                      <span>mapletrace_reason :: recommend.py</span>
                       <span className="code-tag">STAGE 4</span>
                     </div>
                     <pre>

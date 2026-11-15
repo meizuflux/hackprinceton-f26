@@ -7,42 +7,52 @@
 }
 
 .react-flow__node {
-  width: 210px;
+  width: auto;
+  height: auto;
 }
 .evidence-pin {
   position: relative;
-  padding: 18px 14px 0;
-  background: var(--paper);
-  border: 1px solid #eee9dc;
-  border-radius: 2px;
-  box-shadow: 1px 5px 12px #201b1948;
+  width: var(--pin-width, 248px);
+  height: var(--pin-height, 224px);
+  box-sizing: border-box;
+  padding: 14px 17px 4px;
   color: #383c31;
+  display: flex;
+  flex-direction: column;
+  cursor: pointer;
+}
+.evidence-pin:active {
+  cursor: grabbing;
+}
+.pin-outline {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  fill: #faf8f1;
+  stroke: #766d56;
+  stroke-width: 0.7;
+  stroke-opacity: 0.3;
+  filter: drop-shadow(0 3px 4px #4e443b26);
+  z-index: -1;
+}
+.evidence-pin {
+  isolation: isolate;
 }
 .evidence-pin.active {
   outline: 3px solid var(--amber);
   outline-offset: 3px;
 }
-.evidence-pin.statement {
-  background: #e7e2bd;
-}
-.evidence-pin.event {
-  background: #e9dfcc;
-}
-.evidence-pin.device {
-  background: #d9dfd2;
-}
 .pushpin {
   position: absolute;
-  top: -5px;
-  left: calc(50% - 4px);
-  width: 8px;
-  height: 8px;
+  top: 6px;
+  left: calc(50% - 3.5px);
+  width: 7px;
+  height: 7px;
   border-radius: 50%;
-  background: #b2634a;
-  box-shadow: 0 2px 3px #30241488;
-}
-.person .pushpin {
-  background: #637c71;
+  background: #ad604a;
+  box-shadow: 0 1px 2px #63453540;
 }
 .pin-type,
 .pin-type > span,
@@ -57,58 +67,108 @@
 }
 .pin-type {
   justify-content: space-between;
-  text-transform: uppercase;
+  text-transform: capitalize;
   font-size: 11px;
+  letter-spacing: 0;
   color: #5b604f;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 .evidence-pin h3 {
-  font-size: 18px;
-  font-weight: 600;
-  line-height: 1.25;
-  letter-spacing: -0.02em;
+  font:
+    400 21px/1.18 "Excalifont",
+    "DM Sans",
+    sans-serif;
+  letter-spacing: 0;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  flex-shrink: 0;
 }
 .pin-subtitle {
   color: #595e4e;
   font-size: 12px;
-  margin-top: 5px;
+  margin-top: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .pin-summary {
   font:
-    15px/1.45 "Newsreader",
-    Georgia,
-    serif;
+    400 15px/1.4 "Excalifont",
+    "DM Sans",
+    sans-serif;
   color: #454a3d;
-  margin-top: 12px;
+  margin-top: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  flex-shrink: 1;
+}
+.evidence-pin.location h3 {
+  font-size: 22px;
+  font-weight: 500;
+}
+.evidence-pin.statement .pin-summary {
+  font-style: italic;
 }
 .pin-time {
-  margin-top: 10px;
-  font-size: 11px;
+  font-size: 10px;
   color: #59513b;
+  text-transform: none;
+  letter-spacing: 0;
 }
 .pin-gap {
-  background: #bd8c2d16;
+  background: transparent;
   color: #69461b;
-  border: 1px solid #ae884255;
   border-radius: 3px;
-  padding: 5px;
-  font-size: 11px;
-  margin-top: 10px;
+  padding: 3px 0;
+  font:
+    400 14px/1.2 "Excalifont",
+    "DM Sans",
+    sans-serif;
+  margin-top: auto;
+  margin-bottom: 6px;
+  min-height: 26px;
+  flex-shrink: 0;
+  text-align: left;
+  align-self: flex-start;
+}
+.pin-gap svg:last-child {
+  margin-left: 3px;
+}
+.pin-gap:hover {
+  background: #e9ddc2;
+}
+.pin-gap:focus-visible {
+  outline-color: #69461b;
+  outline-offset: 2px;
 }
 .pin-footer {
   justify-content: space-between;
-  border-top: 1px solid #88876c44;
-  margin-top: 14px;
-  padding: 7px 0;
+  margin-top: auto;
+  padding: 0;
   color: #50573e;
   font-size: 11px;
+  min-height: 34px;
+  flex-shrink: 0;
+}
+.pin-gap + .pin-footer {
+  margin-top: 0;
 }
 .pin-inspect {
   background: transparent;
   color: #36452b;
   font-size: 13px;
   min-height: 32px;
-  padding: 6px 4px;
+  min-width: 32px;
+  padding: 6px;
+  justify-content: center;
+  border-radius: 4px;
 }
 .pin-inspect:hover {
   background: #bdc6a875;
@@ -127,10 +187,70 @@
 .react-flow__edge {
   cursor: pointer;
 }
-.react-flow__edge:hover path {
-  stroke: #f4c480 !important;
-  stroke-width: 3 !important;
+.react-flow__edge:hover .react-flow__edge-path,
+.react-flow__edge.selected .react-flow__edge-path {
+  stroke: #782a23 !important;
+  stroke-width: 3.5 !important;
+}
+.thread-label {
+  position: absolute;
+  pointer-events: all;
+  max-width: 166px;
+  padding: 3px 4px;
+  background: #eee8de;
+  color: #5d493c;
+  border-radius: 3px;
+  font:
+    400 14.5px/1.25 "Excalifont",
+    "DM Sans",
+    sans-serif;
+  text-align: center;
+  overflow-wrap: normal;
+}
+.thread-label strong {
+  display: block;
+  font-size: 14px;
+  font-weight: 400;
+  color: #79442f;
+}
+.thread-label:not(.observed) > span {
+  display: none;
+}
+.thread-label:not(.observed):is(:hover, :focus-visible, .is-selected) > span {
+  display: block;
+  margin-top: 3px;
+}
+.thread-label:hover,
+.thread-label.is-selected {
+  background: #fff9e9;
+}
+.thread-label:focus-visible {
+  outline-color: #542d24;
+}
+.react-flow__node {
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1);
 }
 .dimmed-node {
   opacity: 0.16 !important;
+}
+.focused-node .evidence-pin,
+.evidence-pin.is-focused {
+  outline: 3px solid var(--amber) !important;
+  outline-offset: 3px !important;
+  filter: drop-shadow(0 8px 24px rgba(212, 173, 106, 0.45)) !important;
+}
+.react-flow__edge {
+  transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1);
+}
+.dimmed-edge {
+  opacity: 0.14 !important;
+}
+.focused-edge path.react-flow__edge-path {
+  stroke: #c43224 !important;
+  stroke-width: 4px !important;
+  filter: drop-shadow(0 2px 6px rgba(161, 55, 47, 0.5));
+}
+.evidence-list button.is-focused {
+  border-color: var(--amber);
+  background: #2a2c20;
 }

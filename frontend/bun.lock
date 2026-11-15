@@ -3,7 +3,7 @@
   "configVersion": 0,
   "workspaces": {
     "": {
-      "name": "compstat-frontend",
+      "name": "mapletrace-frontend",
       "dependencies": {
         "@tanstack/react-query": "^5.90.0",
         "@xyflow/react": "^12.9.0",

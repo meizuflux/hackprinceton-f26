@@ -2,8 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
   Controls,
-  MiniMap,
+  MarkerType,
+  applyNodeChanges,
+  type NodeChange,
   useNodesState,
   useEdgesState,
   type Node,
@@ -19,6 +23,7 @@ import {
   Layers,
   Lightbulb,
   LoaderCircle,
+  Minus,
   PanelRightOpen,
   Search,
   ShieldCheck,
@@ -29,31 +34,49 @@ import {
 } from "lucide-react";
 import { api } from "./api/client";
 import type { CaseData } from "./api/types";
+import { CanvasMinimap } from "./components/CanvasMinimap";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
+import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
+import {
+  arrangePins,
+  getPinDimensions,
+  settlePinMoves,
+  threadHandles,
+} from "./components/board-layout";
 import { Inspector, type Selection } from "./components/Inspector";
+import { relationshipKind } from "./components/relationships";
+import {
+  getFocusFitOptions,
+  getNodesForSelection,
+  getNodesForTab,
+  type Tab,
+} from "./components/board-focus";
 import { casePath, useRouter } from "./routing";
 import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
+import { CaseWorkspace } from "./components/CaseWorkspace";
 import {
   Landing,
   ProjectManager,
   type SessionProject,
 } from "./onboarding/Onboarding";
 const nodeTypes = { evidence: EvidenceNode };
-type Tab = "gaps" | "insights" | "suggestions";
-type RelationshipKind = "observed" | "claim" | "inference";
-
-function relationshipKind(type: string): RelationshipKind {
-  if (type === "time_overlap") return "inference";
-  if (["claim", "describes", "reported_near"].includes(type)) return "claim";
-  return "observed";
-}
-function Board({
+const edgeTypes = { thread: ThreadEdge };
+function BoardCanvas({
   data,
   projectName,
+  onOpenSource,
+  active,
+  focusSelection,
+  onClearFocusSelection,
 }: {
   data: CaseData;
   projectName?: string;
+  onOpenSource: (sourceId: string) => void;
+  active: boolean;
+  focusSelection?: Selection | null;
+  onClearFocusSelection?: () => void;
 }) {
+  const { fitView } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
   const [tab, setTab] = useState<Tab>("gaps");
   const [dockMode, setDockMode] = useState<
@@ -80,6 +103,58 @@ function Board({
   const searchRef = useRef<HTMLInputElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const reviewButtonRef = useRef<HTMLButtonElement>(null);
+
+  const focusTarget = useCallback(
+    (
+      targetNodeIds: Set<string> | string[],
+      options?: { dockOpen?: boolean },
+    ) => {
+      const ids = Array.from(targetNodeIds);
+      if (ids.length === 0) return;
+      const isNarrow =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 900px)").matches;
+      const isDockOpen = options?.dockOpen ?? dockMode !== "closed";
+      const fitOptions = getFocusFitOptions({
+        nodeCount: ids.length,
+        isNarrow,
+        dockOpen: isDockOpen,
+      });
+
+      requestAnimationFrame(() => {
+        try {
+          fitView({
+            nodes: ids.map((id) => ({ id })),
+            ...fitOptions,
+          });
+        } catch {
+          // Graceful fallback
+        }
+      });
+    },
+    [fitView, dockMode],
+  );
+
+  const resetBoardView = useCallback(() => {
+    requestAnimationFrame(() => {
+      try {
+        fitView({
+          padding: {
+            top: "90px",
+            bottom: "100px",
+            left: "90px",
+            right: "60px",
+          },
+          duration: 650,
+          minZoom: 0.5,
+          maxZoom: 1.1,
+        });
+      } catch {
+        // Graceful fallback
+      }
+    });
+  }, [fitView]);
+
   const inspect = useCallback(
     (kind: Selection["kind"], id: string, sourceId?: string) => {
       openerRef.current =
@@ -88,77 +163,193 @@ function Board({
           ? document.activeElement
           : null;
       setReturnMode(dockMode === "inspector" ? returnMode : dockMode);
-      setSelection({ kind, id, sourceId });
+      const nextSelection: Selection = { kind, id, sourceId };
+      setSelection(nextSelection);
       setDockMode("inspector");
+
+      const targetNodes = getNodesForSelection(nextSelection, data);
+      if (targetNodes.size > 0) {
+        focusTarget(targetNodes, { dockOpen: true });
+      }
     },
-    [dockMode, returnMode],
+    [dockMode, returnMode, data, focusTarget],
   );
+
   const closeInspector = useCallback(() => {
     setSelection(null);
     setDockMode(returnMode);
+    if (returnMode === "closed") {
+      resetBoardView();
+    } else if (returnMode === "analysis") {
+      const targetNodes = getNodesForTab(tab, data);
+      if (targetNodes.size > 0) focusTarget(targetNodes, { dockOpen: true });
+    }
     requestAnimationFrame(() => {
       if (openerRef.current?.isConnected) openerRef.current.focus();
       else if (returnMode === "analysis") analysisRef.current?.focus();
       else reviewButtonRef.current?.focus();
     });
-  }, [returnMode]);
+  }, [returnMode, resetBoardView, tab, data, focusTarget]);
+
+  useEffect(() => {
+    if (focusSelection && active) {
+      inspect(focusSelection.kind, focusSelection.id, focusSelection.sourceId);
+      onClearFocusSelection?.();
+    }
+  }, [focusSelection, active, inspect, onClearFocusSelection]);
   const initialNodes: Node<PinData>[] = useMemo(
     () =>
-      data.nodes.map((n) => ({
-        id: n.id,
-        type: "evidence",
-        ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
-        position: { x: n.position.x, y: n.position.y * 1.65 },
-        data: {
-          ...n,
-          onInspect: () => inspect("node", n.id),
-          gapScore: data.gaps.find((g) => g.id === n.gapId)?.score,
-        },
-      })),
+      arrangePins(
+        data.nodes.map((n) => {
+          const dim = getPinDimensions(n);
+          return {
+            id: n.id,
+            type: "evidence",
+            ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
+            position: { x: 100 + n.position.x, y: n.position.y * 1.2 },
+            width: dim.width,
+            height: dim.height,
+            data: {
+              ...n,
+              width: dim.width,
+              height: dim.height,
+              onInspect: () => inspect("node", n.id),
+              onInspectGap: n.gapId
+                ? () => inspect("gap", n.gapId!)
+                : undefined,
+            },
+          };
+        }),
+      ),
     [data, inspect],
   );
-  const initialEdges: Edge[] = useMemo(
+  const initialEdges: Edge<ThreadData>[] = useMemo(
     () =>
       data.edges.map((e) => ({
         id: e.id,
         source: e.source,
         target: e.target,
-        label: e.label,
-        ariaLabel: `${e.label}. Inspect relationship and sources`,
-        type: "default",
-        style: {
-          stroke:
-            relationshipKind(e.type) === "observed" ? "#b86350" : "#bd985a",
-          strokeWidth: 1.5,
-          strokeDasharray:
-            relationshipKind(e.type) === "observed" ? undefined : "5 5",
+        data: {
+          kind: relationshipKind(e.type),
+          label: e.label,
+          directed: e.directed === true,
+          onInspect: () => inspect("edge", e.id),
         },
-        labelStyle: { fill: "#f4e8cd", fontSize: 12 },
-        labelBgStyle: { fill: "#444039", fillOpacity: 0.95 },
-        labelBgPadding: [7, 4] as [number, number],
-        labelBgBorderRadius: 3,
+        ariaLabel: `${e.label}. Inspect relationship and sources`,
+        type: "thread",
+        markerEnd:
+          e.directed === true
+            ? {
+                type: MarkerType.ArrowClosed,
+                color: "#a1372f",
+                width: 12,
+                height: 12,
+              }
+            : undefined,
+        style: {
+          stroke: "#a1372f",
+          strokeWidth: 3,
+          strokeLinecap: "round",
+          strokeDasharray:
+            relationshipKind(e.type) === "observed" ? undefined : "8 7",
+        },
       })),
     [data],
   );
-  const [nodes, , onNodesChange] = useNodesState(initialNodes);
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
-  const matchingNodes = nodes.filter((n) =>
-    `${n.data.label} ${n.data.summary}`
-      .toLowerCase()
-      .includes(search.trim().toLowerCase()),
-  );
-  const visibleNodes = nodes.map((n) => ({
-    ...n,
-    className:
-      search.trim() && !matchingNodes.some((match) => match.id === n.id)
-        ? "dimmed-node"
-        : "",
-    data: {
-      ...n.data,
-      active: selection?.kind === "node" && selection.id === n.id,
-      onInspect: () => inspect("node", n.id),
+  const [nodes, setNodes] = useNodesState(initialNodes);
+  const onNodesChange = useCallback(
+    (changes: NodeChange<Node<PinData>>[]) => {
+      setNodes((current) => {
+        const next = applyNodeChanges(changes, current);
+        const settledIds = changes.flatMap((change) =>
+          change.type === "position" && !change.dragging ? [change.id] : [],
+        );
+        return settledIds.length ? settlePinMoves(next, settledIds) : next;
+      });
     },
-  }));
+    [setNodes],
+  );
+  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const normalizedSearch = search.trim().toLowerCase();
+  const matchingNodes = useMemo(
+    () =>
+      normalizedSearch
+        ? nodes.filter((n) =>
+            `${n.data.label} ${n.data.summary}`
+              .toLowerCase()
+              .includes(normalizedSearch),
+          )
+        : nodes,
+    [nodes, normalizedSearch],
+  );
+  const matchingNodeIds = useMemo(
+    () => (normalizedSearch ? new Set(matchingNodes.map((n) => n.id)) : null),
+    [matchingNodes, normalizedSearch],
+  );
+  const focusedNodeIds = useMemo(() => {
+    if (selection) {
+      return getNodesForSelection(selection, data);
+    }
+    if (dockMode === "analysis") {
+      return getNodesForTab(tab, data);
+    }
+    return null;
+  }, [selection, dockMode, tab, data]);
+
+  const visibleNodes = useMemo(
+    () =>
+      nodes.map((n) => {
+        const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
+        const isDimmed =
+          (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
+          (focusedNodeIds && !isFocused);
+        return {
+          ...n,
+          className:
+            `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+          data: {
+            ...n.data,
+            active:
+              selection?.kind === "node" ? selection.id === n.id : isFocused,
+            isFocused,
+            onInspect: () => inspect("node", n.id),
+            onInspectGap: n.data.gapId
+              ? () => inspect("gap", n.data.gapId!)
+              : undefined,
+          },
+        };
+      }),
+    [nodes, matchingNodeIds, focusedNodeIds, selection, inspect],
+  );
+
+  const visibleEdges = useMemo(() => {
+    const nodesById = new Map(nodes.map((node) => [node.id, node]));
+    return edges.map((edge) => {
+      const source = nodesById.get(edge.source);
+      const target = nodesById.get(edge.target);
+      const isFocused = focusedNodeIds
+        ? focusedNodeIds.has(edge.source) && focusedNodeIds.has(edge.target)
+        : false;
+      const isDimmed = focusedNodeIds && !isFocused;
+      return {
+        ...edge,
+        className:
+          `${isDimmed ? "dimmed-edge" : ""} ${isFocused ? "focused-edge" : ""}`.trim(),
+        ...(source && target
+          ? threadHandles(source.position, target.position)
+          : {}),
+        selected:
+          selection?.kind === "edge" ? selection.id === edge.id : isFocused,
+        data: edge.data
+          ? {
+              ...edge.data,
+              isFocused,
+              onInspect: () => inspect("edge", edge.id),
+            }
+          : undefined,
+      };
+    });
+  }, [edges, nodes, focusedNodeIds, selection, inspect]);
   return (
     <>
       <div className="workspace">
@@ -242,10 +433,15 @@ function Board({
                 }
                 aria-controls="review-dock"
                 onClick={() => {
-                  if (dockMode === "analysis") setDockMode("closed");
-                  else {
+                  if (dockMode === "analysis") {
+                    setDockMode("closed");
+                    resetBoardView();
+                  } else {
                     setDockMode("analysis");
                     setSelection(null);
+                    setTab("gaps");
+                    const targetNodes = getNodesForTab("gaps", data);
+                    focusTarget(targetNodes, { dockOpen: true });
                   }
                 }}
               >
@@ -260,7 +456,15 @@ function Board({
                 <h2>Evidence & connections</h2>
                 <p>Inspect any record to review its original sources.</p>
                 {matchingNodes.map((n) => (
-                  <button key={n.id} onClick={() => inspect("node", n.id)}>
+                  <button
+                    key={n.id}
+                    className={
+                      focusedNodeIds && focusedNodeIds.has(n.id)
+                        ? "is-focused"
+                        : ""
+                    }
+                    onClick={() => inspect("node", n.id)}
+                  >
                     <span className="list-record-type">{n.data.type}</span>
                     <strong>{n.data.label}</strong>
                     <span>
@@ -273,10 +477,9 @@ function Board({
                 {data.edges
                   .filter(
                     (e) =>
-                      !search.trim() ||
-                      matchingNodes.some(
-                        (n) => n.id === e.source || n.id === e.target,
-                      ),
+                      !matchingNodeIds ||
+                      matchingNodeIds.has(e.source) ||
+                      matchingNodeIds.has(e.target),
                   )
                   .map((e) => (
                     <button key={e.id} onClick={() => inspect("edge", e.id)}>
@@ -289,8 +492,17 @@ function Board({
                       </span>
                       <strong>
                         {data.nodes.find((n) => n.id === e.source)?.label}{" "}
-                        <ArrowRight size={12} /> {e.label}{" "}
-                        <ArrowRight size={12} />{" "}
+                        {e.directed ? (
+                          <ArrowRight size={12} />
+                        ) : (
+                          <Minus size={12} />
+                        )}{" "}
+                        {e.label}{" "}
+                        {e.directed ? (
+                          <ArrowRight size={12} />
+                        ) : (
+                          <Minus size={12} />
+                        )}{" "}
                         {data.nodes.find((n) => n.id === e.target)?.label}
                       </strong>
                       <span>
@@ -302,10 +514,11 @@ function Board({
             ) : (
               <ReactFlow
                 nodes={visibleNodes}
-                edges={edges}
+                edges={visibleEdges}
                 onNodesChange={onNodesChange}
                 onEdgesChange={onEdgesChange}
                 nodeTypes={nodeTypes}
+                edgeTypes={edgeTypes}
                 onNodeClick={(_, n) => inspect("node", n.id)}
                 onEdgeClick={(_, e) => inspect("edge", e.id)}
                 onPaneClick={() => {
@@ -313,30 +526,40 @@ function Board({
                 }}
                 fitView
                 fitViewOptions={{
-                  padding: { top: "110px", bottom: "60px", x: "50px" },
+                  padding: {
+                    top: "90px",
+                    bottom: "100px",
+                    left: "90px",
+                    right: "60px",
+                  },
+                  minZoom: 0.5,
+                  maxZoom: 1.1,
                 }}
                 panOnScroll
                 panOnScrollSpeed={1}
                 zoomOnScroll={false}
                 zoomOnPinch
-                minZoom={0.3}
+                minZoom={0.15}
                 maxZoom={1.8}
                 nodesConnectable={false}
                 deleteKeyCode={null}
                 proOptions={{ hideAttribution: true }}
               >
                 <Controls
+                  position="bottom-right"
                   showInteractive={false}
                   fitViewOptions={{
-                    padding: { top: "110px", bottom: "60px", x: "50px" },
+                    padding: {
+                      top: "90px",
+                      bottom: "100px",
+                      left: "90px",
+                      right: "60px",
+                    },
+                    minZoom: 0.5,
+                    maxZoom: 1.1,
                   }}
                 />
-                <MiniMap
-                  pannable
-                  zoomable
-                  nodeColor={(n) => (n.data.gapId ? "#ce9a53" : "#d4c9ae")}
-                  maskColor="#242721aa"
-                />
+                <CanvasMinimap />
               </ReactFlow>
             )}
             {search.trim() && (
@@ -347,22 +570,20 @@ function Board({
               </div>
             )}
             {boardView === "graph" && (
-              <>
-                <div className="board-legend">
-                  <span>
-                    <i className="legend-line" />
-                    Observed link
-                  </span>
-                  <span>
-                    <i className="legend-line dashed" />
-                    To verify
-                  </span>
-                  <span>
-                    <i className="legend-gap" />
-                    Evidence gap
-                  </span>
-                </div>
-              </>
+              <div className="board-legend">
+                <span>
+                  <i className="legend-line" />
+                  Observed link
+                </span>
+                <span>
+                  <i className="legend-line dashed" />
+                  Claim / inference
+                </span>
+                <span>
+                  <i className="legend-gap" />
+                  Evidence gap
+                </span>
+              </div>
             )}
           </div>
         </div>
@@ -393,6 +614,7 @@ function Board({
                   }
                   setSelection(null);
                   setDockMode("closed");
+                  resetBoardView();
                   reviewButtonRef.current?.focus();
                 }}
               >
@@ -446,11 +668,19 @@ function Board({
                                   tabs.length
                               ];
                       setTab(next);
+                      setSelection(null);
+                      const targetNodes = getNodesForTab(next, data);
+                      focusTarget(targetNodes, { dockOpen: true });
                       document.getElementById(`tab-${next}`)?.focus();
                     }
                   }}
                   className={tab === id ? "active" : ""}
-                  onClick={() => setTab(id)}
+                  onClick={() => {
+                    setTab(id);
+                    setSelection(null);
+                    const targetNodes = getNodesForTab(id, data);
+                    focusTarget(targetNodes, { dockOpen: true });
+                  }}
                 >
                   {label}
                   {count !== null && <span>{count}</span>}
@@ -549,10 +779,16 @@ function Board({
             </div>
           </aside>
           <Inspector
-            selection={dockMode === "inspector" ? selection : null}
+            selection={active && dockMode === "inspector" ? selection : null}
             data={data}
             onSelect={setSelection}
             onClose={closeInspector}
+            onOpenSource={onOpenSource}
+            onFocusOnBoard={(sel) => {
+              const targetNodes = getNodesForSelection(sel, data);
+              if (targetNodes.size > 0)
+                focusTarget(targetNodes, { dockOpen: true });
+            }}
             backLabel={
               returnMode === "audit"
                 ? "Back to audit"
@@ -596,10 +832,27 @@ function Board({
     </>
   );
 }
+
+function Board(props: {
+  data: CaseData;
+  projectName?: string;
+  onOpenSource: (sourceId: string) => void;
+  active: boolean;
+  focusSelection?: Selection | null;
+  onClearFocusSelection?: () => void;
+}) {
+  return (
+    <ReactFlowProvider>
+      <BoardCanvas {...props} />
+    </ReactFlowProvider>
+  );
+}
+
 export default function App() {
   const { route, navigate } = useRouter();
   const queryClient = useQueryClient();
   const [openingCase, setOpeningCase] = useState(false);
+  const [focusSelection, setFocusSelection] = useState<Selection | null>(null);
   const uploadOpen = route.kind === "new-project";
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState<SessionProject[]>([]);
@@ -761,11 +1014,15 @@ export default function App() {
         />
       ) : (
         <div className="app-shell">
-          <WorkspaceNavigation
-            navigate={navigate}
-            projects={projects}
-            activeCaseId={route.kind === "case" ? route.caseId : undefined}
-          />
+          {(route.kind !== "case" ||
+            !caseQuery.data ||
+            caseQuery.data.id !== route.caseId) && (
+            <WorkspaceNavigation
+              navigate={navigate}
+              projects={projects}
+              activeCaseId={route.kind === "case" ? route.caseId : undefined}
+            />
+          )}
           <main className="workspace-main">
             {route.kind === "not-found" ? (
               <div className="center-state">
@@ -805,14 +1062,39 @@ export default function App() {
                 </button>
               </div>
             ) : (
-              <Board
+              <CaseWorkspace
+                key={caseQuery.data.id}
                 data={caseQuery.data}
+                view={route.kind === "case" ? (route.view ?? "board") : "board"}
+                sourceId={route.kind === "case" ? route.sourceId : undefined}
+                navigate={navigate}
+                onFocusOnBoard={(sel) => {
+                  setFocusSelection(sel);
+                  if (route.kind !== "case" || route.view) {
+                    navigate(casePath(caseQuery.data.id));
+                  }
+                }}
                 projectName={
                   projects.find(
                     (project) => project.caseId === caseQuery.data.id,
                   )?.name
                 }
-              />
+              >
+                <Board
+                  data={caseQuery.data}
+                  active={route.kind === "case" && !route.view}
+                  focusSelection={focusSelection}
+                  onClearFocusSelection={() => setFocusSelection(null)}
+                  projectName={
+                    projects.find(
+                      (project) => project.caseId === caseQuery.data.id,
+                    )?.name
+                  }
+                  onOpenSource={(sourceId) =>
+                    navigate(casePath(caseQuery.data.id, "evidence", sourceId))
+                  }
+                />
+              </CaseWorkspace>
             )}
           </main>
         </div>

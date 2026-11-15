@@ -73,7 +73,7 @@ def case_readme() -> str:
     return f"""# Kestrel case ({CASE_ID})
 
 > **Synthetic and fictional.** Every person, company, phone number, plate, address and record here is invented
-> for training and demonstrating Compstat. Any resemblance to real people or companies is coincidental.
+> for training and demonstrating Mapletrace. Any resemblance to real people or companies is coincidental.
 
 **{CASE_TITLE}.** An unreleased AX-9 "Kestrel" GPU engineering sample disappeared from a secure cabinet in the
 Executive Briefing Center of Aurion Compute, Inc. (a fictional GPU company) over the weekend of 2026-10-17.

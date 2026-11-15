@@ -5,6 +5,7 @@ import {
   FolderOpen,
   Plus,
   Search,
+  X,
 } from "lucide-react";
 import { useState } from "react";
 import type { CaseData } from "../api/types";
@@ -83,6 +84,16 @@ export function ProjectManager({
               value={search}
               onChange={(event) => setSearch(event.target.value)}
             />
+            {search && (
+              <button
+                type="button"
+                className="icon-button"
+                aria-label="Clear project search"
+                onClick={() => setSearch("")}
+              >
+                <X size={14} aria-hidden="true" />
+              </button>
+            )}
           </label>
         </div>
 

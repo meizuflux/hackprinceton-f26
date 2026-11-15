@@ -1,4 +1,4 @@
-# Compstat backend: implementation plan (proposal)
+# Mapletrace backend: implementation plan (proposal)
 
 > **Status: proposal.** [`SPEC.md`](../SPEC.md) stays the single product spec. Items that SPEC lists as open
 > decisions (provider, hosting, backend schema) are marked **Proposed** here and need team agreement.
@@ -22,7 +22,7 @@
 | First AI-related economic-espionage conviction (TPU/GPU designs) | US v. Linwei Ding, DOJ, Jan 2026 |
 
 The demo case speaks the insurer's language: claim **LSI-CC-26-009812** ($1.15M, commercial crime policy)
-turns on whether an officer took part (officer-knowledge exclusion). Compstat answers with cited evidence
+turns on whether an officer took part (officer-knowledge exclusion). Mapletrace answers with cited evidence
 and a ranked list of what to obtain next (gap G-09).
 
 Before pitching, re-check the secondhand figures (the 2024 SIU study is members-only). Do not claim accuracy

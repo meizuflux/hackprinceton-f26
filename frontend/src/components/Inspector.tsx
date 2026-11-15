@@ -1,6 +1,7 @@
-import { ArrowLeft, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, GitBranch, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { CaseData } from "../api/types";
+import { relationshipLabel } from "./relationships";
 
 export type Selection = {
   kind: "node" | "edge" | "gap" | "insight" | "suggestion" | "source";
@@ -14,6 +15,8 @@ type InspectorProps = {
   onClose: () => void;
   onSelect: (selection: Selection) => void;
   backLabel?: string;
+  onOpenSource?: (sourceId: string) => void;
+  onFocusOnBoard?: (selection: Selection) => void;
 };
 
 export function Inspector({
@@ -22,6 +25,8 @@ export function Inspector({
   onClose,
   onSelect,
   backLabel = "Back to review",
+  onOpenSource,
+  onFocusOnBoard,
 }: InspectorProps) {
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -80,8 +85,18 @@ export function Inspector({
     );
   const title = "label" in item ? item.label : item.title;
   const score = "score" in item ? item.score : undefined;
-  const description =
-    "summary" in item
+  const edge =
+    selection.kind === "edge" ? (item as CaseData["edges"][number]) : undefined;
+  const connector = edge?.directed ? " → " : " — ";
+  const description = edge
+    ? [
+        data.nodes.find((entry) => entry.id === edge.source)?.label ??
+          edge.source,
+        edge.label,
+        data.nodes.find((entry) => entry.id === edge.target)?.label ??
+          edge.target,
+      ].join(connector)
+    : "summary" in item
       ? item.summary
       : "description" in item
         ? item.description
@@ -145,7 +160,7 @@ export function Inspector({
                   : selection.kind === "node"
                     ? "Evidence record"
                     : selection.kind === "edge"
-                      ? "Relationship"
+                      ? relationshipLabel(edge!.type)
                       : "Source excerpt"}
           </span>
           {score !== undefined && (
@@ -153,8 +168,15 @@ export function Inspector({
               Illustrative score · {Math.round(score * 100)}%
             </span>
           )}
-          {selection.kind === "edge" && "type" in item && (
-            <span className="kind-badge">{item.type}</span>
+          {onFocusOnBoard && (
+            <button
+              type="button"
+              className="focus-board-button"
+              onClick={() => onFocusOnBoard(selection)}
+              aria-label={`Locate ${title} on mind map`}
+            >
+              <GitBranch size={13} aria-hidden="true" /> Locate on mind map
+            </button>
           )}
         </div>
         <p className="inspector-description">{description}</p>
@@ -179,6 +201,15 @@ export function Inspector({
                 </summary>
                 <div className="source-meta">
                   <blockquote>{source.excerpt}</blockquote>
+                  {onOpenSource && (
+                    <button
+                      className="text-button"
+                      type="button"
+                      onClick={() => onOpenSource(source.id)}
+                    >
+                      Open in raw evidence →
+                    </button>
+                  )}
                   <p>
                     <strong>Recorded:</strong> {source.timestamp}
                   </p>

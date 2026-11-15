@@ -1,17 +1,18 @@
 .review-dock {
   position: absolute;
   z-index: 12;
-  top: 88px;
+  top: var(--topbar-clearance-y, 68px);
   right: 16px;
   bottom: 118px;
-  width: min(390px, calc(100% - 32px));
+  width: min(400px, calc(100% - 32px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #505a44;
+  border: 1px solid #364232;
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
+  transition: top 0.15s ease;
 }
 .review-dock-header,
 .inspector-head,
@@ -358,6 +359,25 @@
   margin: 10px 5px 0 0;
   font-size: 11px;
   border-radius: 3px;
+}
+.focus-board-button,
+.insight-board-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--green);
+  background: #252e20;
+  border: 1px solid #4a5a3e;
+  border-radius: var(--radius);
+  padding: 5px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.focus-board-button:hover,
+.insight-board-btn:hover {
+  background: #33402b;
+  border-color: var(--green);
 }
 @media (max-width: 900px) {
   .review-dock {

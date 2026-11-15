@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 
+export type WorkspaceView =
+  "board" | "evidence" | "files" | "insights" | "chat";
+
 export type AppRoute =
   | { kind: "welcome" }
   | { kind: "projects" }
   | { kind: "new-project" }
-  | { kind: "case"; caseId: string }
+  | { kind: "case"; caseId: string; view?: WorkspaceView; sourceId?: string }
   | { kind: "not-found" };
 
 /** Parse only the routes supported by the prototype. Case existence is checked against CaseApi data. */
@@ -13,7 +16,10 @@ export function parseRoute(pathname: string): AppRoute {
   if (/^\/projects\/?$/.test(pathname)) return { kind: "projects" };
   if (/^\/projects\/new\/?$/.test(pathname)) return { kind: "new-project" };
 
-  const match = /^\/cases\/([^/]+)\/?$/.exec(pathname);
+  const match =
+    /^\/cases\/([^/]+)(?:\/(evidence|files|insights|chat)(?:\/([^/]+))?)?\/?$/.exec(
+      pathname,
+    );
   if (!match) return { kind: "not-found" };
 
   let caseId: string;
@@ -30,19 +36,51 @@ export function parseRoute(pathname: string): AppRoute {
   ) {
     return { kind: "not-found" };
   }
-  return { kind: "case", caseId };
+  const view = match[2] as WorkspaceView | undefined;
+  if (match[3] && view !== "evidence") return { kind: "not-found" };
+  let sourceId: string | undefined;
+  if (match[3]) {
+    try {
+      sourceId = decodeURIComponent(match[3]);
+    } catch {
+      return { kind: "not-found" };
+    }
+    if (!isSafeSegment(sourceId)) return { kind: "not-found" };
+  }
+  return {
+    kind: "case",
+    caseId,
+    ...(view ? { view } : {}),
+    ...(sourceId ? { sourceId } : {}),
+  };
 }
 
-export function casePath(caseId: string): string {
-  if (
-    !caseId ||
-    caseId === "." ||
-    caseId === ".." ||
-    /[\u0000-\u001f\u007f/\\]/.test(caseId)
-  ) {
+function isSafeSegment(value: string): boolean {
+  return (
+    !!value &&
+    value !== "." &&
+    value !== ".." &&
+    !/[\u0000-\u001f\u007f/\\]/.test(value)
+  );
+}
+
+export function casePath(
+  caseId: string,
+  view: WorkspaceView = "board",
+  sourceId?: string,
+): string {
+  if (!isSafeSegment(caseId)) {
     throw new Error("Case ID must be a non-empty path segment");
   }
-  return `/cases/${encodeURIComponent(caseId)}`;
+  if (
+    sourceId !== undefined &&
+    (view !== "evidence" || !isSafeSegment(sourceId))
+  ) {
+    throw new Error(
+      "Source links require a safe source ID and the evidence view",
+    );
+  }
+  return `/cases/${encodeURIComponent(caseId)}${view === "board" ? "" : `/${view}`}${sourceId ? `/${encodeURIComponent(sourceId)}` : ""}`;
 }
 
 export interface NavigateOptions {

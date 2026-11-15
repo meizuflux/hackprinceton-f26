@@ -1,9 +1,9 @@
 """Command line:
 
-    python -m compstat_reason analyze runs/kestrel                       # deterministic (no LLM)
-    python -m compstat_reason analyze runs/kestrel --llm                 # + claim extraction and deep-agent investigator
-    python -m compstat_reason analyze runs/kestrel_v2 --previous runs/kestrel/analysis
-    python -m compstat_reason override runs/kestrel <stable_key> dismiss --note "badge reader under repair"
+    python -m mapletrace_reason analyze runs/kestrel                       # deterministic (no LLM)
+    python -m mapletrace_reason analyze runs/kestrel --llm                 # + claim extraction and deep-agent investigator
+    python -m mapletrace_reason analyze runs/kestrel_v2 --previous runs/kestrel/analysis
+    python -m mapletrace_reason override runs/kestrel <stable_key> dismiss --note "badge reader under repair"
 """
 
 from __future__ import annotations
@@ -18,7 +18,7 @@ from .pipeline import analyze
 
 
 def main(argv=None) -> int:
-    p = argparse.ArgumentParser(prog="compstat_reason", description="Reason over an ingested case.")
+    p = argparse.ArgumentParser(prog="mapletrace_reason", description="Reason over an ingested case.")
     sub = p.add_subparsers(dest="cmd", required=True)
     a = sub.add_parser("analyze", help="run the reasoning pipeline on an ingestion run directory")
     a.add_argument("run_dir")

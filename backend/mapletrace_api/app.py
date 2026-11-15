@@ -1,6 +1,6 @@
-"""Compstat HTTP API (FastAPI).
+"""Mapletrace HTTP API (FastAPI).
 
-Run:  uvicorn compstat_api.app:app --reload --port 8000      (from backend/)
+Run:  uvicorn mapletrace_api.app:app --reload --port 8000      (from backend/)
 
     POST /upload                         ZIP -> new case; returns {jobId, caseId}
     GET  /status/{jobId}                 {status: processing|ready|failed, progress, message, stage, caseId}
@@ -15,7 +15,7 @@ Run:  uvicorn compstat_api.app:app --reload --port 8000      (from backend/)
     GET  /cases/{caseId}/overrides       investigator corrections
     POST /cases/{caseId}/overrides       record a correction -> re-analysis job
 
-Case data lives under $COMPSTAT_DATA (default backend/data/cases/<caseId>/). Evidence is never modified.
+Case data lives under $MAPLETRACE_DATA (default backend/data/cases/<caseId>/). Evidence is never modified.
 """
 
 from __future__ import annotations
@@ -37,19 +37,19 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, JSONResponse
 from pydantic import BaseModel
 
-from compstat_ingest.pipeline import ingest_zip
-from compstat_reason import history
-from compstat_reason.pipeline import analyze
+from mapletrace_ingest.pipeline import ingest_zip
+from mapletrace_reason import history
+from mapletrace_reason.pipeline import analyze
 
-DATA = Path(os.environ.get("COMPSTAT_DATA", Path(__file__).resolve().parents[1] / "data"))
-MAX_UPLOAD = int(os.environ.get("COMPSTAT_MAX_UPLOAD_MB", "100")) * 1024 * 1024
+DATA = Path(os.environ.get("MAPLETRACE_DATA", Path(__file__).resolve().parents[1] / "data"))
+MAX_UPLOAD = int(os.environ.get("MAPLETRACE_MAX_UPLOAD_MB", "100")) * 1024 * 1024
 SECTIONS = {"graph", "gaps", "insights", "suggestions", "contradictions", "explanations", "timeline", "audit", "changes",
             "sources", "nodes", "edges", "uncertainTimes", "missingPeriods", "sourceGroups", "signals"}
 _lock = threading.Lock()
 
-app = FastAPI(title="Compstat API", version="0.1.0")
+app = FastAPI(title="Mapletrace API", version="0.1.0")
 app.add_middleware(CORSMiddleware, allow_methods=["*"], allow_headers=["*"],
-                   allow_origins=os.environ.get("COMPSTAT_CORS", "http://localhost:5173,http://127.0.0.1:5173").split(","))
+                   allow_origins=os.environ.get("MAPLETRACE_CORS", "http://localhost:5173,http://127.0.0.1:5173").split(","))
 
 
 class ApiError(Exception):

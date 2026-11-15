@@ -14,8 +14,8 @@ import pytest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 
-from compstat_ingest.pipeline import ingest_zip  # noqa: E402
-from compstat_ingest.timeparse import parse_timestamp  # noqa: E402
+from mapletrace_ingest.pipeline import ingest_zip  # noqa: E402
+from mapletrace_ingest.timeparse import parse_timestamp  # noqa: E402
 
 KESTREL_ZIP = ROOT.parent / "cases" / "kestrel" / "kestrel_case_upload.zip"
 

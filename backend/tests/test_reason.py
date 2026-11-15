@@ -12,9 +12,9 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "examples"))
 
-from compstat_ingest.pipeline import ingest_zip  # noqa: E402
-from compstat_reason import history  # noqa: E402
-from compstat_reason.pipeline import analyze  # noqa: E402
+from mapletrace_ingest.pipeline import ingest_zip  # noqa: E402
+from mapletrace_reason import history  # noqa: E402
+from mapletrace_reason.pipeline import analyze  # noqa: E402
 
 KESTREL_ZIP = ROOT.parent / "cases" / "kestrel" / "kestrel_case_upload.zip"
 CASEDATA_KEYS = {"id", "title", "subtitle", "timeRange", "nodes", "edges", "gaps", "insights", "suggestions", "sources", "audit"}
@@ -94,7 +94,7 @@ def test_next_steps_ranked_and_explained(sample):
 def test_audit_chain_continues_from_ingestion(sample):
     tmp, _, summary, _, _ = sample
     import sqlite3
-    from compstat_ingest.db import canonical_json
+    from mapletrace_ingest.db import canonical_json
     import hashlib
     head = json.loads((tmp / "run" / "run_manifest.json").read_text())["audit_head_hash"]
     con = sqlite3.connect(Path(summary["out_dir"]) / "analysis.db")
@@ -145,7 +145,7 @@ class _FakeStructured:
         self.payload = payload
 
     def invoke(self, prompt):
-        from compstat_reason.llm import ExtractedClaims
+        from mapletrace_reason.llm import ExtractedClaims
         ids = [int(x) for x in __import__("re").findall(r"^\[(\d+)\]", prompt, __import__("re").M)]
         claims = [dict(c, record_id=ids[0] if c["record_id"] == "first" else c["record_id"]) for c in self.payload]
         return ExtractedClaims(claims=claims)
@@ -161,12 +161,12 @@ class _FakeChat:
 
 
 def test_llm_claims_and_agent_tools_are_guarded(sample):
-    from compstat_ingest.db import AuditLog
+    from mapletrace_ingest.db import AuditLog
     import sqlite3
-    from compstat_reason import analytics
-    from compstat_reason.llm import LLMRun
-    from compstat_reason.model import Results
-    from compstat_reason.store import Case
+    from mapletrace_reason import analytics
+    from mapletrace_reason.llm import LLMRun
+    from mapletrace_reason.model import Results
+    from mapletrace_reason.store import Case
     tmp, _, _, _, _ = sample
     case = Case(tmp / "run")
     con = sqlite3.connect(":memory:")
@@ -194,9 +194,9 @@ def test_llm_claims_and_agent_tools_are_guarded(sample):
 
 def test_api_end_to_end(sample, tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
-    monkeypatch.setenv("COMPSTAT_DATA", str(tmp_path / "data"))
+    monkeypatch.setenv("MAPLETRACE_DATA", str(tmp_path / "data"))
     import importlib
-    import compstat_api.app as appmod
+    import mapletrace_api.app as appmod
     importlib.reload(appmod)
     client = TestClient(appmod.app)
     _, z, _, _, _ = sample
@@ -247,11 +247,11 @@ def test_deep_agent_loop_records_cited_insights(sample):
     import sqlite3
     from langchain_core.language_models.fake_chat_models import GenericFakeChatModel
     from langchain_core.messages import AIMessage
-    from compstat_ingest.db import AuditLog
-    from compstat_reason import analytics
-    from compstat_reason.llm import LLMRun
-    from compstat_reason.model import Results
-    from compstat_reason.store import Case
+    from mapletrace_ingest.db import AuditLog
+    from mapletrace_reason import analytics
+    from mapletrace_reason.llm import LLMRun
+    from mapletrace_reason.model import Results
+    from mapletrace_reason.store import Case
 
     class ToolFake(GenericFakeChatModel):
         def bind_tools(self, tools, **kw):

@@ -75,7 +75,7 @@ def extract_claims(ctx: Context, episodes: list[Item]) -> list[Item]:
             incident = next((header[k] for k in ("date of incident", "incident date", "date of event") if header.get(k)), None)
             day = None
             if incident:
-                from compstat_ingest.timeparse import parse_timestamp
+                from mapletrace_ingest.timeparse import parse_timestamp
                 tv = parse_timestamp(incident, tz)
                 day = tv.start.astimezone(tz) if tv and tv.start else None
             if day:
@@ -111,7 +111,7 @@ def extract_claims(ctx: Context, episodes: list[Item]) -> list[Item]:
             hdr = r.attrs.get("interview_header") or r.attrs.get("statement_header") or {}
             doc_date = next((hdr[k] for k in ("date", "date and time", "date of statement", "date of interview") if hdr.get(k)), None)
             if not interview_ts and doc_date:
-                from compstat_ingest.timeparse import parse_timestamp
+                from mapletrace_ingest.timeparse import parse_timestamp
                 tv = parse_timestamp(doc_date, tz)
                 interview_ts = tv.end if tv else None
             end = interview_ts or r.ts or (parse_ts(case.info.get("ingested_at_utc")))

@@ -1,6 +1,6 @@
-# Compstat
+# Mapletrace
 
-Compstat is a prototype for an inspectable investigative evidence board. It presents a fictional case through cited evidence, relationships, ranked gaps, suggested evidence, source inspection, and an audit trail.
+Mapletrace is a prototype for an inspectable investigative evidence board. It presents a fictional case through cited evidence, relationships, ranked gaps, suggested evidence, source inspection, and an audit trail.
 
 This repository contains:
 - **Frontend:** a mocked evidence board. Its case data is fictional and disposable, and ZIP selection runs a simulated flow that does not read ZIP contents.

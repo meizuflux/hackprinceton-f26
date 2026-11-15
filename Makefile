@@ -60,10 +60,10 @@ backend-test:
 	cd backend && $(PYTHON) -m pytest -q tests
 
 backend-ingest-kestrel:
-	cd backend && $(PYTHON) -m compstat_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel --overwrite
+	cd backend && $(PYTHON) -m mapletrace_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel --overwrite
 
 backend-analyze-kestrel:
-	cd backend && $(PYTHON) -m compstat_reason analyze runs/kestrel
+	cd backend && $(PYTHON) -m mapletrace_reason analyze runs/kestrel
 
 backend-serve:
-	cd backend && $(PYTHON) -m uvicorn compstat_api.app:app --host 127.0.0.1 --port 8000
+	cd backend && $(PYTHON) -m uvicorn mapletrace_api.app:app --host 127.0.0.1 --port 8000

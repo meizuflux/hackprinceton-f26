@@ -1,0 +1,186 @@
+.case-workspace {
+  --topbar-clearance-y: 68px;
+  --topbar-height: 52px;
+  --toolbar-clearance: 80px;
+  position: relative;
+  height: 100dvh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+.case-toolbar {
+  position: absolute;
+  z-index: 30;
+  top: var(--topbar-clearance-y, 68px);
+  left: 16px;
+  width: 48px;
+  max-height: calc(100dvh - var(--topbar-clearance-y, 68px) - 16px);
+  display: flex;
+  flex-direction: column;
+  background: var(--surface);
+  border: 1px solid #364232;
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+  transition:
+    top 0.15s ease,
+    max-height 0.15s ease,
+    width 0.15s ease;
+}
+.case-toolbar[data-expanded="true"] {
+  width: min(192px, calc(100vw - 32px));
+}
+.case-toolbar-header {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 5px;
+  border-bottom: 1px solid var(--line);
+}
+.case-toolbar-toggle {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 3px;
+  color: var(--muted);
+  background: transparent;
+}
+.case-toolbar-toggle:hover {
+  color: var(--text);
+  background: #ffffff0c;
+}
+.case-toolbar-caption {
+  font:
+    10px "IBM Plex Mono",
+    monospace;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+}
+.case-toolbar-content {
+  min-height: 0;
+  overflow-y: auto;
+  padding: 5px;
+}
+.case-toolbar nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+.case-toolbar a {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  gap: 10px;
+  min-height: 34px;
+  padding: 8px 10px;
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 18px;
+  white-space: nowrap;
+}
+.case-toolbar a svg {
+  flex-shrink: 0;
+}
+.case-toolbar a:hover {
+  color: var(--text);
+  background: #ffffff0c;
+}
+.case-toolbar a[aria-current] {
+  color: var(--green);
+  background: #d3dfaf12;
+  box-shadow: inset 2px 0 var(--green);
+}
+.case-toolbar-project-actions {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--line);
+}
+.case-panels {
+  position: relative;
+  min-height: 0;
+  min-width: 0;
+  height: 100%;
+}
+.case-board-panel {
+  height: 100%;
+  min-height: 0;
+}
+.case-board-panel .workspace {
+  height: 100%;
+  min-height: 100%;
+}
+.case-board-panel .evidence-list,
+.case-board-panel .search-feedback {
+  left: var(--toolbar-clearance);
+}
+.case-content-panel {
+  position: absolute;
+  top: var(--topbar-clearance-y, 68px);
+  left: var(--toolbar-clearance);
+  right: 16px;
+  bottom: 16px;
+  border: 1px solid #364232;
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  transition:
+    left 0.15s ease,
+    right 0.15s ease,
+    top 0.15s ease;
+}
+.case-panels > .section-inspector {
+  top: var(--topbar-clearance-y, 68px);
+  right: 16px;
+  bottom: 16px;
+  width: min(400px, calc(100% - 32px));
+  max-height: calc(100% - var(--topbar-clearance-y, 68px) - 16px);
+  border: 1px solid #364232;
+  transition:
+    top 0.15s ease,
+    max-height 0.15s ease;
+}
+@media (min-width: 901px) {
+  .case-workspace:has(.case-toolbar[data-expanded="true"]) {
+    --toolbar-clearance: 224px;
+  }
+  .case-panels:has(> .section-inspector) .case-content-panel {
+    right: 432px;
+  }
+}
+@media (max-width: 900px) {
+  .case-workspace {
+    --toolbar-clearance: 68px;
+  }
+  .case-toolbar {
+    left: 10px;
+  }
+  .case-content-panel {
+    left: var(--toolbar-clearance);
+    right: 10px;
+    bottom: 10px;
+  }
+  .case-board-panel {
+    overflow: auto;
+  }
+  .case-board-panel .board-area {
+    height: 100dvh;
+  }
+  .case-panels:has(> .section-inspector) {
+    overflow: auto;
+  }
+  .case-panels > .section-inspector {
+    position: relative;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    margin: 16px 10px 16px 68px;
+    width: auto;
+    max-height: none;
+  }
+}

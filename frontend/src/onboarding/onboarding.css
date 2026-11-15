@@ -242,6 +242,18 @@
   outline-offset: 2px;
 }
 
+.project-search .icon-button {
+  min-height: 26px;
+  min-width: 24px;
+  padding: 3px;
+  background: transparent;
+  color: var(--muted, #b0b8a6);
+}
+
+.project-search .icon-button:hover {
+  color: var(--text, #e8e8df);
+}
+
 .project-list {
   padding: 8px 0 28px;
 }

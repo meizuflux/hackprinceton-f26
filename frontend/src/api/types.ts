@@ -13,6 +13,7 @@ export interface EvidenceNode {
   subtitle: string;
   time?: string;
   gapId?: string;
+  size?: { width: number; height: number };
 }
 
 export interface EvidenceEdge {
@@ -22,6 +23,8 @@ export interface EvidenceEdge {
   type: string;
   label: string;
   citations: CitationId[];
+  /** Arrowheads require an explicit direction from the adapter. */
+  directed?: boolean;
 }
 
 export interface SourceRecord {
@@ -70,6 +73,14 @@ export interface AuditRecord {
   citations: CitationId[];
 }
 
+/** Presentation of authoritative ingestion output, never derived from fixtures. */
+export interface NormalizedEvidenceRecord {
+  id: string;
+  recordType: string;
+  fields: Record<string, string | number | boolean | null>;
+  citations: Array<{ evidenceId: string; locator: string; sourceId?: string }>;
+}
+
 export interface CaseData {
   id: string;
   title: string;
@@ -82,6 +93,7 @@ export interface CaseData {
   suggestions: EvidenceSuggestion[];
   sources: SourceRecord[];
   audit: AuditRecord[];
+  normalizedRecords?: NormalizedEvidenceRecord[];
 }
 
 export type IngestionStatus = "processing" | "ready";

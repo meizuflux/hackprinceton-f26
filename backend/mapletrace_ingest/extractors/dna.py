@@ -1,6 +1,6 @@
 """Biological evidence: STR profiles, lab comparison tables, lab report text, FASTA and VCF.
 
-Compstat does not perform DNA analysis. It ingests the lab's *results* as
+Mapletrace does not perform DNA analysis. It ingests the lab's *results* as
 expert findings (who/what sample, which loci, what conclusion and statistic)
 so they can be placed in the case alongside the digital evidence.
 """

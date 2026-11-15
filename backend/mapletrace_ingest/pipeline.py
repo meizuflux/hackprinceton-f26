@@ -580,9 +580,9 @@ def _rmtree_readonly(path: Path) -> None:
     import os
     import stat
 
-    # Only ever delete a directory that is clearly a previous Compstat run.
+    # Only ever delete a directory that is clearly a previous Mapletrace run.
     if not ((path / "run_manifest.json").exists() or (path / "case.db").exists()):
-        raise FileExistsError(f"{path} is not empty and does not look like a previous Compstat run; refusing to delete it")
+        raise FileExistsError(f"{path} is not empty and does not look like a previous Mapletrace run; refusing to delete it")
 
     def onexc(func, p, _exc):
         os.chmod(p, stat.S_IWRITE)

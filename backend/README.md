@@ -1,17 +1,17 @@
-# Compstat backend
+# Mapletrace backend
 
 Three packages take an uploaded case `.zip` all the way to a cited investigation board:
 
 ```
-upload.zip ──► compstat_ingest ──► case.db ──► compstat_reason ──► board.json / analysis.json ──► compstat_api ──► frontend
+upload.zip ──► mapletrace_ingest ──► case.db ──► mapletrace_reason ──► board.json / analysis.json ──► mapletrace_api ──► frontend
               (ingest, parse,      (immutable    (timeline, links, contradictions,       (FastAPI: upload, status,
                clean, audit)        evidence)     explanations, gaps, next steps,          case, sources, overrides,
                                                   insights, verification)                 new evidence)
 ```
 
-- **`compstat_ingest`:** turns the ZIP into `case.db`. Every row traces back to the exact file and line, row, page or JSON path it came from (stages 1–3 of [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md)).
-- **`compstat_reason`:** the logical reasoning pipeline. It uses traditional ML and rules, plus an optional LangChain deep-agent investigator.
-- **`compstat_api`:** the HTTP service the frontend calls.
+- **`mapletrace_ingest`:** turns the ZIP into `case.db`. Every row traces back to the exact file and line, row, page or JSON path it came from (stages 1–3 of [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md)).
+- **`mapletrace_reason`:** the logical reasoning pipeline. It uses traditional ML and rules, plus an optional LangChain deep-agent investigator.
+- **`mapletrace_api`:** the HTTP service the frontend calls.
 
 **The backend is authoritative.** `case.db`, `board.json` and `analysis.json` are the source of truth for case data. The frontend's `CaseData` types are a view of that data, not a contract the backend must match. When the two disagree, the frontend adapter changes. See "Backend" in [`AGENTS.md`](../AGENTS.md).
 
@@ -23,10 +23,10 @@ Requires Python 3.11+. From `backend/`:
 python -m venv .venv
 .venv/Scripts/pip install -r requirements.txt           # macOS/Linux: .venv/bin/pip
 
-python -m compstat_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel
-python -m compstat_reason analyze runs/kestrel            # writes runs/kestrel/analysis/v1/{board,analysis,graph}.json
-uvicorn compstat_api.app:app --port 8000                  # then POST /upload, GET /cases/{id}
-python -m compstat_ingest verify runs/kestrel             # re-check evidence hashes, DB hash, audit chain
+python -m mapletrace_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel
+python -m mapletrace_reason analyze runs/kestrel            # writes runs/kestrel/analysis/v1/{board,analysis,graph}.json
+uvicorn mapletrace_api.app:app --port 8000                  # then POST /upload, GET /cases/{id}
+python -m mapletrace_ingest verify runs/kestrel             # re-check evidence hashes, DB hash, audit chain
 python -m pytest -q tests
 ```
 
@@ -46,7 +46,7 @@ Options for `ingest`:
 From Python (for the future `POST /upload` handler):
 
 ```python
-from compstat_ingest.pipeline import ingest_zip
+from mapletrace_ingest.pipeline import ingest_zip
 report = ingest_zip("upload.zip", "data/jobs/<job_id>", timezone="America/Los_Angeles")
 ```
 
@@ -142,13 +142,13 @@ WHERE reliability = 'asserted' AND ts_end_utc >= '2026-10-18T05:00:00Z' AND ts_s
 
 ---
 
-# Reasoning pipeline (`compstat_reason`)
+# Reasoning pipeline (`mapletrace_reason`)
 
 ```sh
-python -m compstat_reason analyze runs/kestrel                                   # deterministic, no API key needed
-python -m compstat_reason analyze runs/kestrel --llm                             # + LLM claim extraction and deep-agent investigator
-python -m compstat_reason analyze runs/kestrel_v2 --previous runs/kestrel/analysis   # after new evidence: what changed
-python -m compstat_reason override runs/kestrel <stable_key> dismiss --note "reader under repair"
+python -m mapletrace_reason analyze runs/kestrel                                   # deterministic, no API key needed
+python -m mapletrace_reason analyze runs/kestrel --llm                             # + LLM claim extraction and deep-agent investigator
+python -m mapletrace_reason analyze runs/kestrel_v2 --previous runs/kestrel/analysis   # after new evidence: what changed
+python -m mapletrace_reason override runs/kestrel <stable_key> dismiss --note "reader under repair"
 ```
 
 `case.db` is opened read-only. Each run writes a new version, `runs/<case>/analysis/vN/`, containing:
@@ -196,10 +196,10 @@ Set `ANTHROPIC_API_KEY` in your environment; never commit it. With `--llm`:
 - **Sandboxing:** the agent runs in deepagents' in-memory sandbox, with no file system or shell access.
 - **Labelling:** agent output is marked `generated_by: agent:<model>` and `inferred`.
 
-## API (`compstat_api`)
+## API (`mapletrace_api`)
 
 ```sh
-uvicorn compstat_api.app:app --port 8000      # CORS allows http://localhost:5173 (COMPSTAT_CORS to change)
+uvicorn mapletrace_api.app:app --port 8000      # CORS allows http://localhost:5173 (MAPLETRACE_CORS to change)
 ```
 
 | Method | Path | Purpose |
@@ -214,7 +214,7 @@ uvicorn compstat_api.app:app --port 8000      # CORS allows http://localhost:517
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
 | GET / POST | `/cases/{caseId}/overrides` | Read or record investigator corrections (`dismiss`, `confirm`, `set_status`, `set_label`, `note`, `reject_link`) |
 
-Errors are always `{"error": {"code", "message"}}`. Case data lives under `$COMPSTAT_DATA` (default `backend/data/cases/<caseId>/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
+Errors are always `{"error": {"code", "message"}}`. Case data lives under `$MAPLETRACE_DATA` (default `backend/data/cases/<caseId>/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
 
 ### Board fields beyond the current `CaseData` type
 - **`nodes[].certainty` / `edges[].certainty`** (`observed` | `inferred`), plus `edges[].basis`.

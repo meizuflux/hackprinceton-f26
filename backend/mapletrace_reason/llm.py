@@ -288,7 +288,7 @@ class LLMRun:
                     "system_prompt": VERIFIER_PROMPT, "tools": [t["get_record"]], "model": self.chat(verifier=True)}
         agent = create_deep_agent(model=self.chat(), tools=list(t.values()),
                                   system_prompt=INVESTIGATOR_PROMPT.format(max_insights=max_insights),
-                                  subagents=[verifier], name="compstat-investigator")
+                                  subagents=[verifier], name="mapletrace-investigator")
         task = (f"Case: {case.info.get('case_name')}. Time zone {tz}. Start with list_explanations and list_open_questions; "
                 "list_ml_signals has clustering and classification leads you can check against the records.")
         try:

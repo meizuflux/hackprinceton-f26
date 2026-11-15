@@ -12,12 +12,12 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(ROOT / "examples"))
 
-from compstat_ingest.pipeline import ingest_zip  # noqa: E402
-from compstat_reason import ml  # noqa: E402
-from compstat_reason.analytics import Context  # noqa: E402
-from compstat_reason.model import Results  # noqa: E402
-from compstat_reason.pipeline import analyze  # noqa: E402
-from compstat_reason.store import Case  # noqa: E402
+from mapletrace_ingest.pipeline import ingest_zip  # noqa: E402
+from mapletrace_reason import ml  # noqa: E402
+from mapletrace_reason.analytics import Context  # noqa: E402
+from mapletrace_reason.model import Results  # noqa: E402
+from mapletrace_reason.pipeline import analyze  # noqa: E402
+from mapletrace_reason.store import Case  # noqa: E402
 
 KESTREL_ZIP = ROOT.parent / "cases" / "kestrel" / "kestrel_case_upload.zip"
 
@@ -151,9 +151,9 @@ def test_ml_stage_does_not_change_other_results(tmp_path, monkeypatch):
 
 
 def test_agent_tool_lists_signals(kestrel_run):
-    from compstat_ingest.db import AuditLog
+    from mapletrace_ingest.db import AuditLog
     import sqlite3
-    from compstat_reason.llm import LLMRun
+    from mapletrace_reason.llm import LLMRun
     case = Case(kestrel_run)
     R = Results()
     for s in ml.run(Context(case, R)):
