@@ -198,6 +198,8 @@ Set `ANTHROPIC_API_KEY` in your environment; never commit it. With `--llm`:
 
 ### Cached LLM results
 
+One deep analysis of Kestrel costs about $1.30 with `claude-sonnet-5-5`; replays are free. See [LLM_COSTS.md](LLM_COSTS.md) for the breakdown.
+
 Model calls cost money, so responses are recorded per uploaded archive in `backend/llm_cache/<archive sha256>.jsonl`, keyed by a hash of each request. These files are committed.
 - **Replay:** an upload whose archive matches a cache file replays it automatically, even without the `llm` flag. It needs no API key and never calls the API: a miss raises before any request is sent, the failed call is logged, and the deterministic analysis continues.
 - **Record:** `--llm` (CLI) or `llm=true` (upload) reuses cached responses and records the ones it lacks. Those calls are billed.
