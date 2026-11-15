@@ -1,7 +1,7 @@
 .review-dock {
   position: absolute;
   z-index: 12;
-  top: 76px;
+  top: var(--topbar-clearance-y, 76px);
   right: 12px;
   bottom: 118px;
   width: min(390px, calc(100% - 24px));
@@ -12,6 +12,7 @@
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
+  transition: top 0.15s ease;
 }
 .review-dock-header,
 .inspector-head,

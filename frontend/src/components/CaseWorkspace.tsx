@@ -47,6 +47,7 @@ export function CaseWorkspace({
   const [selection, setSelection] = useState<Selection | null>(null);
   const [toolbarExpanded, setToolbarExpanded] = useState(false);
   const toolbarToggle = useRef<HTMLButtonElement>(null);
+  const workspaceRef = useRef<HTMLDivElement>(null);
   // React Flow needs a visible container for its initial fit. Retain it after
   // the first visit so later section changes preserve pan, zoom and selection.
   const [boardVisited, setBoardVisited] = useState(view === "board");
@@ -61,6 +62,76 @@ export function CaseWorkspace({
       inspectorDock.current?.scrollIntoView({ block: "start" });
     }
   }, [selection]);
+
+  useEffect(() => {
+    const root = workspaceRef.current;
+    if (!root) return;
+
+    let resizeObserver: ResizeObserver | null = null;
+    let observedElement: HTMLElement | null = null;
+
+    const updateClearance = () => {
+      const topbar = root.querySelector<HTMLElement>(
+        ".board-toolbar, .workspace-topbar",
+      );
+      if (!topbar) return;
+      const topbarRect = topbar.getBoundingClientRect();
+      const rootRect = root.getBoundingClientRect();
+      if (topbarRect.height > 0) {
+        const bottomOffset = topbarRect.bottom - rootRect.top;
+        const clearance = Math.round(bottomOffset + 8);
+        root.style.setProperty("--topbar-clearance-y", `${clearance}px`);
+        root.style.setProperty(
+          "--topbar-height",
+          `${Math.round(topbarRect.height)}px`,
+        );
+      }
+    };
+
+    const attachObserver = () => {
+      const topbar = root.querySelector<HTMLElement>(
+        ".board-toolbar, .workspace-topbar",
+      );
+      if (topbar === observedElement) return;
+
+      if (resizeObserver && observedElement) {
+        resizeObserver.unobserve(observedElement);
+      }
+
+      observedElement = topbar;
+      if (topbar && typeof ResizeObserver !== "undefined") {
+        if (!resizeObserver) {
+          resizeObserver = new ResizeObserver(() => {
+            updateClearance();
+          });
+        }
+        resizeObserver.observe(topbar);
+      }
+      updateClearance();
+    };
+
+    attachObserver();
+
+    let mutationObserver: MutationObserver | null = null;
+    if (typeof MutationObserver !== "undefined") {
+      mutationObserver = new MutationObserver(() => {
+        attachObserver();
+      });
+      mutationObserver.observe(root, { childList: true, subtree: true });
+    }
+
+    window.addEventListener("resize", updateClearance);
+
+    return () => {
+      window.removeEventListener("resize", updateClearance);
+      if (mutationObserver) {
+        mutationObserver.disconnect();
+      }
+      if (resizeObserver && observedElement) {
+        resizeObserver.unobserve(observedElement);
+      }
+    };
+  }, [view, data.title, data.subtitle, projectName]);
   const inspect = (next: Selection) => {
     opener.current =
       document.activeElement instanceof HTMLElement
@@ -77,7 +148,7 @@ export function CaseWorkspace({
   const openSource = (id: string) =>
     navigate(casePath(data.id, "evidence", id));
   return (
-    <div className="case-workspace">
+    <div className="case-workspace" ref={workspaceRef}>
       <aside
         className="case-toolbar"
         data-expanded={toolbarExpanded}
