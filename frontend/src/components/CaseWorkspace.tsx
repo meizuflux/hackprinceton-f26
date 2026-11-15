@@ -13,13 +13,13 @@ import {
 import type { CaseData } from "../api/types";
 import { casePath, type InsightsTab, type WorkspaceView } from "../routing";
 import { isMock } from "../api/client";
+import { formatCaseSubtitle } from "./presentation";
 import { EvidenceBrowser } from "./EvidenceBrowser";
 import { RecordsBrowser } from "./RecordsBrowser";
 import { RawEvidence } from "./RawEvidence";
 import { InsightsPage } from "./InsightsPage";
 import { ChatPanel } from "./ChatPanel";
 import { Inspector, type Selection } from "./Inspector";
-import { AnalysisEntries } from "./AnalysisEntries";
 import type { Tab } from "./board-focus";
 import "./case-workspace.css";
 
@@ -262,17 +262,11 @@ export function CaseWorkspace({
           <div className="board-title">
             <h1>{projectName || data.title}</h1>
             <span>
-              {data.subtitle} · {views.find((v) => v.id === view)?.label}
+              {formatCaseSubtitle(data.subtitle, data.timezone)} ·{" "}
+              {views.find((v) => v.id === view)?.label}
             </span>
           </div>
           <div className="board-actions">
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => navigate(casePath(data.id))}
-            >
-              <GitBranch size={15} /> Mind map
-            </button>
             <button
               type="button"
               className="text-button"
@@ -284,12 +278,6 @@ export function CaseWorkspace({
             >
               <History size={15} /> Audit trail
             </button>
-            <AnalysisEntries
-              data={data}
-              onOpen={(tab) =>
-                onOpenReview ? onOpenReview(tab) : navigate(casePath(data.id))
-              }
-            />
           </div>
         </header>
       )}
