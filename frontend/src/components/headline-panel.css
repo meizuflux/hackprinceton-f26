@@ -1,0 +1,241 @@
+/* Headline finding: the first thing the review dock shows when a case opens. Red is reserved for contradictions
+   (the board's #b3262f thread ink); questions use amber; insights use the neutral chip. */
+.headline-panel {
+  --headline-ink: #c9d4df;
+  --headline-chip: #1f2a36;
+  --headline-edge: #3f5266;
+  display: flex;
+  flex-direction: column;
+}
+.headline-panel.is-contradiction {
+  --headline-ink: #f4aeb2;
+  --headline-chip: #b3262f2e;
+  --headline-edge: #b3262fcc;
+}
+.headline-panel.is-gap {
+  --headline-ink: #e4c58f;
+  --headline-chip: #453a25;
+  --headline-edge: #75613b;
+}
+.headline-status-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+.headline-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 9px 4px 8px;
+  border: 1px solid var(--headline-edge);
+  border-radius: 999px;
+  background: var(--headline-chip);
+  color: var(--headline-ink);
+  font-size: 12px;
+  font-weight: 600;
+}
+.headline-title {
+  margin-top: 12px;
+  font-size: 17px;
+  font-weight: 550;
+  line-height: 1.35;
+  text-wrap: balance;
+}
+.headline-statement {
+  margin: 14px 0 0;
+}
+.headline-statement blockquote {
+  margin: 0;
+  padding: 12px 14px;
+  border-radius: 2px;
+  background: var(--paper);
+  color: #2a323b;
+  font:
+    15px/1.5 "Newsreader",
+    Georgia,
+    serif;
+}
+.headline-statement blockquote::before {
+  content: "\201C";
+}
+.headline-statement blockquote::after {
+  content: "\201D";
+}
+.headline-statement figcaption {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: 12px;
+}
+/* Three lines at most; the full text opens with the sources in the inspector. */
+.headline-summary {
+  display: -webkit-box;
+  margin: 12px 0 0;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+  color: #c3cdd8;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.headline-sources {
+  margin-top: 18px;
+}
+.headline-sources h4,
+.headline-context summary {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text);
+}
+.headline-sources h4 {
+  margin-bottom: 8px;
+}
+.headline-sources ul {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+.headline-sources li + li {
+  border-top: 1px solid var(--line);
+}
+.headline-sources button {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 16px;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 10px 10px 12px;
+  background: var(--panel);
+  color: var(--text);
+  text-align: left;
+  transition: background-color 0.15s ease-out;
+}
+.headline-sources button:hover {
+  background: var(--raised);
+}
+.headline-sources button:focus-visible {
+  outline-offset: -2px;
+}
+.headline-source-icon {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: var(--radius);
+  background: #ffffff0d;
+  color: var(--brand-text);
+}
+.headline-source-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+.headline-source-text strong {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 13px;
+  font-weight: 550;
+}
+.headline-source-text em {
+  color: #e3cfa6;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 400;
+}
+.headline-source-detail,
+.headline-source-meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.headline-source-detail {
+  color: #c3cdd8;
+  font-size: 12px;
+}
+.headline-source-meta {
+  color: var(--muted);
+  font:
+    11px/1.4 "IBM Plex Mono",
+    monospace;
+}
+.headline-source-go {
+  color: var(--muted);
+}
+.headline-sources button:hover .headline-source-go {
+  color: var(--brand-text);
+}
+.headline-actions {
+  position: sticky;
+  z-index: 1;
+  bottom: -16px; /* flush with the dock edge, over the scroll padding */
+  margin: 2px -16px 0;
+  padding: 12px 16px;
+  background: var(--surface);
+}
+.headline-context {
+  margin-top: 20px;
+  border-top: 1px solid var(--line);
+  padding-top: 4px;
+}
+.headline-context summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  cursor: pointer;
+  list-style: none;
+}
+.headline-context summary::-webkit-details-marker {
+  display: none;
+}
+.headline-context summary span {
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #ffffff10;
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}
+.headline-context summary svg {
+  margin-left: auto;
+  color: var(--muted);
+  transition: transform 0.2s cubic-bezier(0.2, 0, 0, 1);
+}
+.headline-context[open] summary svg {
+  transform: rotate(180deg);
+}
+.headline-context ul {
+  margin: 2px 0 8px;
+  padding-left: 18px;
+  color: #c3cdd8;
+  font-size: 13px;
+  line-height: 1.6;
+}
+.headline-context li + li {
+  margin-top: 6px;
+}
+.headline-note {
+  display: flex;
+  gap: 8px;
+  margin: 12px 0 0;
+  color: #c3cdd8;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.headline-note svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--muted);
+}
+@media (prefers-reduced-motion: reduce) {
+  .headline-context summary svg {
+    transition: none;
+  }
+}

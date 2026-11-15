@@ -439,9 +439,7 @@
     --chrome-bottom: 54px;
   }
   .board-legend {
-    right: 12px;
     bottom: var(--board-inset);
-    max-width: none;
     font-size: 11px;
   }
   .search-feedback {

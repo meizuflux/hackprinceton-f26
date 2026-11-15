@@ -163,6 +163,7 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
     for obj in [*nodes.values(), *edges.values()]:
         obj["evidenceIds"] = list(dict.fromkeys(c.split(":", 1)[0] for c in obj["citations"]))
     _layout(nodes)
+    story = _story(R, nodes, edges, gap_nodes)
 
     item_title = {it.key: f"{it.id} {it.title}" for b in R.items.values() for it in b}
     board = {
@@ -220,12 +221,47 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
                      "status": s.status} for s in R.get("signal")],
         "changes": changes,
         "overrides": overrides,
+        "story": story,
         "audit": extras["audit"],
     }
     for a in board["audit"]:
         a["citations"] = [src(c) if isinstance(c, dict) else c for c in a.get("citations", [])]
     board["sources"] = list(sources.values())
     return board
+
+
+STORY_MAX = 12
+SEVERITY = {"high": 0, "medium": 1, "low": 2}
+
+
+def _story(R, nodes: dict, edges: dict, gap_nodes: dict) -> dict | None:
+    """The opening view: the leading key event, the cards directly around it and the cards behind the top open
+    questions, plus one headline finding. A selection of existing board nodes only; it adds no facts."""
+    episodes = sorted(R.get("episode"), key=lambda e: -e.score)
+    center = next((f"ev-{e.key}" for e in episodes if f"ev-{e.key}" in nodes), None)
+    if center is None:
+        return None
+    ids = [center]
+
+    def add(nid):
+        if nid in nodes and nid not in ids and len(ids) < STORY_MAX:
+            ids.append(nid)
+
+    for e in edges.values():
+        if center in (e["source"], e["target"]):
+            add(e["target"] if e["source"] == center else e["source"])
+    for g in sorted(R.get("gap"), key=lambda g: -g.score)[:2]:
+        for nid in gap_nodes.get(g.id, []):
+            add(nid)
+    contradictions = sorted(R.get("contradiction"), key=lambda x: (SEVERITY.get(x.data.get("severity"), 3), -x.score))
+    gaps = sorted(R.get("gap"), key=lambda g: -g.score)
+    insights = sorted(R.get("insight"), key=lambda i: -i.score)
+    headline = ({"kind": "contradiction", "id": contradictions[0].id} if contradictions else
+                {"kind": "gap", "id": gaps[0].id} if gaps else
+                {"kind": "insight", "id": insights[0].id} if insights else None)
+    return {"centerId": center, "nodeIds": ids, "headline": headline,
+            "reason": "The leading key event, the records directly around it and the cards the top open questions "
+                      "concern."}
 
 
 def _cite_from_edges(nodes: dict, edges: dict) -> None:

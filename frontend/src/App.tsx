@@ -25,12 +25,14 @@ import {
   ArrowUpRight,
   Check,
   FileArchive,
+  Focus,
   GitBranch,
   History,
   Layers,
   Lightbulb,
   LoaderCircle,
   Minus,
+  Network,
   Search,
   ShieldCheck,
   SlidersHorizontal,
@@ -40,7 +42,7 @@ import {
 } from "lucide-react";
 import { api, isMock } from "./api/client";
 import { isApiError } from "./api/http";
-import type { CaseData } from "./api/types";
+import type { CaseData, EvidenceEdge } from "./api/types";
 import {
   CanvasMinimap,
   ZoomReadout,
@@ -55,7 +57,30 @@ import {
   getPinDimensions,
   settlePinMoves,
   threadHandles,
+  type Pin,
+  type Point,
 } from "./components/board-layout";
+import {
+  StoryCardNode,
+  StoryGroupNode,
+  type StoryExcerpt,
+} from "./components/StoryCard";
+import {
+  STORY_CARD,
+  STORY_EXPANDED,
+  STORY_GROUP,
+  STORY_HERO,
+  aggregateLabel,
+  buildStoryGroups,
+  hiddenNeighbours,
+  isGroupId,
+  layoutStory,
+  placeAround,
+  planFocus,
+  resolveStory,
+  revealAnchor,
+  storyThreads,
+} from "./components/board-story";
 import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
 import {
@@ -76,6 +101,8 @@ import {
 } from "./components/presentation";
 import {
   getFocusFitOptions,
+  getFocusPadding,
+  getStoryPadding,
   getNodesForSelection,
   getNodesForTab,
   type Tab,
@@ -85,8 +112,10 @@ import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
 import { CaseWorkspace } from "./components/CaseWorkspace";
 import { AskWidget } from "./components/AskWidget";
 import { AnalysisEntries } from "./components/AnalysisEntries";
+import { HeadlinePanel } from "./components/HeadlinePanel";
+import { resolveHeadline } from "./components/headline";
 import { ReplayedCase } from "./replay/ReplayedCase";
-import { requestReplay } from "./replay/intent";
+import { replayRequested, requestReplay } from "./replay/intent";
 import { UploadConfirm, type AnalysisMode } from "./onboarding/UploadConfirm";
 
 /** A request from another section to open the board's review dock. */
@@ -96,8 +125,88 @@ import {
   ProjectManager,
   type SessionProject,
 } from "./onboarding/Onboarding";
-const nodeTypes = { evidence: EvidenceNode };
+const nodeTypes = {
+  evidence: EvidenceNode,
+  storyCard: StoryCardNode,
+  storyGroup: StoryGroupNode,
+};
 const edgeTypes = { thread: ThreadEdge };
+
+const isNarrowViewport = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia("(max-width: 900px)").matches;
+// A replay's expanded run panel covers the left of the board; story fits make room for it.
+const isRunPanelOpen = () =>
+  typeof document !== "undefined" && !!document.querySelector(".replay-hud");
+
+/** Story-view node state; card content is read from the case at render. */
+type StoryNodeState = { arriveFrom?: Point };
+
+const centreOf = (node: {
+  position: Point;
+  width?: number;
+  height?: number;
+}): Point => ({
+  x: node.position.x + (node.width ?? 0) / 2,
+  y: node.position.y + (node.height ?? 0) / 2,
+});
+
+/** One React Flow thread for an API relationship, shared by both views. */
+function threadEdge(e: EvidenceEdge): Edge<ThreadData> {
+  const kind = relationshipKind(e.type, e.certainty);
+  const category = threadCategory(e.type);
+  const ink = threadColors[category].ink;
+  return {
+    id: e.id,
+    source: e.source,
+    target: e.target,
+    data: {
+      kind,
+      category,
+      badge: threadBadge(e.type, e.certainty),
+      label: e.label,
+      directed: e.directed === true,
+      origin: e.origin,
+      onInspect: () => {},
+    },
+    ariaLabel: `${threadColors[category].label}: ${e.label}. Inspect relationship and sources`,
+    type: "thread",
+    markerEnd:
+      e.directed === true
+        ? {
+            type: MarkerType.ArrowClosed,
+            color: ink,
+            width: 12,
+            height: 12,
+          }
+        : undefined,
+    style: {
+      stroke: ink,
+      strokeWidth: 3,
+      strokeLinecap: "round",
+      strokeDasharray: threadDash(kind),
+    },
+  };
+}
+
+/** Labels of parallel threads between the same two cards are stacked apart. */
+function labelOffsets(
+  edges: Array<{ id: string; source: string; target: string }>,
+) {
+  const pairs = new Map<string, string[]>();
+  for (const edge of edges) {
+    const key = [edge.source, edge.target].sort().join("|");
+    pairs.set(key, [...(pairs.get(key) ?? []), edge.id]);
+  }
+  const offsets = new Map<string, number>();
+  for (const ids of pairs.values()) {
+    if (ids.length < 2) continue;
+    ids.forEach((id, index) =>
+      offsets.set(id, (index - (ids.length - 1) / 2) * 34),
+    );
+  }
+  return offsets;
+}
 function BoardCanvas({
   data,
   layoutData = data,
@@ -123,28 +232,281 @@ function BoardCanvas({
   reviewRequest?: ReviewRequest | null;
   onClearReviewRequest?: () => void;
 }) {
-  const { fitView, fitBounds } = useReactFlow();
+  const { fitView, fitBounds, getViewport, setViewport } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
+
+  // Story view: the backend's opening selection, with the rest of the board
+  // folded into presentation-only group cards.
+  const story = useMemo(() => resolveStory(data), [data]);
+  const groups = useMemo(
+    () =>
+      story ? buildStoryGroups(data.nodes, data.edges, story.nodeIds) : [],
+    [data, story],
+  );
+  const groupById = useMemo(
+    () => new Map(groups.map((group) => [group.id, group])),
+    [groups],
+  );
+  const nodeById = useMemo(
+    () => new Map(data.nodes.map((node) => [node.id, node])),
+    [data],
+  );
+  const sourceById = useMemo(
+    () => new Map(data.sources.map((source) => [source.id, source])),
+    [data],
+  );
+  const [viewMode, setViewMode] = useState<"story" | "full">(
+    story ? "story" : "full",
+  );
+  // A running replay grows the full layout; the story view takes over once the run has finished.
+  const storyMode = viewMode === "story" && story !== null && !growing;
+  // The dock state is declared below; story fits read it when they run.
+  const dockOpenRef = useRef(false);
+  const storyPadding = useCallback(
+    () =>
+      getStoryPadding({
+        runPanelOpen: isRunPanelOpen(),
+        isNarrow: isNarrowViewport(),
+        dockOpen: dockOpenRef.current,
+      }),
+    [],
+  );
+  const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
+  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const storyPin = useCallback(
+    (id: string, position: Point, arriveFrom?: Point): Node<StoryNodeState> => {
+      const size = isGroupId(id)
+        ? STORY_GROUP
+        : id === story?.centerId
+          ? STORY_HERO
+          : STORY_CARD;
+      return {
+        id,
+        type: isGroupId(id) ? "storyGroup" : "storyCard",
+        position,
+        width: size.width,
+        height: size.height,
+        data: arriveFrom ? { arriveFrom } : {},
+      };
+    },
+    [story],
+  );
+  const initialStoryNodes = useMemo(
+    () =>
+      story
+        ? Array.from(layoutStory(story, data.edges, groups), ([id, point]) =>
+            storyPin(id, point),
+          )
+        : [],
+    [story, data.edges, groups, storyPin],
+  );
+  const [storyNodes, setStoryNodes] =
+    useNodesState<Node<StoryNodeState>>(initialStoryNodes);
+  const storyNodesRef = useRef(storyNodes);
+  storyNodesRef.current = storyNodes;
+  const expandedRef = useRef(expandedId);
+  expandedRef.current = expandedId;
+  const storyVisibleIds = useMemo(
+    () => new Set(storyNodes.map((node) => node.id)),
+    [storyNodes],
+  );
+  const arrivalTimer = useRef<number | undefined>(undefined);
+  useEffect(() => () => window.clearTimeout(arrivalTimer.current), []);
+
+  /** Puts hidden cards on the story board beside a linked visible card, animating out of it. */
+  const revealCards = useCallback(
+    (ids: string[], anchorId?: string) => {
+      if (!story || ids.length === 0) return;
+      setStoryNodes((current) => {
+        const present = new Set(current.map((node) => node.id));
+        const fresh = ids.filter((id) => !present.has(id) && nodeById.has(id));
+        if (!fresh.length) return current;
+        const centre = current.find((node) => node.id === story.centerId);
+        const away = centre ? centreOf(centre) : { x: 0, y: 0 };
+        const obstacles: Pin[] = current.map((node) =>
+          node.id === expandedRef.current
+            ? {
+                id: node.id,
+                position: {
+                  x:
+                    node.position.x -
+                    (STORY_EXPANDED.width - (node.width ?? 0)) / 2,
+                  y: node.position.y,
+                },
+                ...STORY_EXPANDED,
+              }
+            : {
+                id: node.id,
+                position: node.position,
+                width: node.width,
+                height: node.height,
+              },
+        );
+        const byAnchor = new Map<string, string[]>();
+        for (const id of fresh) {
+          const anchor =
+            anchorId ??
+            revealAnchor(id, data.edges, present, groups) ??
+            story.centerId;
+          byAnchor.set(anchor, [...(byAnchor.get(anchor) ?? []), id]);
+        }
+        const added: Node<StoryNodeState>[] = [];
+        for (const [anchor, list] of byAnchor) {
+          const anchorNode = current.find((node) => node.id === anchor);
+          if (!anchorNode) continue;
+          const spots = placeAround(
+            {
+              id: anchor,
+              position: anchorNode.position,
+              width: anchorNode.width,
+              height: anchorNode.height,
+            },
+            list.map((id) => ({ id, ...STORY_CARD })),
+            [
+              ...obstacles,
+              ...added.map((node) => ({
+                id: node.id,
+                position: node.position,
+                ...STORY_CARD,
+              })),
+            ],
+            away,
+          );
+          const from = centreOf(anchorNode);
+          for (const id of list) {
+            const spot = spots.get(id)!;
+            added.push(
+              storyPin(id, spot, {
+                x: from.x - (spot.x + STORY_CARD.width / 2),
+                y: from.y - (spot.y + STORY_CARD.height / 2),
+              }),
+            );
+          }
+        }
+        return [...current, ...added];
+      });
+      window.clearTimeout(arrivalTimer.current);
+      arrivalTimer.current = window.setTimeout(
+        () =>
+          setStoryNodes((current) =>
+            current.map((node) =>
+              node.data.arriveFrom ? { ...node, data: {} } : node,
+            ),
+          ),
+        900,
+      );
+    },
+    [story, nodeById, data.edges, groups, storyPin, setStoryNodes],
+  );
+  const hideCards = useCallback(
+    (ids: string[]) => {
+      const hide = new Set(ids.filter((id) => !story?.nodeIds.includes(id)));
+      setStoryNodes((current) => current.filter((node) => !hide.has(node.id)));
+      setExpandedId((current) =>
+        current && hide.has(current) ? null : current,
+      );
+    },
+    [story, setStoryNodes],
+  );
+  const fitCards = useCallback(
+    (ids: string[], delay = 80) => {
+      window.setTimeout(
+        () =>
+          requestAnimationFrame(() => {
+            try {
+              fitView({
+                nodes: ids.map((id) => ({ id })),
+                padding: storyPadding(),
+                duration: 650,
+                minZoom: 0.4,
+                maxZoom: 1,
+              });
+            } catch {
+              // Graceful fallback
+            }
+          }),
+        delay,
+      );
+    },
+    [fitView, storyPadding],
+  );
+  /** Fans a group's hidden cards out around it, or folds them all back. */
+  const toggleGroup = useCallback(
+    (groupId: string) => {
+      const group = groupById.get(groupId);
+      if (!group) return;
+      const visible = new Set(storyNodesRef.current.map((node) => node.id));
+      const hidden = group.memberIds.filter((id) => !visible.has(id));
+      if (hidden.length) {
+        revealCards(hidden, groupId);
+        fitCards([groupId, ...group.memberIds]);
+      } else {
+        hideCards(group.memberIds);
+        // Settle the view back on what is left.
+        fitCards(
+          [...visible].filter(
+            (id) =>
+              !group.memberIds.includes(id) || story?.nodeIds.includes(id),
+          ),
+        );
+      }
+    },
+    [groupById, story, revealCards, hideCards, fitCards],
+  );
+  const showConnections = useCallback(
+    (id: string) => {
+      const visible = new Set(storyNodesRef.current.map((node) => node.id));
+      const hidden = hiddenNeighbours(id, data.edges, visible);
+      if (!hidden.length) return;
+      revealCards(hidden, id);
+      fitCards([id, ...hidden]);
+    },
+    [data.edges, revealCards, fitCards],
+  );
+  /** An aggregate thread opens the hidden cards it stands for, beside its card. */
+  const openAggregate = useCallback(
+    (source: string, edgeIds: string[]) => {
+      const ids = edgeIds.flatMap((edgeId) => {
+        const edge = data.edges.find((entry) => entry.id === edgeId);
+        if (!edge) return [];
+        return [edge.source === source ? edge.target : edge.source];
+      });
+      revealCards(ids, source);
+      fitCards([source, ...ids]);
+    },
+    [data.edges, revealCards, fitCards],
+  );
+  const storyModeRef = useRef(storyMode);
+  storyModeRef.current = storyMode;
   const [tab, setTab] = useState<Tab>("gaps");
+  // The backend's headline finding opens in the dock when the case loads.
+  const headline = useMemo(() => resolveHeadline(data), [data]);
   const [dockMode, setDockMode] = useState<
-    "closed" | "analysis" | "inspector" | "audit"
-  >("closed");
+    "closed" | "overview" | "analysis" | "inspector" | "audit"
+  >(() => (headline ? "overview" : "closed"));
   const auditChain = useQuery({
     queryKey: ["audit-chain", data.id],
     queryFn: () => api.getAuditChain(data.id),
     enabled: !isMock && dockMode === "audit",
   });
-  const [returnMode, setReturnMode] = useState<"closed" | "analysis" | "audit">(
-    "analysis",
-  );
-  const [auditReturnMode, setAuditReturnMode] = useState<"closed" | "analysis">(
-    "closed",
-  );
+  const [returnMode, setReturnMode] = useState<
+    "closed" | "overview" | "analysis" | "audit"
+  >("analysis");
+  const [auditReturnMode, setAuditReturnMode] = useState<
+    "closed" | "overview" | "analysis"
+  >("closed");
   const [search, setSearch] = useState("");
   const [boardView, setBoardView] = useState<"graph" | "list">("graph");
   const dockRef = useRef<HTMLElement>(null);
   const analysisRef = useRef<HTMLElement>(null);
+  const previousDockMode = useRef(dockMode);
   useEffect(() => {
+    // The headline opens with the case; on narrow screens it waits below the
+    // board instead of scrolling the page away from it. Only a change of mode
+    // scrolls (a ref, not a mount flag, so StrictMode's rerun is a no-op).
+    if (previousDockMode.current === dockMode) return;
+    previousDockMode.current = dockMode;
     if (
       dockMode !== "closed" &&
       window.matchMedia("(max-width: 900px)").matches
@@ -162,10 +524,23 @@ function BoardCanvas({
   const focusTarget = useCallback(
     (
       targetNodeIds: Set<string> | string[],
-      options?: { dockOpen?: boolean },
+      options?: { dockOpen?: boolean; reveal?: boolean },
     ) => {
-      const ids = Array.from(targetNodeIds);
+      let ids = Array.from(targetNodeIds);
       if (ids.length === 0) return;
+      let delay = 0;
+      if (storyModeRef.current) {
+        // Hidden targets come onto the story board first; for broad focus
+        // (a whole analysis tab) their group cards stand in for them.
+        const visible = new Set(storyNodesRef.current.map((node) => node.id));
+        const plan = planFocus(ids, visible, groups, options?.reveal ?? true);
+        if (plan.reveal.length) {
+          revealCards(plan.reveal);
+          delay = 80;
+        }
+        ids = plan.focus;
+        if (ids.length === 0) return;
+      }
       const isNarrow =
         typeof window !== "undefined" &&
         window.matchMedia("(max-width: 900px)").matches;
@@ -175,40 +550,58 @@ function BoardCanvas({
         isNarrow,
         dockOpen: isDockOpen,
       });
+      if (storyModeRef.current)
+        fitOptions.padding = getStoryPadding({
+          runPanelOpen: isRunPanelOpen(),
+          isNarrow,
+          dockOpen: isDockOpen,
+        });
 
-      requestAnimationFrame(() => {
-        try {
-          fitView({
-            nodes: ids.map((id) => ({ id })),
-            ...fitOptions,
-          });
-        } catch {
-          // Graceful fallback
-        }
-      });
+      const fit = () =>
+        requestAnimationFrame(() => {
+          try {
+            fitView({
+              nodes: ids.map((id) => ({ id })),
+              ...fitOptions,
+            });
+          } catch {
+            // Graceful fallback
+          }
+        });
+      if (delay) window.setTimeout(fit, delay);
+      else fit();
     },
-    [fitView, dockMode],
+    [fitView, dockMode, groups, revealCards],
   );
 
   const resetBoardView = useCallback(() => {
     requestAnimationFrame(() => {
       try {
-        fitView({
-          padding: {
-            top: "90px",
-            bottom: "100px",
-            left: "90px",
-            right: "60px",
-          },
-          duration: 650,
-          minZoom: 0.5,
-          maxZoom: 1.1,
-        });
+        fitView(
+          storyModeRef.current
+            ? {
+                padding: storyPadding(),
+                duration: 650,
+                minZoom: 0.3,
+                maxZoom: 1,
+              }
+            : {
+                padding: {
+                  top: "90px",
+                  bottom: "100px",
+                  left: "90px",
+                  right: "60px",
+                },
+                duration: 650,
+                minZoom: 0.5,
+                maxZoom: 1.1,
+              },
+        );
       } catch {
         // Graceful fallback
       }
     });
-  }, [fitView]);
+  }, [fitView, storyPadding]);
 
   const inspect = useCallback(
     (kind: Selection["kind"], id: string, sourceId?: string) => {
@@ -237,7 +630,8 @@ function BoardCanvas({
       resetBoardView();
     } else if (returnMode === "analysis") {
       const targetNodes = getNodesForTab(tab, data);
-      if (targetNodes.size > 0) focusTarget(targetNodes, { dockOpen: true });
+      if (targetNodes.size > 0)
+        focusTarget(targetNodes, { dockOpen: true, reveal: false });
     }
     requestAnimationFrame(() => {
       if (openerRef.current?.isConnected) openerRef.current.focus();
@@ -261,7 +655,10 @@ function BoardCanvas({
       setDockMode("analysis");
       setSelection(null);
       setTab(next);
-      focusTarget(getNodesForTab(next, data), { dockOpen: true });
+      focusTarget(getNodesForTab(next, data), {
+        dockOpen: true,
+        reveal: false,
+      });
     },
     [dockMode, tab, data, focusTarget, resetBoardView],
   );
@@ -272,10 +669,12 @@ function BoardCanvas({
         return;
       }
       setAuditReturnMode(
-        dockMode === "analysis" ||
-          (dockMode === "inspector" && returnMode === "analysis")
-          ? "analysis"
-          : "closed",
+        dockMode === "analysis" || dockMode === "overview"
+          ? dockMode
+          : dockMode === "inspector" &&
+              (returnMode === "analysis" || returnMode === "overview")
+            ? returnMode
+            : "closed",
       );
       setDockMode("audit");
     },
@@ -284,6 +683,36 @@ function BoardCanvas({
   const analysisShown =
     dockMode === "analysis" ||
     (dockMode === "inspector" && returnMode === "analysis");
+  /** One tab strip serves the headline ("Key finding") and the analysis lists. */
+  const dockTabs = useMemo(
+    () =>
+      [
+        ...(headline ? [["overview", "Key finding", null] as const] : []),
+        ["gaps", "Gaps", data.gaps.length] as const,
+        ["insights", "Insights", data.insights.length] as const,
+        ["suggestions", "Next evidence", data.suggestions.length] as const,
+      ] as ReadonlyArray<readonly [Tab | "overview", string, number | null]>,
+    [headline, data],
+  );
+  const activeDockTab: Tab | "overview" =
+    dockMode === "overview" ? "overview" : tab;
+  const selectDockTab = useCallback(
+    (next: Tab | "overview") => {
+      setSelection(null);
+      if (next === "overview") {
+        setDockMode("overview");
+        return;
+      }
+      setDockMode("analysis");
+      setTab(next);
+      // Tab-level focus highlights group cards rather than revealing every hidden card.
+      focusTarget(getNodesForTab(next, data), {
+        dockOpen: true,
+        reveal: false,
+      });
+    },
+    [data, focusTarget],
+  );
 
   useEffect(() => {
     if (!reviewRequest || !active) return;
@@ -335,43 +764,7 @@ function BoardCanvas({
     [layoutData, inspect, layout],
   );
   const initialEdges: Edge<ThreadData>[] = useMemo(
-    () =>
-      layoutData.edges.map((e) => {
-        const kind = relationshipKind(e.type, e.certainty);
-        const category = threadCategory(e.type);
-        const ink = threadColors[category].ink;
-        return {
-          id: e.id,
-          source: e.source,
-          target: e.target,
-          data: {
-            kind,
-            category,
-            badge: threadBadge(e.type, e.certainty),
-            label: e.label,
-            directed: e.directed === true,
-            origin: e.origin,
-            onInspect: () => inspect("edge", e.id),
-          },
-          ariaLabel: `${threadColors[category].label}: ${e.label}. Inspect relationship and sources`,
-          type: "thread",
-          markerEnd:
-            e.directed === true
-              ? {
-                  type: MarkerType.ArrowClosed,
-                  color: ink,
-                  width: 12,
-                  height: 12,
-                }
-              : undefined,
-          style: {
-            stroke: ink,
-            strokeWidth: 3,
-            strokeLinecap: "round",
-            strokeDasharray: threadDash(kind),
-          },
-        };
-      }),
+    () => layoutData.edges.map(threadEdge),
     [layoutData],
   );
   const [nodes, setNodes] = useNodesState(initialNodes);
@@ -404,6 +797,63 @@ function BoardCanvas({
     () => new Set(data.edges.map((e) => e.id)),
     [data.edges],
   );
+  // Fit the board beside the dock when it is open, including the headline on load.
+  dockOpenRef.current = dockMode !== "closed";
+  const fitPadding = storyMode
+    ? getStoryPadding({
+        runPanelOpen: isRunPanelOpen(),
+        isNarrow: isNarrowViewport(),
+        dockOpen: dockMode !== "closed",
+      })
+    : {
+        ...getFocusPadding({
+          isNarrow: isNarrowViewport(),
+          dockOpen: dockMode !== "closed",
+        }),
+        top: "90px" as const,
+      };
+  // An expanded card must be readable whole: once it has grown, pan the view
+  // (never the layout) so it sits inside the visible canvas.
+  useEffect(() => {
+    if (!expandedId) return;
+    const timer = window.setTimeout(() => {
+      const card = document.querySelector(
+        `.react-flow__node[data-id="${CSS.escape(expandedId)}"] .story-card`,
+      );
+      const wrap = card?.closest(".canvas-wrap");
+      if (!card || !wrap) return;
+      const box = card.getBoundingClientRect();
+      const area = wrap.getBoundingClientRect();
+      const pad = getStoryPadding({
+        runPanelOpen: isRunPanelOpen(),
+        isNarrow: isNarrowViewport(),
+        dockOpen: dockOpenRef.current,
+      });
+      const bounds = {
+        top: area.top + parseFloat(pad.top),
+        bottom: area.bottom - parseFloat(pad.bottom),
+        left: area.left + parseFloat(pad.left),
+        right: area.right - parseFloat(pad.right),
+      };
+      let dx = 0;
+      let dy = 0;
+      if (box.bottom > bounds.bottom) dy = bounds.bottom - box.bottom;
+      if (box.top + dy < bounds.top) dy = bounds.top - box.top;
+      if (box.right > bounds.right) dx = bounds.right - box.right;
+      if (box.left + dx < bounds.left) dx = bounds.left - box.left;
+      if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+      const view = getViewport();
+      void setViewport(
+        { x: view.x + dx, y: view.y + dy, zoom: view.zoom },
+        { duration: 320 },
+      );
+    }, 380);
+    return () => window.clearTimeout(timer);
+  }, [expandedId, getViewport, setViewport]);
+  // The story always fits whole, so its group cards are never cropped.
+  const fitZoom = storyMode
+    ? { minZoom: 0.3, maxZoom: 1 }
+    : { minZoom: 0.5, maxZoom: 1.1 };
   const normalizedSearch = search.trim().toLowerCase();
   const revealedNodes = useMemo(
     () => nodes.filter((n) => revealedNodeIds.has(n.id)),
@@ -424,7 +874,7 @@ function BoardCanvas({
     () => (normalizedSearch ? new Set(matchingNodes.map((n) => n.id)) : null),
     [matchingNodes, normalizedSearch],
   );
-  const focusedNodeIds = useMemo(() => {
+  const rawFocusedNodeIds = useMemo(() => {
     if (selection) {
       return getNodesForSelection(selection, data);
     }
@@ -433,6 +883,198 @@ function BoardCanvas({
     }
     return null;
   }, [selection, dockMode, tab, data]);
+  // In the story view, a hidden target is represented by its group card.
+  const focusedNodeIds = useMemo(
+    () =>
+      rawFocusedNodeIds && storyMode
+        ? new Set(
+            planFocus(rawFocusedNodeIds, storyVisibleIds, groups, false).focus,
+          )
+        : rawFocusedNodeIds,
+    [rawFocusedNodeIds, storyMode, storyVisibleIds, groups],
+  );
+  /** Search matches still folded into groups. */
+  const hiddenMatches = useMemo(
+    () =>
+      storyMode && matchingNodeIds
+        ? Array.from(matchingNodeIds).filter((id) => !storyVisibleIds.has(id))
+        : [],
+    [storyMode, matchingNodeIds, storyVisibleIds],
+  );
+
+  const excerptsFor = useCallback(
+    (citations: string[]): StoryExcerpt[] =>
+      citations.slice(0, 3).flatMap((id) => {
+        const source = sourceById.get(id);
+        if (!source) return [];
+        const evidenceId = source.metadata?.evidence_id;
+        const locator = source.metadata?.locator;
+        return [
+          {
+            id,
+            locator: evidenceId
+              ? `${evidenceId}${locator ? ` ${locator}` : ""}`
+              : source.path.split("/").pop() || id,
+            text: source.excerpt,
+          },
+        ];
+      }),
+    [sourceById],
+  );
+
+  const storyFlowNodes = useMemo(() => {
+    if (!storyMode || !story) return [];
+    return storyNodes.map((n) => {
+      const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
+      const group = groupById.get(n.id);
+      if (group) {
+        const matches = matchingNodeIds
+          ? group.memberIds.filter(
+              (id) => matchingNodeIds.has(id) && !storyVisibleIds.has(id),
+            ).length
+          : 0;
+        const isDimmed =
+          (matchingNodeIds && matches === 0) || (focusedNodeIds && !isFocused);
+        return {
+          ...n,
+          className:
+            `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+          data: {
+            title: group.title,
+            rule: group.rule,
+            nodeType: group.nodeType,
+            total: group.memberIds.length,
+            hidden: group.memberIds.filter((id) => !storyVisibleIds.has(id))
+              .length,
+            width: n.width ?? STORY_GROUP.width,
+            height: n.height ?? STORY_GROUP.height,
+            isFocused,
+            matches,
+            onToggle: () => toggleGroup(n.id),
+          },
+        };
+      }
+      const source = nodeById.get(n.id)!;
+      const expanded = expandedId === n.id;
+      const isDimmed =
+        (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
+        (focusedNodeIds && !isFocused);
+      return {
+        ...n,
+        zIndex: expanded ? 1000 : undefined,
+        className:
+          `${isDimmed && !expanded ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+        data: {
+          label: source.label,
+          type: source.type,
+          subtitle: source.subtitle,
+          summary: source.summary,
+          citations: source.citations,
+          time: source.time,
+          timeZone: data.timezone,
+          certainty: source.certainty,
+          gapId: source.gapId,
+          width: n.width ?? STORY_CARD.width,
+          height: n.height ?? STORY_CARD.height,
+          hero: n.id === story.centerId,
+          expanded,
+          active:
+            selection?.kind === "node" ? selection.id === n.id : isFocused,
+          isFocused,
+          excerpts: expanded ? excerptsFor(source.citations) : [],
+          hiddenNeighbours: hiddenNeighbours(n.id, data.edges, storyVisibleIds)
+            .length,
+          arriveFrom: n.data.arriveFrom,
+          onToggle: () =>
+            setExpandedId((current) => (current === n.id ? null : n.id)),
+          onCollapse: () => setExpandedId(null),
+          onInspect: () => inspect("node", n.id),
+          onInspectGap: source.gapId
+            ? () => inspect("gap", source.gapId!)
+            : undefined,
+          onShowConnections: () => showConnections(n.id),
+        },
+      };
+    });
+  }, [
+    storyMode,
+    story,
+    storyNodes,
+    focusedNodeIds,
+    groupById,
+    matchingNodeIds,
+    storyVisibleIds,
+    toggleGroup,
+    nodeById,
+    expandedId,
+    data,
+    selection,
+    excerptsFor,
+    inspect,
+    showConnections,
+  ]);
+
+  /** Story threads: real threads between visible cards, plus one aggregate per card and group. */
+  const storyEdges = useMemo(() => {
+    if (!storyMode || !story) return [];
+    const { shown, aggregates } = storyThreads(
+      data.edges,
+      storyVisibleIds,
+      groups,
+    );
+    const inStory = new Set(story.nodeIds);
+    const real = shown.map((e) => {
+      const edge = threadEdge(e);
+      return {
+        ...edge,
+        data: {
+          ...edge.data!,
+          quiet: !(inStory.has(e.source) && inStory.has(e.target)),
+        },
+      };
+    });
+    const folded: Edge<ThreadData>[] = aggregates.map((thread) => {
+      const category = thread.category ?? "other";
+      const kind = thread.kind === "mixed" ? "inference" : thread.kind;
+      const label = aggregateLabel(thread);
+      const group = groupById.get(thread.target);
+      const from = nodeById.get(thread.source)?.label ?? thread.source;
+      return {
+        id: thread.id,
+        source: thread.source,
+        target: thread.target,
+        type: "thread",
+        className: "aggregate-edge",
+        ariaLabel: `${label} between ${from} and cards in ${group?.title}`,
+        data: {
+          kind,
+          category,
+          label,
+          directed: false,
+          aggregateCount: thread.count,
+          quiet: true,
+          ariaLabel: `${label} between ${from} and cards folded into ${group?.title}. Show those ${thread.count === 1 ? "card" : "cards"}`,
+          onInspect: () => openAggregate(thread.source, thread.edgeIds),
+        },
+        style: {
+          stroke: threadColors[category].ink,
+          strokeWidth: 3,
+          strokeLinecap: "round",
+          strokeDasharray: threadDash(kind),
+        },
+      };
+    });
+    return [...real, ...folded];
+  }, [
+    storyMode,
+    story,
+    data.edges,
+    storyVisibleIds,
+    groups,
+    groupById,
+    nodeById,
+    openAggregate,
+  ]);
 
   // Items revealed in the same tick fade in a few tens of ms apart.
   const revealDelays = useRef(new Map<string, number>());
@@ -475,47 +1117,115 @@ function BoardCanvas({
   ]);
 
   const visibleEdges = useMemo(() => {
-    const nodesById = new Map(nodes.map((node) => [node.id, node]));
-    return edges
-      .filter((edge) => revealedEdgeIds.has(edge.id))
-      .map((edge) => {
-        const source = nodesById.get(edge.source);
-        const target = nodesById.get(edge.target);
-        const isFocused = focusedNodeIds
-          ? focusedNodeIds.has(edge.source) && focusedNodeIds.has(edge.target)
-          : false;
-        const isDimmed = focusedNodeIds && !isFocused;
-        return {
-          ...edge,
-          className:
-            `${isDimmed ? "dimmed-edge" : ""} ${isFocused ? "focused-edge" : ""}`.trim(),
-          ...(source && target
-            ? threadHandles(source.position, target.position)
-            : {}),
-          selected:
-            selection?.kind === "edge" ? selection.id === edge.id : isFocused,
-          data: edge.data
-            ? {
-                ...edge.data,
-                isFocused,
-                isDimmed: Boolean(isDimmed),
-                onInspect: () => inspect("edge", edge.id),
-              }
-            : undefined,
-        };
+    // In the full graph a running replay shows only the threads revealed so far.
+    const list = storyMode
+      ? storyEdges
+      : edges.filter((edge) => revealedEdgeIds.has(edge.id));
+    const positioned: Array<{
+      id: string;
+      position: Point;
+      width?: number;
+      height?: number;
+    }> = storyMode ? storyNodes : nodes;
+    const nodesById = new Map(positioned.map((node) => [node.id, node]));
+    const offsets = labelOffsets(list);
+    return list.map((edge) => {
+      const source = nodesById.get(edge.source);
+      const target = nodesById.get(edge.target);
+      const isFocused = focusedNodeIds
+        ? focusedNodeIds.has(edge.source) && focusedNodeIds.has(edge.target)
+        : false;
+      const isDimmed = focusedNodeIds && !isFocused;
+      const touches = (id: string | null) =>
+        id !== null && (edge.source === id || edge.target === id);
+      return {
+        ...edge,
+        className:
+          `${edge.className ?? ""} ${isDimmed ? "dimmed-edge" : ""} ${isFocused ? "focused-edge" : ""}`.trim(),
+        ...(source && target
+          ? storyMode
+            ? // Story cards differ in size, so threads attach by centres.
+              threadHandles(centreOf(source), centreOf(target))
+            : threadHandles(source.position, target.position)
+          : {}),
+        selected:
+          selection?.kind === "edge" ? selection.id === edge.id : isFocused,
+        data: edge.data
+          ? {
+              ...edge.data,
+              isFocused,
+              isDimmed: Boolean(isDimmed),
+              labelOffset: offsets.get(edge.id),
+              hovered: hoveredEdgeId === edge.id || touches(hoveredNodeId),
+              onInspect: edge.data.aggregateCount
+                ? edge.data.onInspect
+                : () => inspect("edge", edge.id),
+            }
+          : undefined,
+      };
+    });
+  }, [
+    storyMode,
+    storyEdges,
+    storyNodes,
+    edges,
+    revealedEdgeIds,
+    nodes,
+    focusedNodeIds,
+    selection,
+    inspect,
+    hoveredEdgeId,
+    hoveredNodeId,
+    expandedId,
+  ]);
+
+  const switchView = useCallback(
+    (mode: "story" | "full") => {
+      if (mode === viewMode) return;
+      setExpandedId(null);
+      setViewMode(mode);
+      window.setTimeout(() => {
+        const targets = selection
+          ? getNodesForSelection(selection, data)
+          : null;
+        if (targets && targets.size && mode === "full")
+          focusTarget(targets, { reveal: false });
+        else resetBoardView();
+      }, 40);
+    },
+    [viewMode, selection, data, focusTarget, resetBoardView],
+  );
+  const onStoryNodesChange = useCallback(
+    (changes: NodeChange<Node<StoryNodeState>>[]) => {
+      setStoryNodes((current) => {
+        const next = applyNodeChanges(changes, current);
+        const settledIds = changes.flatMap((change) =>
+          change.type === "position" && !change.dragging ? [change.id] : [],
+        );
+        return settledIds.length ? settlePinMoves(next, settledIds) : next;
       });
-  }, [edges, nodes, revealedEdgeIds, focusedNodeIds, selection, inspect]);
+    },
+    [setStoryNodes],
+  );
   // A replay frames the finished layout once, so cards appear in place while the camera holds still.
-  const framedReplay = useRef(false);
+  // An import starts before its layout exists (an empty case), so frame once per layout, and only
+  // when it has cards; otherwise the camera would stay fixed on an empty frame.
+  const framedReplay = useRef<CaseData | null>(null);
   const [flowReady, setFlowReady] = useState(false);
   useEffect(() => {
     if (!growing) {
-      framedReplay.current = false;
+      framedReplay.current = null;
       return;
     }
-    if (framedReplay.current || !flowReady || !active || dockMode !== "closed")
+    if (
+      framedReplay.current === layoutData ||
+      nodes.length === 0 ||
+      !flowReady ||
+      !active ||
+      dockMode !== "closed"
+    )
       return;
-    framedReplay.current = true;
+    framedReplay.current = layoutData;
     const bounds = boundsOf(
       nodes.map((node) => ({ ...node.position, ...nodeSize(node) })),
     );
@@ -525,7 +1235,7 @@ function BoardCanvas({
       { ...bounds, x: bounds.x - panel, width: bounds.width + panel },
       { padding: 0.08, duration: 400 },
     );
-  }, [growing, flowReady, active, dockMode, fitBounds, nodes]);
+  }, [growing, flowReady, active, dockMode, fitBounds, nodes, layoutData]);
   return (
     <>
       <div className="workspace">
@@ -533,10 +1243,7 @@ function BoardCanvas({
           <div className="board-toolbar">
             <div className="board-title">
               <h1>{projectName || data.title}</h1>
-              <span>
-                {formatCaseSubtitle(data.subtitle, data.timezone)} ·{" "}
-                {data.nodes.length} pins · {data.edges.length} connections
-              </span>
+              <span>{formatCaseSubtitle(data.subtitle, data.timezone)}</span>
             </div>
             <div className="board-actions">
               <label className="board-search">
@@ -546,6 +1253,13 @@ function BoardCanvas({
                   aria-label="Find evidence"
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    // Enter brings matches folded into story groups onto the board.
+                    if (e.key !== "Enter" || !hiddenMatches.length) return;
+                    const ids = hiddenMatches.slice(0, 12);
+                    revealCards(ids);
+                    fitCards(ids, 120);
+                  }}
                   placeholder="Find a pin…"
                 />
                 {search && (
@@ -594,7 +1308,7 @@ function BoardCanvas({
             </div>
           </div>
           <div
-            className={`canvas-wrap${growing ? " replay-growing" : ""}`}
+            className={`canvas-wrap ${storyMode && boardView === "graph" ? "is-story" : ""}${growing ? " replay-growing" : ""}`}
             style={boardColorVars()}
           >
             {boardView === "list" ? (
@@ -664,29 +1378,45 @@ function BoardCanvas({
               </div>
             ) : (
               <ReactFlow
-                nodes={visibleNodes}
+                nodes={(storyMode ? storyFlowNodes : visibleNodes) as Node[]}
                 edges={visibleEdges}
-                onNodesChange={onNodesChange}
+                onNodesChange={
+                  (storyMode ? onStoryNodesChange : onNodesChange) as (
+                    changes: NodeChange<Node>[],
+                  ) => void
+                }
                 onEdgesChange={onEdgesChange}
                 nodeTypes={nodeTypes}
                 edgeTypes={edgeTypes}
-                onNodeClick={(_, n) => inspect("node", n.id)}
-                onEdgeClick={(_, e) => inspect("edge", e.id)}
+                onNodeClick={(event, n) => {
+                  if (!storyMode) {
+                    inspect("node", n.id);
+                    return;
+                  }
+                  if (isGroupId(n.id)) toggleGroup(n.id);
+                  else if (
+                    !(event.target as HTMLElement).closest(".story-card-body")
+                  )
+                    setExpandedId((current) =>
+                      current === n.id ? null : n.id,
+                    );
+                }}
+                onEdgeClick={(_, e) => {
+                  const edge = visibleEdges.find((entry) => entry.id === e.id);
+                  if (edge?.data?.aggregateCount) edge.data.onInspect();
+                  else inspect("edge", e.id);
+                }}
+                onNodeMouseEnter={(_, n) => setHoveredNodeId(n.id)}
+                onNodeMouseLeave={() => setHoveredNodeId(null)}
+                onEdgeMouseEnter={(_, e) => setHoveredEdgeId(e.id)}
+                onEdgeMouseLeave={() => setHoveredEdgeId(null)}
                 onPaneClick={() => {
-                  if (dockMode === "inspector") closeInspector();
+                  if (expandedId) setExpandedId(null);
+                  else if (dockMode === "inspector") closeInspector();
                 }}
                 onInit={() => setFlowReady(true)}
                 fitView={!growing}
-                fitViewOptions={{
-                  padding: {
-                    top: "90px",
-                    bottom: "100px",
-                    left: "90px",
-                    right: "60px",
-                  },
-                  minZoom: 0.5,
-                  maxZoom: 1.1,
-                }}
+                fitViewOptions={{ padding: fitPadding, ...fitZoom }}
                 panOnScroll
                 panOnScrollSpeed={1}
                 zoomOnScroll={false}
@@ -705,27 +1435,62 @@ function BoardCanvas({
                 <Controls
                   position="bottom-right"
                   showInteractive={false}
-                  fitViewOptions={{
-                    padding: {
-                      top: "90px",
-                      bottom: "100px",
-                      left: "90px",
-                      right: "60px",
-                    },
-                    minZoom: 0.5,
-                    maxZoom: 1.1,
-                  }}
+                  fitViewOptions={{ padding: fitPadding, ...fitZoom }}
                 >
                   <ZoomReadout />
                 </Controls>
-                <CanvasMinimap frameNodes={nodes} />
+                {!storyMode && <CanvasMinimap frameNodes={nodes} />}
               </ReactFlow>
+            )}
+            {story && boardView === "graph" && !growing && (
+              <div
+                className="board-view-switch"
+                role="group"
+                aria-label="Board view"
+              >
+                <button
+                  type="button"
+                  aria-pressed={storyMode}
+                  title={`${story.reason} ${storyVisibleIds.size - groups.length} of ${data.nodes.length} cards on the board.`}
+                  onClick={() => switchView("story")}
+                >
+                  <Focus size={14} aria-hidden="true" /> Story
+                  <span className="board-view-count">
+                    {storyVisibleIds.size - groups.length}
+                  </span>
+                </button>
+                <button
+                  type="button"
+                  aria-pressed={!storyMode}
+                  onClick={() => switchView("full")}
+                >
+                  <Network size={14} aria-hidden="true" /> Full graph
+                  <span className="board-view-count">{data.nodes.length}</span>
+                </button>
+              </div>
             )}
             {search.trim() && (
               <div className="search-feedback" role="status">
                 {matchingNodes.length
                   ? `${matchingNodes.length} matching pin${matchingNodes.length === 1 ? "" : "s"}.${boardView === "graph" ? " Other pins are dimmed." : ""}`
                   : "No matching evidence. Try a name, device, or location."}
+                {boardView === "graph" && hiddenMatches.length > 0 && (
+                  <>
+                    {" "}
+                    {hiddenMatches.length} folded into groups.{" "}
+                    <button
+                      type="button"
+                      className="search-feedback-action"
+                      onClick={() => {
+                        const ids = hiddenMatches.slice(0, 12);
+                        revealCards(ids);
+                        fitCards(ids, 120);
+                      }}
+                    >
+                      Show {hiddenMatches.length > 12 ? "first 12" : "them"}
+                    </button>
+                  </>
+                )}
               </div>
             )}
             {boardView === "graph" && (
@@ -772,6 +1537,81 @@ function BoardCanvas({
               </button>
             </div>
           )}
+          <div
+            className="analysis-tabs"
+            role="tablist"
+            aria-label="Case analysis"
+            hidden={dockMode !== "analysis" && dockMode !== "overview"}
+          >
+            {dockTabs.map(([id, label, count]) => (
+              <button
+                key={id}
+                role="tab"
+                id={`tab-${id}`}
+                aria-controls={`panel-${id}`}
+                aria-selected={activeDockTab === id}
+                tabIndex={activeDockTab === id ? 0 : -1}
+                onKeyDown={(event) => {
+                  const ids = dockTabs.map(([entry]) => entry);
+                  const offset =
+                    event.key === "ArrowRight"
+                      ? 1
+                      : event.key === "ArrowLeft"
+                        ? -1
+                        : 0;
+                  if (offset || event.key === "Home" || event.key === "End") {
+                    event.preventDefault();
+                    const next =
+                      event.key === "Home"
+                        ? ids[0]
+                        : event.key === "End"
+                          ? ids[ids.length - 1]
+                          : ids[
+                              (ids.indexOf(activeDockTab) +
+                                offset +
+                                ids.length) %
+                                ids.length
+                            ];
+                    selectDockTab(next);
+                    document.getElementById(`tab-${next}`)?.focus();
+                  }
+                }}
+                className={activeDockTab === id ? "active" : ""}
+                onClick={() => selectDockTab(id)}
+              >
+                {label}
+                {count !== null && <span>{count}</span>}
+              </button>
+            ))}
+          </div>
+          {headline && (
+            <section
+              className="panel-content overview-panel"
+              role="tabpanel"
+              id="panel-overview"
+              aria-labelledby="tab-overview"
+              hidden={dockMode !== "overview"}
+            >
+              <HeadlinePanel
+                headline={headline}
+                data={data}
+                onInspectSource={(sourceId) =>
+                  inspect(headline.kind, headline.id, sourceId)
+                }
+                onReviewSources={() => {
+                  inspect(headline.kind, headline.id);
+                  // Land on the full source list rather than the item summary.
+                  requestAnimationFrame(() =>
+                    requestAnimationFrame(() =>
+                      dockRef.current
+                        ?.querySelector(".inspector .sources-section")
+                        ?.scrollIntoView({ block: "start" }),
+                    ),
+                  );
+                }}
+              />
+            </section>
+          )}
           <aside
             className="analysis-panel"
             ref={analysisRef}
@@ -779,64 +1619,6 @@ function BoardCanvas({
             aria-label="Analysis"
             hidden={dockMode !== "analysis"}
           >
-            <div
-              className="analysis-tabs"
-              role="tablist"
-              aria-label="Case analysis"
-            >
-              {(
-                [
-                  ["gaps", "Gaps", data.gaps.length],
-                  ["insights", "Insights", data.insights.length],
-                  ["suggestions", "Next evidence", data.suggestions.length],
-                ] as const
-              ).map(([id, label, count]) => (
-                <button
-                  key={id}
-                  role="tab"
-                  id={`tab-${id}`}
-                  aria-controls={`panel-${id}`}
-                  aria-selected={tab === id}
-                  tabIndex={tab === id ? 0 : -1}
-                  onKeyDown={(event) => {
-                    const tabs: Tab[] = ["gaps", "insights", "suggestions"];
-                    const offset =
-                      event.key === "ArrowRight"
-                        ? 1
-                        : event.key === "ArrowLeft"
-                          ? -1
-                          : 0;
-                    if (offset || event.key === "Home" || event.key === "End") {
-                      event.preventDefault();
-                      const next =
-                        event.key === "Home"
-                          ? "gaps"
-                          : event.key === "End"
-                            ? "suggestions"
-                            : tabs[
-                                (tabs.indexOf(tab) + offset + tabs.length) %
-                                  tabs.length
-                              ];
-                      setTab(next);
-                      setSelection(null);
-                      const targetNodes = getNodesForTab(next, data);
-                      focusTarget(targetNodes, { dockOpen: true });
-                      document.getElementById(`tab-${next}`)?.focus();
-                    }
-                  }}
-                  className={tab === id ? "active" : ""}
-                  onClick={() => {
-                    setTab(id);
-                    setSelection(null);
-                    const targetNodes = getNodesForTab(id, data);
-                    focusTarget(targetNodes, { dockOpen: true });
-                  }}
-                >
-                  {label}
-                  {count !== null && <span>{count}</span>}
-                </button>
-              ))}
-            </div>
             <div
               className="panel-content"
               role="tabpanel"
@@ -944,13 +1726,15 @@ function BoardCanvas({
             backLabel={
               returnMode === "audit"
                 ? "Back to audit"
-                : returnMode === "closed"
-                  ? "Back to board"
-                  : tab === "gaps"
-                    ? "Back to gaps"
-                    : tab === "insights"
-                      ? "Back to insights"
-                      : "Back to next evidence"
+                : returnMode === "overview"
+                  ? "Back to key finding"
+                  : returnMode === "closed"
+                    ? "Back to board"
+                    : tab === "gaps"
+                      ? "Back to gaps"
+                      : tab === "insights"
+                        ? "Back to insights"
+                        : "Back to next evidence"
             }
           />
           <section className="audit-panel" hidden={dockMode !== "audit"}>
@@ -1139,6 +1923,16 @@ export default function App() {
   const uploadFailed =
     statusQuery.isError || statusQuery.data?.status === "failed";
   const caseNotReady = isApiError(caseQuery.error, "not_ready");
+  // A query with no data goes back to "pending" on every refetch. While an import runs, those
+  // refetches must not swap the board for the opening spinner: that remounts the replay and
+  // restarts it, so the run would never be seen growing. Once a case has answered "not ready"
+  // (or opened to replay), keep the board mounted until its data arrives.
+  const awaitingRunRef = useRef<string | null>(null);
+  if (routeCaseId && (caseNotReady || replayRequested(routeCaseId)))
+    awaitingRunRef.current = routeCaseId;
+  const caseOpening =
+    caseQuery.isPending &&
+    !(routeCaseId && awaitingRunRef.current === routeCaseId);
   const caseNotFound =
     route.kind === "case" &&
     ((caseQuery.data !== undefined && caseQuery.data.id !== route.caseId) ||
@@ -1334,7 +2128,7 @@ export default function App() {
       ) : (
         <div className="app-shell">
           {(route.kind !== "case" ||
-            (!caseQuery.data && !caseNotReady) ||
+            (!caseQuery.data && !caseNotReady && caseOpening) ||
             caseNotFound) && (
             <WorkspaceNavigation
               navigate={navigate}
@@ -1363,7 +2157,7 @@ export default function App() {
                   Go home
                 </button>
               </div>
-            ) : caseQuery.isPending ? (
+            ) : caseOpening ? (
               <div className="center-state">
                 <LoaderCircle className="spin" />
                 <h2>Opening evidence workspace…</h2>
@@ -1431,6 +2225,8 @@ export default function App() {
                     }
                   >
                     <Board
+                      // The story is laid out from complete data, so the board starts afresh when a replay ends.
+                      key={context.growing ? "replay-growing" : "settled"}
                       layoutData={context.layoutData}
                       growing={context.growing}
                       hud={context.hud}
