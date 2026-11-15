@@ -8,7 +8,7 @@ Requires Bun 1.4.4. Run the app from the repository root:
 
 ```sh
 make frontend-install
-make backend-install    # once; Python 3.11+
+make backend-install    # once; uv creates backend/.venv (Python 3.12)
 make dev                # API on :8000 and Vite on :5173
 ```
 
