@@ -163,6 +163,51 @@ export interface ExplanationSet {
   }>;
 }
 
+/** A traditional-ML lead (`ML-xx`). Always inferred; it never changes findings. */
+export interface MlSignal {
+  id: string;
+  title: string;
+  text: string;
+  /** e.g. place_cluster, routine_outlier, message_triage. */
+  type: string;
+  /** Model ranking score, not a probability. */
+  score: number;
+  certainty?: Certainty;
+  /** Model name and parameters as reported by the backend. */
+  method?: { name?: string } & Record<string, unknown>;
+  citations: CitationId[];
+  status?: string;
+  key?: string;
+}
+
+/** The same information repeated across several files; one origin. */
+export interface SourceGroup {
+  id: string;
+  title: string;
+  text: string;
+  citations: CitationId[];
+}
+
+/** A source that is unusually silent; may be inactivity, an outage or missing data. */
+export interface MissingPeriod {
+  id: string;
+  title: string;
+  text: string;
+  kind: string;
+  start?: string;
+  end?: string;
+  citations: CitationId[];
+}
+
+/** Records whose time carries an assumption (for example no time zone). */
+export interface UncertainTime {
+  id: string;
+  title: string;
+  text: string;
+  count?: number;
+  citations: CitationId[];
+}
+
 export interface CaseData {
   id: string;
   title: string;
@@ -178,6 +223,10 @@ export interface CaseData {
   normalizedRecords?: NormalizedEvidenceRecord[];
   contradictions?: Contradiction[];
   explanations?: ExplanationSet[];
+  signals?: MlSignal[];
+  sourceGroups?: SourceGroup[];
+  missingPeriods?: MissingPeriod[];
+  uncertainTimes?: UncertainTime[];
   /** IANA time zone the case is displayed in. Times on the wire are ISO 8601. */
   timezone?: string;
 }

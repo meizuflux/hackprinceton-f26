@@ -12,7 +12,7 @@ import {
   ScanText,
 } from "lucide-react";
 import type { CaseData } from "../api/types";
-import { casePath, type WorkspaceView } from "../routing";
+import { casePath, type InsightsTab, type WorkspaceView } from "../routing";
 import { isMock } from "../api/client";
 import { EvidenceBrowser } from "./EvidenceBrowser";
 import { RecordsBrowser } from "./RecordsBrowser";
@@ -34,6 +34,7 @@ export function CaseWorkspace({
   projectName,
   view,
   sourceId,
+  insightsTab,
   navigate,
   onFocusOnBoard,
   children,
@@ -42,6 +43,7 @@ export function CaseWorkspace({
   projectName?: string;
   view: WorkspaceView;
   sourceId?: string;
+  insightsTab?: InsightsTab;
   navigate: (path: string) => void;
   onFocusOnBoard?: (selection: Selection) => void;
   children: ReactNode;
@@ -62,7 +64,7 @@ export function CaseWorkspace({
   }, [view]);
   const opener = useRef<HTMLElement | null>(null);
   const inspectorDock = useRef<HTMLElement | null>(null);
-  useEffect(() => setSelection(null), [view, sourceId]);
+  useEffect(() => setSelection(null), [view, sourceId, insightsTab]);
   useEffect(() => {
     if (selection && window.matchMedia("(max-width: 900px)").matches) {
       inspectorDock.current?.scrollIntoView({ block: "start" });
@@ -336,6 +338,8 @@ export function CaseWorkspace({
         >
           <InsightsPage
             data={data}
+            tab={insightsTab}
+            navigate={navigate}
             onInspect={inspect}
             onOpenSource={openSource}
             onFocusOnBoard={onFocusOnBoard}
