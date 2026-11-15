@@ -62,6 +62,7 @@ import {
 import { casePath, useRouter } from "./routing";
 import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
 import { CaseWorkspace } from "./components/CaseWorkspace";
+import { AskWidget } from "./components/AskWidget";
 import {
   Landing,
   ProjectManager,
@@ -900,9 +901,16 @@ function Board(props: {
   onClearFocusSelection?: () => void;
 }) {
   return (
-    <ReactFlowProvider>
-      <BoardCanvas {...props} />
-    </ReactFlowProvider>
+    <>
+      <ReactFlowProvider>
+        <BoardCanvas {...props} />
+      </ReactFlowProvider>
+      <AskWidget
+        caseId={props.data.id}
+        sourceIds={props.data.sources.map((source) => source.id)}
+        onOpenSource={props.onOpenSource}
+      />
+    </>
   );
 }
 
