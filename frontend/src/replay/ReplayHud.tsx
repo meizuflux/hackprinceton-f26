@@ -10,6 +10,7 @@ import { useState } from "react";
 import type { ReplayState } from "./useReplay";
 import {
   describeEvent,
+  feedRows,
   formatCost,
   formatDuration,
   formatTokens,
@@ -74,7 +75,7 @@ export function ReplayHud({ replay }: { replay: ReplayState }) {
     );
   }
 
-  const feed = replay.shown.slice(-FEED_LIMIT).reverse();
+  const feed = feedRows(replay.shown, FEED_LIMIT);
   const counters: Array<[string, number]> = [
     ["Files", p.filesParsed || p.filesHashed],
     ["Records", p.records],
@@ -233,10 +234,11 @@ export function ReplayHud({ replay }: { replay: ReplayState }) {
       </div>
 
       <ol className="replay-feed" role="log" aria-label="Run events">
-        {feed.map((event) => (
+        {feed.map(({ event, count }) => (
           <li key={event.seq} data-phase={event.phase}>
             <time>{formatDuration(event.tMs)}</time>
             {describeEvent(event)}
+            {count > 1 && <span className="replay-feed-count">×{count}</span>}
           </li>
         ))}
       </ol>

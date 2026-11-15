@@ -4,6 +4,9 @@ import { emptyCase, itemRevealed, revealCase } from "./reveal";
 import {
   advanceClock,
   countUpTo,
+  countShownBy,
+  displayTimes,
+  feedRows,
   describeEvent,
   formatCost,
   formatDuration,
@@ -181,5 +184,41 @@ describe("per-phase pacing", () => {
     );
     expect(playbackTime(8500 + 1000, segs, 10, 102_000)).toBeCloseTo(12_000);
     expect(playbackTime(1e9, segs, 10, 102_000)).toBe(102_000);
+  });
+});
+
+describe("display pacing", () => {
+  const ev = (seq: number, tMs: number, extra: Partial<TraceEvent> = {}) =>
+    ({ seq, tMs, phase: "agent", type: "agent_tool", ...extra }) as TraceEvent;
+
+  it("spreads a burst across the gap before the next event, in order", () => {
+    const burst = [1, 2, 3, 4].map((s) => ev(s, 1000));
+    const times = displayTimes([...burst, ev(5, 11000)]);
+    expect(times[0]).toBe(1000);
+    expect(times[3]).toBeLessThanOrEqual(1000 + 10000 * 0.8);
+    expect([...times].sort((a, b) => a - b)).toEqual(times);
+    expect(times[4]).toBe(11000);
+    expect(countShownBy(times, 1000)).toBe(1);
+  });
+
+  it("keeps a lone event and a final burst at their own times", () => {
+    expect(displayTimes([ev(1, 10), ev(2, 500), ev(3, 500)])).toEqual([
+      10, 500, 500,
+    ]);
+  });
+
+  it("folds consecutive calls of one tool into a counted row", () => {
+    const rows = feedRows(
+      [
+        ev(1, 0, { tool: "search_records" }),
+        ev(2, 1, { tool: "get_record" }),
+        ev(3, 2, { tool: "get_record" }),
+      ],
+      10,
+    );
+    expect(rows.map((r) => [r.event.seq, r.count])).toEqual([
+      [3, 2],
+      [1, 1],
+    ]);
   });
 });

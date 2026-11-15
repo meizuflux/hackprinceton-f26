@@ -8,7 +8,8 @@ import {
   phaseSegments,
   playbackRate,
   slowedPhase,
-  countUpTo,
+  countShownBy,
+  displayTimes,
   defaultSpeed,
   mergeEvents,
   runEndMs,
@@ -172,7 +173,8 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
     }
   }, [reachedEnd, playing]);
 
-  const count = countUpTo(events, effectiveClock);
+  const times = useMemo(() => displayTimes(events), [events]);
+  const count = countShownBy(times, effectiveClock);
   const shown = useMemo(() => events.slice(0, count), [events, count]);
   const progress = useMemo(() => summarize(shown), [shown]);
 

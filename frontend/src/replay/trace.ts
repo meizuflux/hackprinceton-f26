@@ -48,6 +48,83 @@ export function countUpTo(events: readonly TraceEvent[], tMs: number): number {
   return lo;
 }
 
+/** Events closer together than this on the replay clock count as one burst. */
+const BURST_WINDOW_MS = 5;
+/** Replay-clock spacing a burst is spread over per event (~150 ms on screen at 10×). */
+const BURST_STEP_MS = 1500;
+
+/**
+ * Presentation times for events. The agent issues tool calls in batches (up to
+ * ~60 at one instant), so each burst is spread evenly across at most 80% of the
+ * gap before the next event, `BURST_STEP_MS` apart. Order is kept and no event
+ * moves past the next burst; the feed still labels each event with its `tMs`.
+ */
+export function displayTimes(events: readonly TraceEvent[]): number[] {
+  const out = events.map((e) => e.tMs);
+  let i = 0;
+  while (i < events.length) {
+    let j = i + 1;
+    while (
+      j < events.length &&
+      events[j].tMs - events[i].tMs <= BURST_WINDOW_MS
+    )
+      j++;
+    const n = j - i;
+    if (n > 1 && j < events.length) {
+      const span = Math.min(
+        (events[j].tMs - events[i].tMs) * 0.8,
+        (n - 1) * BURST_STEP_MS,
+      );
+      for (let k = 0; k < n; k++)
+        out[i + k] = Math.max(
+          events[i + k].tMs,
+          events[i].tMs + (span * k) / (n - 1),
+        );
+    }
+    i = j;
+  }
+  return out;
+}
+
+/** Number of events whose display time is at or before the clock. */
+export function countShownBy(times: readonly number[], tMs: number): number {
+  let lo = 0;
+  let hi = times.length;
+  while (lo < hi) {
+    const mid = (lo + hi) >> 1;
+    if (times[mid] <= tMs) lo = mid + 1;
+    else hi = mid;
+  }
+  return lo;
+}
+
+export interface FeedRow {
+  event: TraceEvent;
+  /** Consecutive calls of the same agent tool folded into this row. */
+  count: number;
+}
+
+/** Feed rows, newest first, folding runs of the same agent tool into one counted row. */
+export function feedRows(
+  events: readonly TraceEvent[],
+  limit: number,
+): FeedRow[] {
+  const rows: FeedRow[] = [];
+  for (let i = events.length - 1; i >= 0 && rows.length < limit; i--) {
+    const e = events[i];
+    const last = rows.at(-1);
+    if (
+      last &&
+      e.type === "agent_tool" &&
+      last.event.type === "agent_tool" &&
+      last.event.tool === e.tool
+    )
+      last.count++;
+    else rows.push({ event: e, count: 1 });
+  }
+  return rows;
+}
+
 /** Merge a polled page into the events already held, keeping seq order and dropping repeats. */
 export function mergeEvents(
   held: readonly TraceEvent[],

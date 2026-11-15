@@ -229,3 +229,9 @@
     animation: none;
   }
 }
+
+.replay-feed-count {
+  margin-left: 6px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.75;
+}

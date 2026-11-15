@@ -48,7 +48,7 @@ export function AskWidget({
       aria-label="Ask a question"
       onSubmit={(event) => {
         event.preventDefault();
-        if (chat.live) submit(draft);
+        submit(draft);
       }}
     >
       {available && recorded.length > 0 && (
@@ -77,20 +77,16 @@ export function AskWidget({
           value={draft}
           maxLength={1000}
           onChange={(event) => setDraft(event.target.value)}
-          disabled={!available || !chat.live}
+          disabled={!available}
           placeholder={
-            !available
-              ? "Chat is unavailable"
-              : chat.live
-                ? "Ask about the evidence…"
-                : "Pick a recorded question"
+            available ? "Ask about the evidence…" : "Chat is unavailable"
           }
         />
         <button
           type="submit"
           className="ask-send"
           aria-label="Send question"
-          disabled={!draft.trim() || !available || !chat.live}
+          disabled={!draft.trim() || !available}
         >
           <ArrowUp size={15} />
         </button>
