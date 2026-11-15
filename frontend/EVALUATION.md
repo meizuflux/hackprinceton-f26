@@ -22,7 +22,7 @@ Method: independent design and technical assessments by `design_assessment` and 
 
 ## What works
 
-- Cork, paper pins, and linked relationships give Mapletrace a recognizable evidence-review identity.
+- Cork, paper pins, and linked relationships give MapleTrace a recognizable evidence-review identity.
 - Citations and uncertainty are part of the workflow rather than an unrelated help page.
 - One source inspector covers evidence, relationships, gaps, inferences, and suggested next steps.
 

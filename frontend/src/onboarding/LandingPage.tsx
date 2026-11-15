@@ -392,7 +392,7 @@ export function LandingPage({
             }}
           >
             <Fingerprint size={26} aria-hidden="true" />
-            <span className="landing-brand-text">mapletrace</span>
+            <span className="landing-brand-text">MapleTrace</span>
           </a>
 
           <nav className="landing-links" aria-label="Page navigation">
@@ -765,7 +765,7 @@ for (swipe, ws_session) in spatiotemporal_join(swipes, sessions):
                   <div className="pipeline-panel-copy">
                     <h3>Multiple Working Hypotheses & Source Independence</h3>
                     <p>
-                      Instead of forcing premature conclusions, Mapletrace
+                      Instead of forcing premature conclusions, MapleTrace
                       evaluates competing theories: borrowed credentials,
                       untruthful statements, clock drift, or associate
                       involvement. Echo chambers are rejected by tracking
@@ -884,7 +884,7 @@ def rank_next_steps(gaps, hypotheses):
             <h2 className="landing-section-title">The Contradiction Engine</h2>
             <p className="landing-section-desc">
               Human memory is approximate. Badges get borrowed. Clocks drift.
-              Mapletrace reconciles human claims against machine records without
+              MapleTrace reconciles human claims against machine records without
               jumping to accusations.
             </p>
           </div>
@@ -1085,7 +1085,7 @@ def rank_next_steps(gaps, hypotheses):
             </h2>
             <p className="landing-section-desc">
               Black-box AI models that generate ungrounded conclusions cannot be
-              admitted into court. Mapletrace enforces strict mathematical and
+              admitted into court. MapleTrace enforces strict mathematical and
               evidentiary guardrails.
             </p>
           </div>
@@ -1126,7 +1126,7 @@ def rank_next_steps(gaps, hypotheses):
                 Protected demographic attributes (nationality, issuing country)
                 are strictly barred from being model features. The Kestrel
                 dataset includes an intentional bias trap (RH-03) that
-                Mapletrace systematically rejects.
+                MapleTrace systematically rejects.
               </p>
             </div>
           </div>
@@ -1219,7 +1219,7 @@ def rank_next_steps(gaps, hypotheses):
               Step onto the evidence pinboard
             </h2>
             <p className="bottom-cta-lead">
-              Experience how Mapletrace transforms messy case files into clear,
+              Experience how MapleTrace transforms messy case files into clear,
               defensible investigative truth.
             </p>
 
@@ -1261,7 +1261,7 @@ def rank_next_steps(gaps, hypotheses):
           <div className="footer-brand-col">
             <div className="landing-brand">
               <Fingerprint size={20} aria-hidden="true" />
-              <span className="landing-brand-text">mapletrace</span>
+              <span className="landing-brand-text">MapleTrace</span>
             </div>
             <p className="footer-tagline">
               Evidence-first investigative workspace and automated reasoning

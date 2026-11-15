@@ -54,7 +54,7 @@ export function ProjectManager({
           }}
         >
           <Fingerprint size={25} aria-hidden="true" />
-          mapletrace
+          MapleTrace
         </a>
       </header>
 
