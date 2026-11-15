@@ -58,6 +58,23 @@
   color: var(--amber);
   font-style: normal;
 }
+/* Shortened model waits are the normal pace above 1x: stated, not flagged. */
+.replay-slowed:not([data-pace="slowed"]) {
+  color: var(--brand-text);
+}
+
+/* A counter that is counting up to a new value. */
+.count-up {
+  font-variant-numeric: tabular-nums;
+  transition: color 0.4s ease;
+}
+.replay-counters .count-up[data-counting] {
+  color: var(--brand-200);
+}
+/* Top-bar counts outline their chip while they count. */
+.analysis-entry strong:has(.count-up[data-counting]) {
+  box-shadow: 0 0 0 1px currentColor;
+}
 .replay-bar {
   height: 4px;
   background: var(--line);

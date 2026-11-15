@@ -11,14 +11,17 @@ import type { ReplayState } from "./useReplay";
 
 /** Fired on `window` when the run panel opens or collapses. */
 export const RUN_PANEL_EVENT = "mapletrace:run-panel";
+import { CountUp } from "./CountUp";
 import {
   describeEvent,
   feedRows,
   formatCost,
   formatDuration,
+  formatSpeed,
   formatTokens,
   phaseOrder,
   speeds,
+  type Pace,
 } from "./trace";
 import "./replay.css";
 
@@ -28,6 +31,22 @@ function timingLabel(replay: ReplayState) {
   if (replay.timing === "live") return "live timing";
   if (replay.timing === "estimated") return "estimated (from token counts)";
   return "recorded";
+}
+
+const phaseLabel = (pace: Pace) =>
+  phaseOrder.find((x) => x.id === pace.phase)?.label ?? pace.phase;
+
+/** States plainly when the replay runs slower or faster than the chosen speed. */
+function paceNote(pace: Pace | undefined, speed: number): string {
+  if (!pace)
+    return speed > 1
+      ? "Model waits are shortened; every event is shown"
+      : "Recorded waits shown in full";
+  if (pace.kind === "slowed")
+    return pace.speed >= 0.1
+      ? `${phaseLabel(pace)} shown at ${formatSpeed(pace.speed)} so each step is visible`
+      : `${phaseLabel(pace)} took ${Math.round(pace.realMs)} ms; slowed so each step is visible`;
+  return `Skipping model wait: ${Math.round(pace.realMs / 1000)} s of waiting shown at ${formatSpeed(pace.realMs / pace.wallMs)}`;
 }
 
 /** Floating run panel on the mind map: phases, counters, cost and an event feed. */
@@ -137,11 +156,9 @@ export function ReplayHud({ replay }: { replay: ReplayState }) {
             Recorded run {formatDuration(replay.endMs)} ·{" "}
             {replay.finished ? "finished" : `playing at ${replay.speed}×`}
             <br />
-            {replay.slowed && (
-              <em className="replay-slowed">
-                {phaseOrder.find((x) => x.id === replay.slowed!.phase)?.label}{" "}
-                shown at {replay.slowed.speed.toFixed(1)}× so each step is
-                visible
+            {!replay.finished && (
+              <em className="replay-slowed" data-pace={replay.pace?.kind}>
+                {paceNote(replay.pace, replay.speed)}
                 <br />
               </em>
             )}
@@ -226,7 +243,12 @@ export function ReplayHud({ replay }: { replay: ReplayState }) {
         {counters.map(([name, value]) => (
           <div key={name}>
             <dt>{name}</dt>
-            <dd>{value.toLocaleString("en-US")}</dd>
+            <dd>
+              <CountUp
+                value={value}
+                duration={name === "Agent insights" ? 700 : 350}
+              />
+            </dd>
           </div>
         ))}
       </dl>
