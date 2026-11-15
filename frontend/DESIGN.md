@@ -233,7 +233,7 @@ Excalifont is distributed with its upstream SIL Open Font License in `public/fon
 - **Headline** (Newsreader 400, 42px, 1.1): the projects page heading; its empty-state and case-card headings use Newsreader 26px.
 - **Excerpt** (Newsreader 400, 17px, 1.55): original source excerpts on paper in the inspector; chat citations use 13.5px.
 - **Title** (DM Sans 550, 20px): the inspector's item heading.
-- **Section** (DM Sans 550, 16px): case section headings (Raw evidence, Generalized files, Insights sections, Ask about this case); the evidence browser heading uses 17px and the Insights intro 22px.
+- **Section** (DM Sans 550, 16px): case section headings (Raw evidence, Generalized files, Insights sections, Ask about this case); the evidence browser heading uses 17px. The Insights page sets its h2 at 16px in its sticky header row, beside the tabs and search.
 - **Case title** (DM Sans 550, 15px): the single case `h1` in the top bar, with a 12px muted subtitle line.
 - **Body** (DM Sans 400, 14px, 1.5): default interface reading size.
 - **Detail / Compact / Micro** (DM Sans 400, 12px / 11px / 10px): secondary descriptions, chips, counts and timestamps.

@@ -53,6 +53,8 @@ export interface EvidenceNode {
   stage?: string;
   evidenceIds?: string[];
   media?: MediaInfo;
+  /** Analysis item this card stands for (`ML-05`, `I-11`); absent on record cards. */
+  itemId?: string;
 }
 
 export interface EvidenceEdge {
@@ -215,6 +217,8 @@ export interface MlSignal {
   citations: CitationId[];
   status?: string;
   key?: string;
+  /** Always `ml` from the backend. */
+  origin?: Origin;
 }
 
 /** The same information repeated across several files; one origin. */
