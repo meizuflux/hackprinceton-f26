@@ -49,13 +49,21 @@ import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
   arrangePins,
-  layoutCaseGraph,
   getPinDimensions,
   settlePinMoves,
-  threadHandles,
   type Pin,
   type Point,
 } from "./components/board-layout";
+import { layoutCaseGraph } from "./components/graph-layout";
+import {
+  ZoomLevelWatcher,
+  cardWording,
+  createReuse,
+  searchText,
+  threadLayout,
+  useHoverLabels,
+} from "./components/board-render";
+import { cardTitle, sourceHeading } from "./components/readable";
 import {
   StoryCardNode,
   StoryGroupNode,
@@ -183,24 +191,6 @@ function threadEdge(e: EvidenceEdge): Edge<ThreadData> {
   };
 }
 
-/** Labels of parallel threads between the same two cards are stacked apart. */
-function labelOffsets(
-  edges: Array<{ id: string; source: string; target: string }>,
-) {
-  const pairs = new Map<string, string[]>();
-  for (const edge of edges) {
-    const key = [edge.source, edge.target].sort().join("|");
-    pairs.set(key, [...(pairs.get(key) ?? []), edge.id]);
-  }
-  const offsets = new Map<string, number>();
-  for (const ids of pairs.values()) {
-    if (ids.length < 2) continue;
-    ids.forEach((id, index) =>
-      offsets.set(id, (index - (ids.length - 1) / 2) * 34),
-    );
-  }
-  return offsets;
-}
 function BoardCanvas({
   data,
   layoutData = data,
@@ -262,8 +252,17 @@ function BoardCanvas({
     [],
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const hover = useHoverLabels();
+  // Far zoom shows titles only; set by ZoomLevelWatcher on threshold crossings.
+  const [farZoom, setFarZoom] = useState(false);
+  // Card actions stay stable across renders so memoized cards skip re-rendering.
+  const inspectRef = useRef<(kind: Selection["kind"], id: string) => void>(
+    () => {},
+  );
+  const stableInspect = useCallback(
+    (kind: Selection["kind"], id: string) => inspectRef.current(kind, id),
+    [],
+  );
   const storyPin = useCallback(
     (id: string, position: Point, arriveFrom?: Point): Node<StoryNodeState> => {
       const size = isGroupId(id)
@@ -612,6 +611,7 @@ function BoardCanvas({
     },
     [dockMode, returnMode, data, focusTarget],
   );
+  inspectRef.current = inspect;
 
   const closeInspector = useCallback(() => {
     setSelection(null);
@@ -704,10 +704,11 @@ function BoardCanvas({
         layoutData.nodes.map((n) => {
           const dim = getPinDimensions(n);
           const laidOut = layout?.get(n.id);
+          const wording = cardWording(n, layoutData);
           return {
             id: n.id,
             type: "evidence",
-            ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
+            ariaLabel: `${wording.title}. ${n.type}. Inspect evidence and sources`,
             position: laidOut
               ? { x: 100 + laidOut.x, y: laidOut.y }
               : { x: 100 + n.position.x, y: n.position.y * 1.2 },
@@ -715,19 +716,20 @@ function BoardCanvas({
             height: dim.height,
             data: {
               ...n,
+              ...wording,
               timeZone: layoutData.timezone,
               caseId: layoutData.id,
               width: dim.width,
               height: dim.height,
-              onInspect: () => inspect("node", n.id),
+              onInspect: () => stableInspect("node", n.id),
               onInspectGap: n.gapId
-                ? () => inspect("gap", n.gapId!)
+                ? () => stableInspect("gap", n.gapId!)
                 : undefined,
             },
           };
         }),
       ),
-    [layoutData, inspect, layout],
+    [layoutData, stableInspect, layout],
   );
   const initialEdges: Edge<ThreadData>[] = useMemo(
     () => layoutData.edges.map(threadEdge),
@@ -843,9 +845,7 @@ function BoardCanvas({
     () =>
       normalizedSearch
         ? revealedNodes.filter((n) =>
-            `${n.data.label} ${n.data.summary}`
-              .toLowerCase()
-              .includes(normalizedSearch),
+            searchText(n.data).includes(normalizedSearch),
           )
         : revealedNodes,
     [revealedNodes, normalizedSearch],
@@ -887,24 +887,18 @@ function BoardCanvas({
       citations.slice(0, 3).flatMap((id) => {
         const source = sourceById.get(id);
         if (!source) return [];
-        const evidenceId = source.metadata?.evidence_id;
-        const locator = source.metadata?.locator;
-        return [
-          {
-            id,
-            locator: evidenceId
-              ? `${evidenceId}${locator ? ` ${locator}` : ""}`
-              : source.path.split("/").pop() || id,
-            text: source.excerpt,
-          },
-        ];
+        return [{ id, ...sourceHeading(source), text: source.excerpt }];
       }),
     [sourceById],
   );
 
+  // Story card actions go through a ref so their data objects can be reused.
+  const storyActions = useRef({ toggleGroup, showConnections });
+  storyActions.current = { toggleGroup, showConnections };
+  const reuseStory = useMemo(() => createReuse<Node>(), []);
   const storyFlowNodes = useMemo(() => {
     if (!storyMode || !story) return [];
-    return storyNodes.map((n) => {
+    return storyNodes.map((n): Node => {
       const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
       const group = groupById.get(n.id);
       if (group) {
@@ -913,68 +907,87 @@ function BoardCanvas({
               (id) => matchingNodeIds.has(id) && !storyVisibleIds.has(id),
             ).length
           : 0;
-        const isDimmed =
-          (matchingNodeIds && matches === 0) || (focusedNodeIds && !isFocused);
-        return {
-          ...n,
-          className:
-            `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
-          data: {
-            title: group.title,
-            rule: group.rule,
-            nodeType: group.nodeType,
-            total: group.memberIds.length,
-            hidden: group.memberIds.filter((id) => !storyVisibleIds.has(id))
-              .length,
-            width: n.width ?? STORY_GROUP.width,
-            height: n.height ?? STORY_GROUP.height,
-            isFocused,
-            matches,
-            onToggle: () => toggleGroup(n.id),
-          },
-        };
+        const isDimmed = Boolean(
+          (matchingNodeIds && matches === 0) || (focusedNodeIds && !isFocused),
+        );
+        const hidden = group.memberIds.filter(
+          (id) => !storyVisibleIds.has(id),
+        ).length;
+        return reuseStory(
+          n.id,
+          [n, group, isFocused, isDimmed, matches, hidden],
+          () => ({
+            ...n,
+            className:
+              `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+            data: {
+              title: group.title,
+              rule: group.rule,
+              nodeType: group.nodeType,
+              total: group.memberIds.length,
+              hidden,
+              width: n.width ?? STORY_GROUP.width,
+              height: n.height ?? STORY_GROUP.height,
+              isFocused,
+              matches,
+              onToggle: () => storyActions.current.toggleGroup(n.id),
+            },
+          }),
+        );
       }
       const source = nodeById.get(n.id)!;
       const expanded = expandedId === n.id;
-      const isDimmed =
+      const isDimmed = Boolean(
         (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
-        (focusedNodeIds && !isFocused);
-      return {
-        ...n,
-        zIndex: expanded ? 1000 : undefined,
-        className:
-          `${isDimmed && !expanded ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
-        data: {
-          label: source.label,
-          type: source.type,
-          subtitle: source.subtitle,
-          summary: source.summary,
-          citations: source.citations,
-          time: source.time,
-          timeZone: data.timezone,
-          certainty: source.certainty,
-          gapId: source.gapId,
-          width: n.width ?? STORY_CARD.width,
-          height: n.height ?? STORY_CARD.height,
-          hero: n.id === story.centerId,
-          expanded,
-          active:
-            selection?.kind === "node" ? selection.id === n.id : isFocused,
-          isFocused,
-          excerpts: expanded ? excerptsFor(source.citations) : [],
-          hiddenNeighbours: hiddenNeighbours(n.id, data.edges, storyVisibleIds)
-            .length,
-          arriveFrom: n.data.arriveFrom,
-          onToggle: () =>
-            setExpandedId((current) => (current === n.id ? null : n.id)),
-          onCollapse: () => setExpandedId(null),
-          onInspect: () => inspect("node", n.id),
-          onInspectGap: source.gapId
-            ? () => inspect("gap", source.gapId!)
-            : undefined,
-          onShowConnections: () => showConnections(n.id),
-        },
-      };
+        (focusedNodeIds && !isFocused),
+      );
+      const active =
+        selection?.kind === "node" ? selection.id === n.id : isFocused;
+      const hiddenCount = hiddenNeighbours(
+        n.id,
+        data.edges,
+        storyVisibleIds,
+      ).length;
+      return reuseStory(
+        n.id,
+        [n, source, isFocused, isDimmed, expanded, active, hiddenCount, data],
+        () => ({
+          ...n,
+          zIndex: expanded ? 1000 : undefined,
+          className:
+            `${isDimmed && !expanded ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+          data: {
+            ...cardWording(source, data),
+            label: source.label,
+            type: source.type,
+            subtitle: source.subtitle,
+            citations: source.citations,
+            time: source.time,
+            timeZone: data.timezone,
+            certainty: source.certainty,
+            origin: source.origin,
+            stage: source.stage,
+            gapId: source.gapId,
+            width: n.width ?? STORY_CARD.width,
+            height: n.height ?? STORY_CARD.height,
+            hero: n.id === story.centerId,
+            expanded,
+            active,
+            isFocused,
+            excerpts: expanded ? excerptsFor(source.citations) : [],
+            hiddenNeighbours: hiddenCount,
+            arriveFrom: n.data.arriveFrom,
+            onToggle: () =>
+              setExpandedId((current) => (current === n.id ? null : n.id)),
+            onCollapse: () => setExpandedId(null),
+            onInspect: () => stableInspect("node", n.id),
+            onInspectGap: source.gapId
+              ? () => stableInspect("gap", source.gapId!)
+              : undefined,
+            onShowConnections: () => storyActions.current.showConnections(n.id),
+          },
+        }),
+      );
     });
   }, [
     storyMode,
@@ -984,14 +997,13 @@ function BoardCanvas({
     groupById,
     matchingNodeIds,
     storyVisibleIds,
-    toggleGroup,
     nodeById,
     expandedId,
     data,
     selection,
     excerptsFor,
-    inspect,
-    showConnections,
+    stableInspect,
+    reuseStory,
   ]);
 
   /** Story threads: real threads between visible cards, plus one aggregate per card and group. */
@@ -1018,7 +1030,8 @@ function BoardCanvas({
       const kind = thread.kind === "mixed" ? "inference" : thread.kind;
       const label = aggregateLabel(thread);
       const group = groupById.get(thread.target);
-      const from = nodeById.get(thread.source)?.label ?? thread.source;
+      const fromNode = nodeById.get(thread.source);
+      const from = fromNode ? cardTitle(fromNode) : thread.source;
       return {
         id: thread.id,
         source: thread.source,
@@ -1058,42 +1071,39 @@ function BoardCanvas({
 
   // Items revealed in the same tick fade in a few tens of ms apart.
   const revealDelays = useRef(new Map<string, number>());
+  // Unchanged cards and threads keep their object identity, so React Flow
+  // re-renders only what a selection, search, drag or reveal changed.
+  const reuseNode = useMemo(() => createReuse<Node<PinData>>(), []);
   const visibleNodes = useMemo(() => {
     let fresh = 0;
     return revealedNodes.map((n) => {
       const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
-      const isDimmed =
+      const isDimmed = Boolean(
         (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
-        (focusedNodeIds && !isFocused);
+        (focusedNodeIds && !isFocused),
+      );
       if (growing && !revealDelays.current.has(n.id))
         revealDelays.current.set(n.id, Math.min(fresh++, 6) * 50);
       const delay = revealDelays.current.get(n.id);
-      return {
+      const active =
+        selection?.kind === "node" ? selection.id === n.id : isFocused;
+      return reuseNode(n.id, [n, isFocused, isDimmed, active, delay], () => ({
         ...n,
         ...(delay
           ? { style: { ...n.style, "--reveal-delay": `${delay}ms` } }
           : {}),
         className:
           `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
-        data: {
-          ...n.data,
-          active:
-            selection?.kind === "node" ? selection.id === n.id : isFocused,
-          isFocused,
-          onInspect: () => inspect("node", n.id),
-          onInspectGap: n.data.gapId
-            ? () => inspect("gap", n.data.gapId!)
-            : undefined,
-        },
-      };
+        data: { ...n.data, active, isFocused },
+      }));
     });
   }, [
     revealedNodes,
     matchingNodeIds,
     focusedNodeIds,
     selection,
-    inspect,
     growing,
+    reuseNode,
   ]);
 
   const { decorate: decorateMorph } = morph;
@@ -1102,67 +1112,97 @@ function BoardCanvas({
     [decorateMorph, storyMode, storyFlowNodes, visibleNodes],
   );
 
+  // Handles and label spots follow the cards; while a card is being dragged
+  // the label spots keep their last placement so dragging stays smooth.
+  const lastSpots = useRef({
+    spots: new Map<string, number>(),
+    covered: new Set<string>(),
+  });
+  const edgeList = useMemo(
+    () =>
+      storyMode
+        ? storyEdges
+        : edges.filter((edge) => revealedEdgeIds.has(edge.id)),
+    [storyMode, storyEdges, edges, revealedEdgeIds],
+  );
+  const placedCards: Node[] = storyMode ? storyNodes : revealedNodes;
+  const threadGeometry = useMemo(() => {
+    // An expanded story card overlays its neighbours; labels avoid it too,
+    // while its threads still attach to its compact footprint.
+    const expanded =
+      storyMode && expandedId
+        ? placedCards.find((node) => node.id === expandedId)
+        : undefined;
+    const obstacles = expanded
+      ? [
+          {
+            x:
+              expanded.position.x -
+              (STORY_EXPANDED.width - (expanded.width ?? 0)) / 2,
+            y: expanded.position.y,
+            ...STORY_EXPANDED,
+          },
+        ]
+      : [];
+    const dragging = placedCards.some((node) => node.dragging);
+    const result = threadLayout(edgeList, placedCards, obstacles);
+    if (dragging) return { ...result, ...lastSpots.current };
+    lastSpots.current = { spots: result.spots, covered: result.covered };
+    return result;
+  }, [edgeList, placedCards, storyMode, expandedId]);
+  const reuseEdge = useMemo(() => createReuse<Edge<ThreadData>>(), []);
   const visibleEdges = useMemo(() => {
-    // In the full graph a running replay shows only the threads revealed so far.
-    const list = storyMode
-      ? storyEdges
-      : edges.filter((edge) => revealedEdgeIds.has(edge.id));
-    const positioned: Array<{
-      id: string;
-      position: Point;
-      width?: number;
-      height?: number;
-    }> = storyMode ? storyNodes : nodes;
-    const nodesById = new Map(positioned.map((node) => [node.id, node]));
-    const offsets = labelOffsets(list);
-    return list.map((edge) => {
-      const source = nodesById.get(edge.source);
-      const target = nodesById.get(edge.target);
+    const { handles, spots, covered } = threadGeometry;
+    return edgeList.map((edge) => {
       const isFocused = focusedNodeIds
         ? focusedNodeIds.has(edge.source) && focusedNodeIds.has(edge.target)
         : false;
-      const isDimmed = focusedNodeIds && !isFocused;
-      const touches = (id: string | null) =>
-        id !== null && (edge.source === id || edge.target === id);
-      return {
-        ...edge,
-        className:
-          `${edge.className ?? ""} ${isDimmed ? "dimmed-edge" : ""} ${isFocused ? "focused-edge" : ""}`.trim(),
-        ...(source && target
-          ? storyMode
-            ? // Story cards differ in size, so threads attach by centres.
-              threadHandles(centreOf(source), centreOf(target))
-            : threadHandles(source.position, target.position)
-          : {}),
-        selected:
-          selection?.kind === "edge" ? selection.id === edge.id : isFocused,
-        data: edge.data
-          ? {
-              ...edge.data,
-              isFocused,
-              isDimmed: Boolean(isDimmed),
-              labelOffset: offsets.get(edge.id),
-              hovered: hoveredEdgeId === edge.id || touches(hoveredNodeId),
-              onInspect: edge.data.aggregateCount
-                ? edge.data.onInspect
-                : () => inspect("edge", edge.id),
-            }
-          : undefined,
-      };
+      const isDimmed = Boolean(focusedNodeIds && !isFocused);
+      const selected =
+        selection?.kind === "edge" ? selection.id === edge.id : isFocused;
+      const pair = handles.get(edge.id);
+      const labelT = spots.get(edge.id);
+      const labelCovered = covered.has(edge.id);
+      return reuseEdge(
+        edge.id,
+        [
+          edge,
+          isFocused,
+          isDimmed,
+          selected,
+          pair?.sourceHandle,
+          pair?.targetHandle,
+          labelT,
+          labelCovered,
+        ],
+        () => ({
+          ...edge,
+          className:
+            `${edge.className ?? ""} ${isDimmed ? "dimmed-edge" : ""} ${isFocused ? "focused-edge" : ""}`.trim(),
+          ...(pair ?? {}),
+          selected,
+          data: edge.data
+            ? {
+                ...edge.data,
+                isFocused,
+                isDimmed,
+                labelT,
+                labelCovered,
+                onInspect: edge.data.aggregateCount
+                  ? edge.data.onInspect
+                  : () => stableInspect("edge", edge.id),
+              }
+            : undefined,
+        }),
+      );
     });
   }, [
-    storyMode,
-    storyEdges,
-    storyNodes,
-    edges,
-    revealedEdgeIds,
-    nodes,
+    threadGeometry,
+    edgeList,
     focusedNodeIds,
     selection,
-    inspect,
-    hoveredEdgeId,
-    hoveredNodeId,
-    expandedId,
+    stableInspect,
+    reuseEdge,
   ]);
 
   const switchView = useCallback(
@@ -1282,7 +1322,7 @@ function BoardCanvas({
             </div>
           </div>
           <div
-            className={`canvas-wrap ${storyMode ? "is-story" : ""}${growing ? " replay-growing" : ""}${morph.className}`}
+            className={`canvas-wrap ${storyMode ? "is-story" : ""}${growing ? " replay-growing" : ""}${farZoom ? " is-far" : ""}${morph.className}`}
             style={{ ...boardColorVars(), ...morph.style }}
           >
             <ReactFlow
@@ -1312,10 +1352,10 @@ function BoardCanvas({
                 if (edge?.data?.aggregateCount) edge.data.onInspect();
                 else inspect("edge", e.id);
               }}
-              onNodeMouseEnter={(_, n) => setHoveredNodeId(n.id)}
-              onNodeMouseLeave={() => setHoveredNodeId(null)}
-              onEdgeMouseEnter={(_, e) => setHoveredEdgeId(e.id)}
-              onEdgeMouseLeave={() => setHoveredEdgeId(null)}
+              onNodeMouseEnter={hover.onNodeMouseEnter}
+              onNodeMouseLeave={hover.onLeave}
+              onEdgeMouseEnter={hover.onEdgeMouseEnter}
+              onEdgeMouseLeave={hover.onLeave}
               onPaneClick={() => {
                 if (expandedId) setExpandedId(null);
                 else if (dockMode === "inspector") closeInspector();
@@ -1347,6 +1387,7 @@ function BoardCanvas({
                 <ZoomReadout />
               </Controls>
               {!storyMode && <CanvasMinimap frameNodes={nodes} />}
+              <ZoomLevelWatcher onFarChange={setFarZoom} />
             </ReactFlow>
             {story && !growing && (
               <div

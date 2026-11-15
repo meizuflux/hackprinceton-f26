@@ -65,8 +65,8 @@ describe("media card helpers", () => {
       getPinDimensions({ type: "event", media: { kind: "photo" } }).height,
     ).toBeGreaterThan(getPinDimensions({ type: "event" }).height);
     expect(getPinDimensions({ type: "event" })).toEqual({
-      width: 252,
-      height: 228,
+      width: 248,
+      height: 184,
     });
   });
 });

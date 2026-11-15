@@ -16,17 +16,36 @@ import {
   Layers,
   Link2,
   Network,
+  Sparkles,
 } from "lucide-react";
-import { cardIcons } from "./EvidenceNode";
-import { cardKind } from "./board-colors";
+import { cardIcons, kindWord } from "./EvidenceNode";
+import { cardKind, markedOrigin, originMarks } from "./board-colors";
+import { OriginBadge } from "./OriginBadge";
+import type { Origin } from "../api/types";
 import { formatCaseTime } from "./presentation";
 import { paperOutline } from "./paper-note";
 import "./story-board.css";
 
-export type StoryExcerpt = { id: string; locator: string; text: string };
+/** A cited excerpt: a readable heading (`file · row 72`) with the citation ID kept beside it. */
+export type StoryExcerpt = {
+  id: string;
+  heading: string;
+  citation: string;
+  text: string;
+};
 
 export type StoryCardData = {
+  /** Raw record label. */
   label: string;
+  /** Readable title; falls back to the label. */
+  title?: string;
+  /** The raw label as metadata when the title differs. */
+  rawLabel?: string;
+  labelOrigin?: "rules" | "llm";
+  origin?: Origin;
+  stage?: string;
+  method?: string;
+  methodFull?: string;
   type: string;
   subtitle?: string;
   summary: string;
@@ -101,6 +120,8 @@ export const StoryCardNode = memo(function StoryCardNode({
   data,
 }: NodeProps<Node<StoryCardData>>) {
   const Icon = cardIcons[data.type as keyof typeof cardIcons] || FileText;
+  const title = data.title ?? data.label;
+  const mark = markedOrigin(data.origin);
   const toggleRef = useRef<HTMLButtonElement>(null);
   const wasExpanded = useRef(data.expanded);
   useEffect(() => {
@@ -123,12 +144,15 @@ export const StoryCardNode = memo(function StoryCardNode({
   // One line: when it happened, else what it is, else how well it is sourced.
   const meta = data.time
     ? formatCaseTime(data.time, data.timeZone)
-    : data.summary && data.summary.slice(0, 24) !== data.label.slice(0, 24)
+    : data.summary && data.summary.slice(0, 24) !== title.slice(0, 24)
       ? data.summary
       : sources;
+  const kind = kindWord(data.type, data.subtitle, data.origin);
   // A subtitle that only repeats the record type adds nothing.
   const kindNote =
-    data.subtitle && data.subtitle.toLowerCase() !== data.type.toLowerCase()
+    data.subtitle &&
+    data.subtitle.toLowerCase() !== data.type.toLowerCase() &&
+    data.subtitle !== kind
       ? data.subtitle
       : undefined;
   return (
@@ -142,9 +166,9 @@ export const StoryCardNode = memo(function StoryCardNode({
     >
       <Handles />
       <article
-        className={`story-card kind-${cardKind(data.type)} ${data.hero ? "is-hero" : ""} ${data.expanded ? "is-expanded" : ""} ${data.certainty === "inferred" ? "is-inferred" : ""} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""} ${data.isFocused ? "is-focused" : ""}`}
+        className={`story-card kind-${cardKind(data.type)} ${mark ? `has-origin origin-${mark}` : ""} ${data.hero ? "is-hero" : ""} ${data.expanded ? "is-expanded" : ""} ${data.certainty === "inferred" ? "is-inferred" : ""} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""} ${data.isFocused ? "is-focused" : ""}`}
         onKeyDown={onKeyDown}
-        aria-label={data.expanded ? `${data.label}, expanded` : undefined}
+        aria-label={data.expanded ? `${title}, expanded` : undefined}
       >
         <svg
           className="pin-outline"
@@ -165,7 +189,7 @@ export const StoryCardNode = memo(function StoryCardNode({
           type="button"
           className="story-card-toggle"
           aria-expanded={Boolean(data.expanded)}
-          aria-label={`${data.label}. ${data.type}${data.certainty === "inferred" ? ", inferred" : ""}${data.gapId ? ", open question" : ""}. ${data.expanded ? "Collapse card" : "Expand card"}`}
+          aria-label={`${title}. ${data.type}${data.certainty === "inferred" ? ", inferred" : ""}${mark ? `, from ${originMarks[mark].label}` : ""}${data.gapId ? ", open question" : ""}. ${data.expanded ? "Collapse card" : "Expand card"}`}
           onClick={(event) => {
             event.stopPropagation();
             data.onToggle();
@@ -174,14 +198,33 @@ export const StoryCardNode = memo(function StoryCardNode({
           <span className="story-card-type">
             <span className="pin-kind-chip">
               <Icon size={12} strokeWidth={2.25} aria-hidden="true" />
-              {data.hero ? `${data.type} · story centre` : data.type}
+              {data.hero ? `${kind} · story centre` : kind}
             </span>
-            {data.certainty === "inferred" && (
-              <span className="pin-certainty">Inferred</span>
-            )}
+            <span className="story-card-marks">
+              {data.certainty === "inferred" && (
+                <span className="pin-certainty">Inferred</span>
+              )}
+              <OriginBadge origin={data.origin} stage={data.stage} />
+            </span>
           </span>
-          <span className="story-card-title" title={data.label}>
-            {breakableTitle(data.label)}
+          <span
+            className="story-card-title"
+            title={
+              data.rawLabel
+                ? `${title} (record label: ${data.rawLabel})`
+                : title
+            }
+          >
+            {data.labelOrigin === "llm" && (
+              <span
+                className="pin-llm-title"
+                title="Readable title written by an LLM (inferred)"
+              >
+                <Sparkles size={10} strokeWidth={2.4} aria-hidden="true" />
+                <span className="sr-only">Title inferred by an LLM. </span>
+              </span>
+            )}
+            {breakableTitle(title)}
           </span>
           {!data.expanded && (
             <span className="story-card-meta">
@@ -191,6 +234,14 @@ export const StoryCardNode = memo(function StoryCardNode({
         </button>
         {data.expanded && (
           <div className="story-card-body nodrag nopan nowheel">
+            {data.rawLabel && (
+              <p
+                className="story-card-raw"
+                title="Label in the original record"
+              >
+                {data.rawLabel}
+              </p>
+            )}
             {(data.time || kindNote) && (
               <p className="story-card-when">
                 {data.time && <CalendarClock size={12} aria-hidden="true" />}
@@ -206,11 +257,28 @@ export const StoryCardNode = memo(function StoryCardNode({
               <ul className="story-card-excerpts" aria-label="Key sources">
                 {data.excerpts.map((excerpt) => (
                   <li key={excerpt.id}>
-                    <span>{excerpt.locator}</span>
+                    <span className="story-excerpt-head">
+                      <span>{excerpt.heading}</span>
+                      <code title="Citation">{excerpt.citation}</code>
+                    </span>
                     <q>{excerpt.text}</q>
                   </li>
                 ))}
               </ul>
+            )}
+            {mark && (
+              <p className={`story-card-origin origin-${mark}`}>
+                <OriginBadge origin={data.origin} stage={data.stage} />
+                <span>
+                  {originMarks[mark].label}
+                  {data.methodFull && (
+                    <>
+                      {" · "}
+                      <span title={data.methodFull}>{data.methodFull}</span>
+                    </>
+                  )}
+                </span>
+              </p>
             )}
             <p className="story-card-count">
               <Link2 size={11} aria-hidden="true" /> {sources}
@@ -256,7 +324,7 @@ export const StoryCardNode = memo(function StoryCardNode({
               <button
                 type="button"
                 className="story-action icon"
-                aria-label={`Collapse ${data.label}`}
+                aria-label={`Collapse ${title}`}
                 title="Collapse (Esc)"
                 onClick={(event) => {
                   event.stopPropagation();
