@@ -1,49 +1,31 @@
-# Vultr deployment (initial implementation)
+# Vultr deployment
 
-This deploys a **single Ubuntu VM** using the Vultr v2 API and builds the repository's Docker images on it. Caddy serves the frontend and proxies `/api` to the backend on the same domain. Caddy obtains and renews a publicly trusted TLS certificate and redirects HTTP to HTTPS. The app has **no authentication**, so anyone who can reach it can access cases and upload data. Use fictional data only. There is no login, rollback, or production hardening. Docker-published ports may bypass host firewall rules; do not rely on UFW alone. The firewall must permit public TCP ports 80 and 443 for certificate issuance and renewal, SSH (22) from the deployment machine, and outbound access for packages and image builds.
+This deploys a **single Ubuntu VM** using the Vultr API and builds the Docker images on it. Caddy serves the frontend and proxies `/api` to the backend on the same HTTPS domain. The app has **no authentication**, so anyone who can reach it can access cases and upload data. Use fictional data only.
 
-## Prerequisites
+## Run
 
-- Python 3.11+, Git, and an OpenSSH client locally; a Vultr API key exported as `VULTR_API_KEY`.
-- An Ubuntu instance with root SSH access, or a Vultr SSH key registered in the account and its matching local private key. Select an Ubuntu OS ID, region, and plan compatible with one another. Choose enough memory and disk for both builds and case data.
-- A Vultr region and plan that support Block Storage. A new volume incurs additional charges; an existing volume must contain exactly one ext4 filesystem.
-- A public DNS hostname with an A record pointing to the instance. Remove any AAAA record that does not point to the same server. A new instance prints its IP so you can update DNS during setup; retry with its ID if DNS or certificate issuance takes too long.
-- A public IPv4 SSH source CIDR for a new Vultr firewall group, or an existing firewall group with appropriate rules. New groups allow TCP 80/443 from IPv4 and IPv6 and SSH only from the supplied CIDR. On existing instances, attaching a different group replaces the current group, so verify access first. Reused groups are not modified or validated.
-- A pre-existing **private, unversioned** Vultr Object Storage bucket and its HTTPS endpoint and access keys. The access keys need permission to read bucket versioning and read/write its lifecycle configuration. Buckets with versioning enabled or suspended are rejected because expiration would not guarantee removal of old versions. The script does not create the subscription or bucket. Use a separate location or account for stronger isolation, and configure appropriate access, retention and lifecycle policies.
-- Verify the server's SSH host key through a trusted channel and add it to your local `known_hosts`. The script uses your normal SSH host-key policy and never disables verification. When provisioning, it prints the IP before waiting for SSH, allowing you to verify and add the host key in another terminal; otherwise retry with the saved instance ID.
-- Commit the desired revision first: only tracked files in `HEAD` are transferred. Tracked changes block deployment; untracked and ignored files are never transferred. The server requires internet access to install Docker and build images.
-
-## Deploy
+Install Python 3.11+, Git, and OpenSSH locally. Commit the desired revision first: the script transfers only tracked files in `HEAD` and rejects tracked uncommitted changes. Set the Vultr API key and run:
 
 ```sh
 export VULTR_API_KEY='...'
-export VULTR_OBJECT_ACCESS_KEY='...'
-export VULTR_OBJECT_SECRET_KEY='...'
-# Optional: live LLM calls; without a key the backend uses recorded responses.
-export ANTHROPIC_API_KEY='...'
-# Optional: defaults to claude-sonnet-5-5; MAPLETRACE_CORS may also be set.
-export MAPLETRACE_LLM_MODEL='claude-sonnet-5-5'
-
-python3 scripts/deploy-vultr.py \
-  --region REGION_ID --plan PLAN_ID --os-id UBUNTU_OS_ID \
-  --ssh-key-id VULTR_SSH_KEY_ID --identity-file ~/.ssh/id_ed25519 \
-  --ssh-cidr YOUR_PUBLIC_IP/32 --domain maple.example.com \
-  --volume-size-gb 40 --backup-endpoint https://REGION.vultrobjects.com \
-  --backup-bucket PRIVATE_BUCKET
+python3 scripts/deploy-vultr.py
 ```
 
-Creating an instance and a block volume incurs Vultr charges. The script prints the instance, firewall group, and volume IDs immediately; retain them. A failure or interruption **does not delete any of these resources**, so retry using the same IDs rather than creating duplicates:
+The API key must be permitted to manage instances, SSH keys, firewall groups, block storage, Object Storage subscriptions and buckets. The default run creates **billable** resources: an `ewr` (New Jersey) `vc2-2c-4gb` instance, a 40 GB high-performance block volume, and a Standard Object Storage subscription. Confirm availability and pricing for your account before running it. The script provisions a private bucket and retrieves its S3 credentials from Vultr; separate object-storage credentials are not needed.
 
-```sh
-python3 scripts/deploy-vultr.py --instance-id INSTANCE_ID \
-  --identity-file ~/.ssh/id_ed25519 --domain maple.example.com --volume-id VOLUME_ID \
-  --firewall-group-id FIREWALL_GROUP_ID --backup-endpoint https://REGION.vultrobjects.com \
-  --backup-bucket PRIVATE_BUCKET
-```
+The script generates an unencrypted Ed25519 SSH key under `~/.local/state/mapletrace-vultr/`, registers its public key with Vultr, and saves resource IDs (not API or S3 credentials) in `~/.local/state/mapletrace-vultr/deployment.json`. Protect and back up the local private key. SSH uses `StrictHostKeyChecking=accept-new`: the first observed host key is trusted, then later changes are rejected. This is convenient but does not independently authenticate the first connection; for stronger verification, add the host key to `known_hosts` through a trusted channel first.
 
-A network error during a create request can leave the result unknown. Firewall creation can also fail after creating only some rules: inspect and complete the group before reusing its ID. Check the Vultr console before retrying to avoid duplicate billable instances. Existing instances must already have Ubuntu, root SSH, and suitable firewall rules. The script uses `root` and installs Docker using Docker's convenience installer if Docker is absent. Existing Docker installations must already include the Compose plugin. Set all desired environment variables on every invocation; omitted optional values are cleared. The backend's upload limit remains 100 MB to match Caddy. Same-origin `/api` requests do not need CORS; set `MAPLETRACE_CORS` only for additional trusted origins.
+New firewall groups allow SSH and web ports from anywhere. Newly created Ubuntu instances disable SSH password and keyboard-interactive authentication through cloud-init; SSH requires the private key. Existing instances are not reconfigured, so verify their SSH settings before exposing them. Pass `--ssh-cidr YOUR_IPV4/32` to restrict SSH when your IP is stable. The script only adds managed firewall rules: changing an existing group's CIDR does not remove older rules. `--firewall-group-id` reuses an existing group without changing it; verify its rules before attaching it to an instance. Docker-published ports can bypass host firewall rules.
 
-The script creates or attaches the block volume in the instance region. It formats only a newly created, completely blank disk; an existing volume must already contain one ext4 filesystem. If a retry finds a newly created but unformatted volume, format that specific volume manually after verifying its identity. The mount uses the volume’s Vultr device ID and filesystem UUID. The script configures Docker to require the mount at boot, and the backend uses a directory on the mounted filesystem as `/data`.
+Without `--domain`, the script uses `<instance-ip-with-dashes>.sslip.io` for HTTPS, with DNS supplied by the independent sslip.io service. Public certificate issuance depends on that service, the certificate authority, and their rate limits; no uptime is guaranteed. To use your own domain instead, pass `--domain your-domain.example` and point its A record to the printed instance IP. Remove any AAAA record that points elsewhere. Either way ports 80 and 443 must be publicly reachable.
+
+Optional values can be overridden: `--region`, `--plan`, `--os-id`, `--volume-size-gb`, `--identity-file`, `--ssh-key-id`, `--firewall-group-id`, `--object-storage-id`, `--backup-bucket`, and `--domain`. The default `--os-id 2284` is Ubuntu 24.04 LTS x64. Run `python3 scripts/deploy-vultr.py --help` for all options. Existing volumes must contain one ext4 filesystem, and an existing bucket must be private and unversioned. Do not use an existing bucket unless its lifecycle rules and backup prefix are appropriate.
+
+For live, uncached LLM calls, optionally export `ANTHROPIC_API_KEY`. `MAPLETRACE_LLM_MODEL` and `MAPLETRACE_CORS` are also optional. Set all desired optional variables on every invocation; omitted values are cleared from the server configuration. No application authentication is provided.
+
+Re-run the same command to reuse resources recorded in the local state file. Use `--state-file PATH` for a separate deployment; changing to a different file can create additional billable resources. The script prints resource IDs as they are created. If a create request times out, the remote outcome may be unknown and an ID may not be saved; inspect the Vultr console before retrying to avoid duplicates. Resources are not automatically deleted. Existing instances must already have Ubuntu and root SSH access; when reusing one without saved state, pass `--identity-file` and `--instance-id` as well as the other existing resource IDs. A partial deployment may need manual recovery; the initial version has not been tested against a live account.
+
+The script creates or attaches the block volume in the instance region. It formats only a newly created, completely blank disk; an existing volume must already contain one ext4 filesystem. A volume created by this deployment remains eligible for initialization on retry until it has been mounted; reused volumes are never automatically formatted. The mount uses the volume’s Vultr device ID and filesystem UUID. The script configures Docker to require the mount at boot, and the backend uses a directory on the mounted filesystem as `/data`.
 
 The script installs a daily case-data backup timer for 03:30 UTC and runs an initial backup before declaring deployment successful. It does not configure Vultr instance backups; the instance can be rebuilt from the repository and deployment script, while Caddy obtains certificates again. Each backup stops the backend while archiving `/data`, then restarts it before upload. During that interval API requests fail, and running ingestion, analysis, or chat jobs may be interrupted. Ensure the server has enough free primary-disk space for a compressed case archive.
 
@@ -61,7 +43,7 @@ docker compose --project-name mapletrace --env-file /opt/mapletrace/.env -f scri
 docker compose --project-name mapletrace --env-file /opt/mapletrace/.env -f scripts/compose.vultr.yaml logs --tail 100
 ```
 
-Case data persists on the separately billed Vultr block volume across deployments and instance replacement. The volume must be attached in the same region and mounted before Docker can start. Backups must be monitored and restores tested separately. Removing the instance or volume is manual and destructive. Caddy stores certificates in the `mapletrace_caddy-data` volume; preserve it across restarts. Access the app at `https://YOUR_DOMAIN/`. If certificate issuance fails, check DNS, firewall access and frontend logs, then retry using the same instance ID.
+Case data persists on the separately billed Vultr block volume across deployments and instance replacement. The volume must be attached in the same region and mounted before Docker can start. Backups must be monitored and restores tested separately. Removing the instance or volume is manual and destructive. Caddy stores certificates in the `mapletrace_caddy-data` volume; preserve it across restarts. The script prints the app URL after deployment. If certificate issuance fails, check DNS, firewall access and frontend logs, then retry using the same instance ID.
 
 Vultr reference: [instance provisioning](https://docs.vultr.com/products/compute/instances/cloud-compute/provisioning) and [firewall groups](https://docs.vultr.com/products/network/firewall-groups/provisioning).
 
