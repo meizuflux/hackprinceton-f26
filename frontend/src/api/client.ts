@@ -55,6 +55,10 @@ export const mockApi: CaseApi = {
     return [];
   },
 
+  async openDemo() {
+    return demoCase.id;
+  },
+
   async listFiles() {
     return [];
   },

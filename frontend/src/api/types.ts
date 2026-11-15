@@ -260,6 +260,8 @@ export interface CaseApi {
   /** Without an ID, returns the most recent ready case. */
   getCase(caseId?: string): Promise<CaseData>;
   listCases(): Promise<CaseSummary[]>;
+  /** Opens the demo case (a prepared snapshot with the live adapter) and returns its ID. */
+  openDemo(): Promise<string>;
   /** Evidence file inventory; empty when the adapter has no ingestion output. */
   listFiles(caseId: string): Promise<EvidenceFile[]>;
   getRecords(

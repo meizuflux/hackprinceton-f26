@@ -1056,13 +1056,14 @@ export default function App() {
     setError("");
   }
   closeUploadRef.current = closeUpload;
-  /** Opens a case by ID, or the most recent ready case when no ID is given. */
-  async function openCase(caseId?: string) {
+  /** Opens a case by ID, or the demo case when no ID is given. */
+  async function openCase(requestedId?: string) {
     setError("");
     setOpeningCase(true);
     try {
+      const caseId = requestedId ?? (await api.openDemo());
       const data = await queryClient.fetchQuery({
-        queryKey: ["case", caseId ?? "latest"],
+        queryKey: ["case", caseId],
         queryFn: () => api.getCase(caseId),
       });
       queryClient.setQueryData(["case", data.id], data);
@@ -1076,8 +1077,8 @@ export default function App() {
         navigate(casePath(data.id));
     } catch (e) {
       setError(
-        isApiError(e, "no_cases")
-          ? "No analysed case yet. Upload a ZIP to start one."
+        isApiError(e, "no_demo_snapshot")
+          ? "The demo case has not been prepared on this server. Upload a ZIP instead."
           : e instanceof Error
             ? e.message
             : "Could not open the case. Try again.",

@@ -98,6 +98,13 @@ export function createHttpApi(baseUrl: string): CaseApi {
       );
     },
 
+    async openDemo(): Promise<string> {
+      const result = await request<{ caseId: string }>("/demo", {
+        method: "POST",
+      });
+      return result.caseId;
+    },
+
     listCases(): Promise<CaseSummary[]> {
       return request<CaseSummary[]>("/cases");
     },

@@ -115,6 +115,18 @@ describe("HTTP case adapter", () => {
     });
   });
 
+  it("opens the prepared demo case", async () => {
+    const fetchMock = vi.fn(async () => json({ caseId: "kestrel-demo" }));
+    vi.stubGlobal("fetch", fetchMock);
+    await expect(api.openDemo()).resolves.toBe("kestrel-demo");
+    const [url, init] = fetchMock.mock.calls[0] as unknown as [
+      string,
+      RequestInit,
+    ];
+    expect(url).toBe("/api/demo");
+    expect(init.method).toBe("POST");
+  });
+
   it("builds original evidence download URLs", () => {
     expect(api.evidenceFileUrl("k-1", "EV-071")).toBe(
       "/api/cases/k-1/evidence/EV-071",
