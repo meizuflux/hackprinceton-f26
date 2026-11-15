@@ -40,6 +40,20 @@
 .evidence-pin {
   isolation: isolate;
 }
+/* A box shadow under the paper instead of an SVG drop-shadow filter: a hundred
+   filtered cards made every zoom step re-rasterize. */
+.evidence-pin .pin-outline {
+  filter: none;
+}
+.evidence-pin::before {
+  content: "";
+  position: absolute;
+  inset: 5px 4px 3px;
+  z-index: -2;
+  border-radius: 2px;
+  box-shadow: 0 3px 6px #4e443b2e;
+  pointer-events: none;
+}
 .evidence-pin.active {
   outline: 3px solid var(--amber);
   outline-offset: 3px;
@@ -191,8 +205,9 @@
   position: absolute;
   pointer-events: all;
   max-width: 166px;
-  padding: 3px 4px;
-  background: #eee8de;
+  padding: 2px 6px;
+  border: 0;
+  background: #f3eee4;
   color: #5d493c;
   border-radius: 3px;
   font:
@@ -208,12 +223,27 @@
   font-weight: 400;
   color: #79442f;
 }
-.thread-label:not(.observed) > span {
+/* The relationship wording always shows; the inferred/claim badge joins it on
+   hover, focus or selection (contradictions always show theirs). Dashes on the
+   thread and the chip mark inference without relying on colour. */
+.thread-label > .thread-badge {
   display: none;
 }
-.thread-label:not(.observed):is(:hover, :focus-visible, .is-selected) > span {
+.thread-label:is(:hover, :focus-visible, .is-selected) > .thread-badge,
+.thread-label.thread-contradicts > .thread-badge {
   display: block;
-  margin-top: 3px;
+  margin-bottom: 2px;
+}
+/* Labels sit above ordinary cards (placement keeps them off cards where it
+   can); an expanded story card (z-index 1000) still covers them. */
+.react-flow__edgelabel-renderer {
+  z-index: 3;
+}
+.thread-text {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
 }
 .thread-label:hover,
 .thread-label.is-selected {
@@ -243,4 +273,212 @@
 .evidence-list button.is-focused {
   border-color: var(--amber);
   background: #2a2c20;
+}
+
+/*
+ * Card shapes by role (sizes in board-layout.ts). A person is a name tag with
+ * an initial disc; phones, accounts and places are compact; events,
+ * statements, analysis and media cards carry a summary.
+ */
+.evidence-pin h3 {
+  color: #2f332a;
+}
+.pin-raw {
+  margin-top: 2px;
+  font:
+    400 10.5px/1.35 "IBM Plex Mono",
+    monospace;
+  color: #5b5f52;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+.pin-llm-title {
+  display: inline-grid;
+  place-items: center;
+  width: 15px;
+  height: 15px;
+  margin-right: 4px;
+  vertical-align: 2px;
+  border: 1px dashed var(--origin-ink, #33373d);
+  border-radius: 3px;
+  color: var(--origin-ink, #33373d);
+}
+.pin-method {
+  margin-right: 6px;
+  padding-right: 6px;
+  border-right: 1px solid #c9c2b2;
+  font-weight: 600;
+  color: var(--origin-ink, #33373d);
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.pin-footer > span {
+  min-width: 0;
+  white-space: nowrap;
+}
+
+/* Person: a small name tag. */
+.evidence-pin.variant-person {
+  flex-direction: row;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 6px 8px 14px;
+}
+.pin-avatar {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--pin-ink) 14%, #faf8f1);
+  border: 1.5px solid color-mix(in srgb, var(--pin-ink) 55%, transparent);
+  color: var(--pin-ink);
+  font:
+    400 19px/1 "Excalifont",
+    "DM Sans",
+    sans-serif;
+}
+.pin-person-text {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  gap: 2px;
+}
+.evidence-pin.variant-person h3 {
+  font-size: 18px;
+  line-height: 1.12;
+  overflow-wrap: break-word;
+}
+.pin-person-meta {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  font-size: 11px;
+  color: #50573e;
+  white-space: nowrap;
+}
+.pin-gap.is-inline {
+  margin: 0;
+  min-height: 0;
+  padding: 1px 4px;
+  font-size: 12.5px;
+}
+.evidence-pin.variant-person .pin-inspect {
+  align-self: center;
+  flex-shrink: 0;
+}
+
+/* Compact: phones, accounts and places. */
+.evidence-pin.variant-compact {
+  padding: 13px 14px 2px;
+}
+.evidence-pin.variant-compact .pin-type {
+  margin-bottom: 4px;
+}
+.evidence-pin.variant-compact h3,
+.evidence-pin.location.variant-compact h3 {
+  font-size: 19px;
+  font-weight: 400;
+}
+.pin-summary.is-short {
+  font-size: 13.5px;
+  -webkit-line-clamp: 1;
+  margin-top: 3px;
+}
+.evidence-pin.variant-compact .pin-footer,
+.evidence-pin.variant-person .pin-footer {
+  min-height: 28px;
+}
+
+/* Full cards keep the summary to two lines; the inspector has the rest. */
+.evidence-pin.variant-full .pin-summary {
+  -webkit-line-clamp: 2;
+  font-size: 14px;
+}
+.evidence-pin.variant-full h3 {
+  font-size: 19.5px;
+}
+
+/*
+ * Origin: a graphite stamp whose form differs by producer (dotted outline for
+ * a classical ML model, solid for the AI agent, dashed for LLM extraction)
+ * plus a patterned strip along the card's foot. Never a new hue.
+ */
+.origin-badge.origin-ml {
+  background: #faf8f1;
+  color: var(--origin-ink, #33373d);
+  outline: 1.5px dotted var(--origin-ink, #33373d);
+  outline-offset: -1.5px;
+}
+.origin-badge.origin-llm {
+  background: #faf8f1;
+  color: var(--origin-ink, #33373d);
+  outline: 1.5px dashed var(--origin-ink, #33373d);
+  outline-offset: -1.5px;
+}
+
+/* Far zoom: cards read as titles; detail returns when zoomed in. */
+.canvas-wrap.is-far
+  .evidence-pin
+  :is(
+    .pin-summary,
+    .pin-raw,
+    .pin-subtitle,
+    .pin-time,
+    .pin-certainty,
+    .pin-gap,
+    .pin-footer > span,
+    .pin-person-meta
+  ) {
+  visibility: hidden;
+}
+.canvas-wrap.is-far .evidence-pin h3 {
+  font-size: 24px;
+  -webkit-line-clamp: 3;
+}
+.canvas-wrap.is-far .evidence-pin.variant-person h3 {
+  font-size: 18px;
+  -webkit-line-clamp: 2;
+}
+.canvas-wrap.is-far
+  .thread-label:not(.is-selected, .thread-contradicts, :focus-visible) {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.origin-badge {
+  text-transform: none;
+}
+
+/* A label with no clear spot folds to a knot on its thread so it never hides a
+   card; hovering the thread or either card, focus or selection unfolds it. */
+.thread-label.is-covered:not(
+    .thread-contradicts,
+    :hover,
+    :focus-visible,
+    .is-selected
+  ) {
+  width: 14px;
+  height: 14px;
+  min-width: 0;
+  padding: 0;
+  border-radius: 50%;
+  outline: none;
+  background: #faf8f1;
+  box-shadow: inset 0 0 0 3px var(--thread-ink, #6b5d4f);
+}
+.thread-label.is-covered:not(
+    .thread-contradicts,
+    :hover,
+    :focus-visible,
+    .is-selected
+  )
+  > * {
+  display: none;
 }
