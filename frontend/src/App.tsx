@@ -707,7 +707,7 @@ function BoardCanvas({
                 >
                   <ZoomReadout />
                 </Controls>
-                <CanvasMinimap />
+                <CanvasMinimap frameNodes={nodes} />
               </ReactFlow>
             )}
             {search.trim() && (

@@ -77,7 +77,7 @@ export function revealCase(data: CaseData, progress: TraceProgress): CaseData {
     edges: data.edges.filter((e) => graph.edges.has(e.id)),
     gaps: data.gaps.filter((g) => itemRevealed(g, progress, "gaps")),
     suggestions: data.suggestions.filter((s) =>
-      itemRevealed(s, progress, "gaps"),
+      itemRevealed(s, progress, "next_steps"),
     ),
     insights: data.insights.filter((i) =>
       itemRevealed(

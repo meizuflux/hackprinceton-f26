@@ -59,23 +59,25 @@ function useFlowView(): Bounds & { zoom: number } {
 /**
  * Overview of the pins. The map frames the pins alone, so its scale holds still
  * while the view moves; the viewport rectangle tracks pan and zoom, and dragging
- * it moves the board as if holding the rectangle.
+ * it moves the board as if holding the rectangle. `frameNodes` (every pin of the
+ * case) keeps the scale fixed while a replay reveals pins one by one.
  */
-export function CanvasMinimap() {
+export function CanvasMinimap({ frameNodes }: { frameNodes?: Node[] } = {}) {
   const rawId = useId();
   const markerId = `minimap-arrow-${rawId.replace(/:/g, "")}`;
   const nodes = useStore((state) => state.nodes);
   const edges = useStore((state) => state.edges);
   const view = useFlowView();
   const { setViewport } = useReactFlow();
+  const framed = frameNodes?.length ? frameNodes : nodes;
   const frame = useMemo(
     () =>
       frameContent(
         boundsOf(
-          nodes.map((node) => ({ ...node.position, ...nodeSize(node) })),
+          framed.map((node) => ({ ...node.position, ...nodeSize(node) })),
         ),
       ),
-    [nodes],
+    [framed],
   );
   const latest = useRef({ frame, view });
   latest.current = { frame, view };
