@@ -55,6 +55,18 @@ export const mockApi: CaseApi = {
     return [];
   },
 
+  async listFiles() {
+    return [];
+  },
+
+  async getRecords() {
+    return { total: 0, limit: 0, offset: 0, items: [] };
+  },
+
+  async getAuditChain() {
+    return undefined;
+  },
+
   evidenceFileUrl() {
     return undefined;
   },

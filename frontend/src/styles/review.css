@@ -421,3 +421,37 @@
   border-color: var(--green);
   color: #e3edd2;
 }
+.audit-chain {
+  margin: 0 0 16px;
+  padding: 12px;
+  border: 1px solid #566449;
+  border-radius: 5px;
+  background: #2d3825;
+  color: #c0c9b5;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.audit-chain.failed {
+  border-color: #8a4a3a;
+  background: #3e2722;
+}
+.audit-chain strong {
+  display: block;
+  color: #e3edd2;
+  font-size: 13px;
+}
+.audit-chain ul {
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+.audit-chain li.bad {
+  color: #f0a58f;
+}
+.audit-chain code {
+  font-size: 10px;
+}
+.audit-step p {
+  overflow-wrap: anywhere;
+}

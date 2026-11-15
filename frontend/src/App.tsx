@@ -90,6 +90,11 @@ function BoardCanvas({
   const [dockMode, setDockMode] = useState<
     "closed" | "analysis" | "inspector" | "audit"
   >("closed");
+  const auditChain = useQuery({
+    queryKey: ["audit-chain", data.id],
+    queryFn: () => api.getAuditChain(data.id),
+    enabled: !isMock && dockMode === "audit",
+  });
   const [returnMode, setReturnMode] = useState<"closed" | "analysis" | "audit">(
     "analysis",
   );
@@ -824,6 +829,35 @@ function BoardCanvas({
             }
           />
           <section className="audit-panel" hidden={dockMode !== "audit"}>
+            {auditChain.data && (
+              <div
+                className={`audit-chain ${auditChain.data.verified ? "verified" : "failed"}`}
+                role="status"
+              >
+                <strong>
+                  {auditChain.data.verified
+                    ? "Audit chain verified"
+                    : "Audit chain verification failed"}
+                </strong>
+                <span>
+                  {auditChain.data.entries.length} hash-chained entries from
+                  ingestion and analysis · head{" "}
+                  <code>{auditChain.data.head.slice(0, 16)}…</code>
+                </span>
+                <ul>
+                  {auditChain.data.checks.map((check) => (
+                    <li key={check.message} className={check.ok ? "" : "bad"}>
+                      {check.ok ? "✓" : "✗"} {check.message}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+            {auditChain.isError && (
+              <p className="error-message" role="alert">
+                Could not verify the audit chain: {auditChain.error.message}
+              </p>
+            )}
             <div className="audit-steps">
               {data.audit.map((a) => (
                 <div className="audit-step" key={a.id}>

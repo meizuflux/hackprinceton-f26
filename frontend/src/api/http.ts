@@ -1,5 +1,8 @@
 import type {
+  AuditChain,
   CaseApi,
+  EvidenceFile,
+  RecordPage,
   CaseData,
   CaseSummary,
   IngestionProgress,
@@ -97,6 +100,30 @@ export function createHttpApi(baseUrl: string): CaseApi {
 
     listCases(): Promise<CaseSummary[]> {
       return request<CaseSummary[]>("/cases");
+    },
+
+    listFiles(caseId: string): Promise<EvidenceFile[]> {
+      return request<EvidenceFile[]>(
+        `/cases/${encodeURIComponent(caseId)}/files`,
+      );
+    },
+
+    getRecords(caseId, query = {}): Promise<RecordPage> {
+      const params = new URLSearchParams();
+      if (query.evidenceId) params.set("evidenceId", query.evidenceId);
+      if (query.limit !== undefined) params.set("limit", String(query.limit));
+      if (query.offset !== undefined)
+        params.set("offset", String(query.offset));
+      const search = params.size ? `?${params}` : "";
+      return request<RecordPage>(
+        `/cases/${encodeURIComponent(caseId)}/records${search}`,
+      );
+    },
+
+    getAuditChain(caseId: string): Promise<AuditChain> {
+      return request<AuditChain>(
+        `/cases/${encodeURIComponent(caseId)}/audit-chain`,
+      );
     },
 
     evidenceFileUrl(caseId: string, evidenceId: string) {

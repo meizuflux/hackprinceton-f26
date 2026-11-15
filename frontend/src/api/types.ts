@@ -165,6 +165,49 @@ export interface CaseSummary {
   ready: boolean;
 }
 
+/** One file from the authoritative ingestion inventory. */
+export interface EvidenceFile {
+  evidenceId: string;
+  fileId: number;
+  path: string;
+  filename: string;
+  sha256: string;
+  bytes: number;
+  format: string;
+  evidenceType: string;
+  parseStatus: string;
+  recordCount: number;
+  /** Null when the manifest lists no hash for the file. */
+  manifestMatch: boolean | null;
+  origin: string;
+  title?: string | null;
+}
+
+export interface RecordPage {
+  total: number;
+  limit: number;
+  offset: number;
+  items: NormalizedEvidenceRecord[];
+}
+
+export interface AuditChainEntry {
+  seq: number;
+  time: string;
+  stage: string;
+  action: string;
+  detail: Record<string, unknown>;
+  hash: string;
+  prevHash: string;
+  source: "ingest" | "analysis";
+}
+
+export interface AuditChain {
+  verified: boolean;
+  head: string;
+  checks: Array<{ source: string; ok: boolean; message: string }>;
+  entries: AuditChainEntry[];
+}
+
 export type ApiMode = "mock" | "live";
 
 export interface CaseApi {
@@ -174,6 +217,14 @@ export interface CaseApi {
   /** Without an ID, returns the most recent ready case. */
   getCase(caseId?: string): Promise<CaseData>;
   listCases(): Promise<CaseSummary[]>;
+  /** Evidence file inventory; empty when the adapter has no ingestion output. */
+  listFiles(caseId: string): Promise<EvidenceFile[]>;
+  getRecords(
+    caseId: string,
+    query?: { evidenceId?: string; limit?: number; offset?: number },
+  ): Promise<RecordPage>;
+  /** Hash-chained audit log, re-verified; undefined without ingestion output. */
+  getAuditChain(caseId: string): Promise<AuditChain | undefined>;
   /** URL of the original evidence file, when the adapter can serve bytes. */
   evidenceFileUrl(caseId: string, evidenceId: string): string | undefined;
 }

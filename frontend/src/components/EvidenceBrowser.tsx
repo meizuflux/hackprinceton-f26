@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Download, FileSearch, Files, Search, ShieldAlert } from "lucide-react";
 import { api } from "../api/client";
 import { formatCaseTime } from "./presentation";
@@ -12,6 +12,12 @@ export type EvidenceBrowserProps = {
   selectedSourceId?: string;
   onInspect: (sourceId: string) => void;
   generalizedRecords?: NormalizedEvidenceRecord[];
+  /** Total records available from ingestion, when more can be loaded. */
+  recordTotal?: number;
+  /** Controls above the record list (file filter). */
+  recordFilter?: ReactNode;
+  /** Controls below the record list (paging). */
+  recordFooter?: ReactNode;
 };
 
 export function EvidenceBrowser({
@@ -20,6 +26,9 @@ export function EvidenceBrowser({
   selectedSourceId,
   onInspect,
   generalizedRecords = [],
+  recordTotal,
+  recordFilter,
+  recordFooter,
 }: EvidenceBrowserProps) {
   const [search, setSearch] = useState("");
   const [activeSourceId, setActiveSourceId] = useState(selectedSourceId);
@@ -72,11 +81,13 @@ export function EvidenceBrowser({
             <h2>Generalized files</h2>
           </div>
           <span className="evidence-state-chip">
-            {citedRecords.length
-              ? `${citedRecords.length} normalized records`
-              : api.mode === "mock"
-                ? "Unavailable in mock"
-                : "Unavailable"}
+            {recordTotal !== undefined
+              ? `${citedRecords.length} of ${recordTotal} normalized records`
+              : citedRecords.length
+                ? `${citedRecords.length} normalized records`
+                : api.mode === "mock"
+                  ? "Unavailable in mock"
+                  : "Unavailable"}
           </span>
         </header>
         <label className="evidence-search">
@@ -89,6 +100,7 @@ export function EvidenceBrowser({
             onChange={(event) => setSearch(event.target.value)}
           />
         </label>
+        {recordFilter}
         {generalizedRecords.length > 0 ? (
           <div className="normalized-records" aria-label="Normalized records">
             <p className="normalized-records-intro">
@@ -137,6 +149,7 @@ export function EvidenceBrowser({
                 </footer>
               </article>
             ))}
+            {recordFooter}
           </div>
         ) : (
           <div className="evidence-empty-state">
