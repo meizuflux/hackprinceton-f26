@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import math
 
-from . import media as media_mod
+from . import labels as labels_mod, media as media_mod
 from .analytics import case_tz
 from .store import iso
 
@@ -38,6 +38,7 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
             sources[cid] = {"id": cid, "path": c["path"], "kind": r.type if r else "file",
                             "timestamp": iso(r.ts or r.start) if r and (r.ts or r.start) else "",
                             "hash": c["sha256"], "excerpt": (r.content if r else "")[:1200],
+                            **({"fileLabel": labels_mod.file_label(f)} if f else {}),
                             "metadata": {k: str(v) for k, v in meta.items() if v not in (None, "")}}
         return cid
 
@@ -165,6 +166,8 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
     extras["media_stats"] = media_mod.add_media(case, R, nodes, edges, src, extras.get("vision"))
     for obj in [*nodes.values(), *edges.values()]:
         obj["evidenceIds"] = list(dict.fromkeys(c.split(":", 1)[0] for c in obj["citations"]))
+    # readable titles (presentation only; `label` and `summary` stay exactly as they are)
+    labels_mod.apply(case, R, nodes, case_tz(case))
     _layout(nodes)
     story = _story(R, nodes, edges, gap_nodes)
 
@@ -251,7 +254,7 @@ def _story(R, nodes: dict, edges: dict, gap_nodes: dict) -> dict | None:
             ids.append(nid)
 
     for e in edges.values():
-        if center in (e["source"], e["target"]):
+        if center in (e["source"], e["target"]) and e.get("stage") != "media_links":  # media stays one click away
             add(e["target"] if e["source"] == center else e["source"])
     for g in sorted(R.get("gap"), key=lambda g: -g.score)[:2]:
         for nid in gap_nodes.get(g.id, []):

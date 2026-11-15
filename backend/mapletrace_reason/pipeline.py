@@ -167,6 +167,17 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
     brd = board_mod.build_board(case, ctx, R, verdicts, timeline, changes, applied, extras)
     if trace:
         trace.stage_finished("media_links", "Media cards and links", extras["media_stats"], media_started)
+    # Optional LLM display labels: card titles only (labelOrigin "llm"); never read by any stage. Skipped silently
+    # without a recorded cache (label_llm.py).
+    if llm:
+        from . import label_llm
+        try:
+            label_summary = label_llm.run(case, brd, llm, trace, audit)
+        except Exception as exc:  # noqa: BLE001 - optional presentation stage
+            label_summary = {"enabled": True, "error": str(exc)[:300]}
+            audit.write("llm", "display_labels_failed", {"error": str(exc)[:300]})
+        if label_summary and llm_run:
+            analysis["llm"]["labels"] = label_summary
     graph = {"nodes": brd["nodes"], "edges": brd["edges"]}
     if trace:
         trace.totals.update({"records": len(case.records), "nodes": len(brd["nodes"]), "edges": len(brd["edges"]),
@@ -192,7 +203,8 @@ _STAGE_LABELS = {"ml_signals": "ML signals", "connections": "Identity connection
                  "uncertain_times": "Uncertain times", "missing_periods": "Missing periods", "claims": "Claims",
                  "contradictions": "Contradictions", "explanations": "Competing explanations", "gaps": "Gaps",
                  "next_steps": "Suggested evidence", "insights": "Insights", "agent_insights": "Agent insights",
-                 "media_vision": "Image descriptions", "media_links": "Media cards and links"}
+                 "media_vision": "Image descriptions", "media_links": "Media cards and links",
+                 "display_labels": "Display labels"}
 
 
 def _trace_stage(trace, name: str, items, started_ms: int) -> None:

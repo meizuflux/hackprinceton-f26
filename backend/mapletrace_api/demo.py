@@ -2,6 +2,7 @@
 
     python -m mapletrace_api.demo record      # one billed run: records backend/llm_cache/<archive sha256>.jsonl
     python -m mapletrace_api.demo record-vision  # billed: records only backend/llm_cache/vision-<sha>.jsonl
+    python -m mapletrace_api.demo record-labels  # billed: records only backend/llm_cache/labels-<sha>.jsonl
     python -m mapletrace_api.demo snapshot    # replays the cache (no API calls) -> backend/demo/kestrel.tar.gz
 
 Both run an upload of cases/kestrel/kestrel_case_upload.zip exactly as POST /upload does, so the recorded requests
@@ -22,7 +23,7 @@ import tempfile
 from pathlib import Path
 
 
-def _run(llm: bool, vision_record: bool = False) -> tuple[Path, dict]:
+def _run(llm: bool, vision_record: bool = False, label_record: bool = False) -> tuple[Path, dict]:
     data = Path(tempfile.mkdtemp(prefix="mapletrace-demo-"))
     os.environ["MAPLETRACE_DATA"] = str(data)
     from mapletrace_api import app as api  # imported after MAPLETRACE_DATA is set
@@ -36,6 +37,8 @@ def _run(llm: bool, vision_record: bool = False) -> tuple[Path, dict]:
                          "time": api._now(), "stored": "upload_1.zip"}], "versions": [], "latest": None}
     if vision_record:
         meta["vision_record"] = True  # replay the analysis cache, record only image descriptions
+    if label_record:
+        meta["label_record"] = True  # replay the analysis cache, record only display labels
     api._write_json(case_dir / "case.json", meta)
     api._run_version("0" * 32, api.DEMO_CASE_ID, 1, None)
     job = json.loads((api._jobs() / f"{'0' * 32}.json").read_text(encoding="utf-8"))
@@ -46,9 +49,10 @@ def _run(llm: bool, vision_record: bool = False) -> tuple[Path, dict]:
 
 def main(argv=None) -> int:
     p = argparse.ArgumentParser(prog="mapletrace_api.demo")
-    p.add_argument("command", choices=["record", "record-vision", "snapshot"])
+    p.add_argument("command", choices=["record", "record-vision", "record-labels", "snapshot"])
     args = p.parse_args(argv)
-    case_dir, llm = _run(llm=args.command == "record", vision_record=args.command == "record-vision")
+    case_dir, llm = _run(llm=args.command == "record", vision_record=args.command == "record-vision",
+                         label_record=args.command == "record-labels")
     print(json.dumps(llm, indent=1))
     cache = (llm or {}).get("cache") or {}
     if args.command == "record-vision":
@@ -56,6 +60,11 @@ def main(argv=None) -> int:
         if not llm or cache.get("misses") or v.get("skipped") or v.get("error"):
             raise SystemExit(f"vision recording incomplete (the analysis cache must exist and replay fully): {v}")
         print(f"Recorded {v.get('recorded', 0)} image descriptions into backend/llm_cache/{v.get('cache')}")
+    elif args.command == "record-labels":
+        lab = (llm or {}).get("labels") or {}
+        if not llm or cache.get("misses") or not lab or lab.get("error") or lab.get("skipped"):
+            raise SystemExit(f"label recording incomplete (the analysis cache must exist and replay fully): {lab}")
+        print(f"Recorded {lab.get('recorded', 0)} display labels into backend/llm_cache/{lab.get('cache')}")
     elif args.command == "record":
         print(f"Recorded {cache.get('recorded', 0)} responses into backend/llm_cache/{cache.get('file')}")
     else:

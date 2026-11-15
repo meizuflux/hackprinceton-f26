@@ -185,6 +185,8 @@ def _llm_config(meta: dict, case_dir: Optional[Path] = None) -> Optional[dict]:
     cached = bool(sha) and cache_path(sha).exists()
     if meta.get("vision_record") and cached:  # make backend-vision-record: replay the analysis, record only images
         return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": "replay", "vision_mode": "record"}
+    if meta.get("label_record") and cached:  # make backend-label-record: replay the analysis, record only labels
+        return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": "replay", "label_mode": "record"}
     if meta.get("llm"):
         mode = "record"
     elif cached:
