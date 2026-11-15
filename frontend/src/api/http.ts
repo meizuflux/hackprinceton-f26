@@ -113,6 +113,11 @@ export function createHttpApi(baseUrl: string): CaseApi {
       return request<CaseSummary[]>("/cases");
     },
 
+    async getHealth(): Promise<{ llmLive: boolean }> {
+      const health = await request<{ llmLive?: unknown }>("/health");
+      return { llmLive: health.llmLive === true };
+    },
+
     getTrace(caseId: string, after = 0): Promise<TracePage> {
       return request<TracePage>(
         `/cases/${encodeURIComponent(caseId)}/trace?after=${after}`,

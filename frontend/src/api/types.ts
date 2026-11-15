@@ -423,6 +423,8 @@ export interface CaseApi {
   listCases(): Promise<CaseSummary[]>;
   /** Run trace from `after` (exclusive); undefined when the adapter has no trace (the mock). */
   getTrace(caseId: string, after?: number): Promise<TracePage | undefined>;
+  /** Whether the server can make billed model calls (`GET /health` `llmLive`); absent on the mock. */
+  getHealth?(): Promise<{ llmLive: boolean }>;
   /** Opens the demo case (a prepared snapshot with the live adapter) and returns its ID. */
   openDemo(): Promise<string>;
   /** Evidence file inventory; empty when the adapter has no ingestion output. */

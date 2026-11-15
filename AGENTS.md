@@ -62,6 +62,12 @@ Rules and durable decisions for agents working in this repository. How-to materi
 - Backend scores are computed ranks. Show insight `confidence` as a label and ML scores as "Model score 0.xx", never as percentages. Times render in the case `timezone` via `formatCaseTime`.
 - Competing explanations show the backend verdict, which may be undecided; never present a hypothesis as a finding.
 
+### Run replay (frontend/src/replay)
+
+- The import and the demo open the empty map and play the run from `GET /cases/{id}/trace` (`useReplay`, default 10x, 1x/10x/50x, pause, skip). `reveal.ts` only decides when an existing board item appears (record nodes at their first parsed `evidenceIds` file, others at their `stage_finished` or `insight_recorded` key, edges when both ends show, everything at `run_finished`); items without provenance and the mock (no trace) show at once. Layout always comes from the full case, so revealed cards never move.
+- The start-replay flag is module state (`replay/intent.ts`), not a URL parameter: reloads and later visits show the finished case with a "Replay run" button. A case opened while processing shows the HUD on an empty map, polls the trace every 700 ms and swaps in the board when `GET /cases/{id}` stops returning `not_ready`.
+- The HUD labels replay versus live and shows the backend `timing` ("estimated" is never presented as recorded); it collapses to a "Run summary" chip when a watched run ends. Uploads (live adapter) ask for replay or, when `/health` reports `llmLive`, billed live analysis in `UploadConfirm` before sending `analysis_mode`.
+
 ### Routes and workspace
 
 - `/` is the landing page, `/projects` the project manager and `/projects/new` project naming plus ZIP selection (onboarding lives in `frontend/src/onboarding/`). Demo buttons call `openDemo()` (`POST /demo` with the live adapter). Carry a session project name into the matching case title; direct case routes fall back to the API title. The fictional-case entry stays on `/projects` until that case is in the session; do not repeat it in the upload modal. Contact sales is not part of the prototype: no enquiry form or fake destination.

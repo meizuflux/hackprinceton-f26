@@ -1,0 +1,226 @@
+/* Run panel on the mind map. Chrome only: glass fill over the dark surface. */
+.replay-hud,
+.replay-chip {
+  position: absolute;
+  z-index: 12;
+  left: calc(16px + 48px + 12px);
+  top: var(--topbar-clearance-y, 68px);
+}
+.replay-hud {
+  width: 340px;
+  max-height: calc(100% - var(--topbar-clearance-y, 68px) - 190px);
+  min-height: 160px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 12px 14px;
+  overflow: hidden;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius);
+  background: var(--glass-fill), var(--surface);
+  box-shadow: var(--glass-edge), var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+}
+.replay-hud-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px;
+}
+.replay-hud h2 {
+  margin: 0 0 4px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+}
+.replay-badge {
+  display: inline-block;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 3px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.replay-badge[data-timing="estimated"] {
+  border-color: var(--amber);
+  color: var(--amber);
+}
+.replay-clock {
+  margin: 0;
+  line-height: 1.5;
+  font-variant-numeric: tabular-nums;
+}
+.replay-clock span {
+  color: var(--muted);
+}
+.replay-bar {
+  height: 4px;
+  background: var(--line);
+  border-radius: 2px;
+  overflow: hidden;
+}
+.replay-bar span {
+  display: block;
+  height: 100%;
+  background: var(--brand);
+}
+.replay-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.replay-speeds {
+  display: inline-flex;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  overflow: hidden;
+}
+.replay-speeds button {
+  padding: 4px 8px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.replay-speeds button + button {
+  border-left: 1px solid var(--line);
+}
+.replay-speeds button[aria-pressed="true"] {
+  background: var(--brand-selected);
+  color: var(--brand-text);
+}
+.replay-phases {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 3px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.replay-phases li {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  padding: 4px 5px;
+  border-top: 2px solid var(--line);
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.25;
+}
+.replay-phases li small {
+  font-size: 10px;
+  font-variant-numeric: tabular-nums;
+}
+.replay-phases li[data-status="running"] {
+  border-top-color: var(--brand);
+  color: var(--text);
+}
+.replay-phases li[data-status="done"] {
+  border-top-color: var(--brand-text);
+  color: var(--text);
+}
+.replay-counters {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px 8px;
+  margin: 0;
+}
+.replay-counters dt {
+  color: var(--muted);
+  font-size: 10px;
+}
+.replay-counters dd {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.replay-types {
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.4;
+}
+.replay-cost {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  padding: 6px 0;
+  border-block: 1px solid var(--line);
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+.replay-cost strong {
+  color: var(--text);
+  font-size: 16px;
+}
+.replay-feed {
+  flex: 1 1 auto;
+  min-height: 60px;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+  list-style: none;
+  font-size: 11px;
+  line-height: 1.45;
+}
+.replay-feed li {
+  display: flex;
+  gap: 8px;
+  padding: 2px 0;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+.replay-feed time {
+  flex: none;
+  color: var(--brand-text);
+  font-variant-numeric: tabular-nums;
+}
+.replay-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 11px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius);
+  background: var(--glass-fill), var(--surface);
+  box-shadow: var(--glass-edge), var(--shadow);
+  color: var(--text);
+  font-size: 12px;
+}
+.replay-chip svg {
+  color: var(--brand-text);
+}
+.replay-chip strong {
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 900px) {
+  .replay-hud {
+    width: min(340px, calc(100% - 86px));
+  }
+}
+
+/* New cards and threads fade and settle in as the run reveals them. Uses the
+   independent `scale` property so React Flow's transform is untouched. */
+@keyframes replay-enter {
+  from {
+    opacity: 0;
+    scale: 0.92;
+  }
+  to {
+    opacity: 1;
+    scale: 1;
+  }
+}
+.replay-growing .react-flow__node,
+.replay-growing .react-flow__edge {
+  animation: replay-enter 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .replay-growing .react-flow__node,
+  .replay-growing .react-flow__edge {
+    animation: none;
+  }
+}
