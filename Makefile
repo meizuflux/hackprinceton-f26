@@ -1,7 +1,7 @@
 .DEFAULT_GOAL := help
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
 	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel \
-	backend-analyze-kestrel backend-serve backend-seed-kestrel dev
+	backend-analyze-kestrel backend-serve backend-seed-kestrel backend-llm-record backend-demo-snapshot dev
 
 PYTHON ?= python3
 UV ?= uv
@@ -25,6 +25,8 @@ help:
 	@echo "make backend-analyze-kestrel Run the reasoning pipeline on backend/runs/kestrel/"
 	@echo "make backend-serve     Start the API at http://127.0.0.1:8000"
 	@echo "make backend-seed-kestrel  Upload the Kestrel ZIP to the running API and wait for analysis (API=...)"
+	@echo "make backend-llm-record    Record Kestrel LLM responses into backend/llm_cache/ (billed; needs ANTHROPIC_API_KEY)"
+	@echo "make backend-demo-snapshot Rebuild backend/demo/kestrel.tar.gz by replaying the cache (no API calls)"
 	@echo "make dev               Start the API and Vite together (the frontend proxies /api to the API)"
 
 frontend-install:
@@ -88,3 +90,9 @@ backend-seed-kestrel:
 
 dev:
 	$(MAKE) -j2 backend-serve frontend-dev
+
+backend-llm-record:
+	cd backend && $(PYTHON) -m mapletrace_api.demo record
+
+backend-demo-snapshot:
+	cd backend && $(PYTHON) -m mapletrace_api.demo snapshot

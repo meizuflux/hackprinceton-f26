@@ -9,7 +9,9 @@ Modes:
 - `replay`: answer only from the cache. A miss raises `CacheMiss` before any request is sent, so a replayed run
   can never be billed; the LLM layer logs the failed call and the deterministic analysis carries on.
 
-LangGraph gives some messages random IDs, so message `id` fields are left out of the key.
+Two fields are left out of the key: message `id`s, which LangGraph sometimes generates at random, and
+`usage_metadata.total_cost`, which LangChain adds to every cached response it returns. A replayed response goes back
+into the agent's history, so without this the next request would differ from the recorded one.
 """
 
 from __future__ import annotations
@@ -37,7 +39,14 @@ def cache_path(archive_sha256: str, root: Path = CACHE_DIR) -> Path:
 
 def _strip_ids(obj: Any) -> Any:
     if isinstance(obj, dict):
-        return {k: _strip_ids(v) for k, v in obj.items() if not (k == "id" and not isinstance(v, list))}
+        out = {k: _strip_ids(v) for k, v in obj.items() if not (k == "id" and not isinstance(v, list))}
+        if "usage_metadata" in out:
+            usage = {k: v for k, v in (out["usage_metadata"] or {}).items() if k != "total_cost"}
+            if usage:
+                out["usage_metadata"] = usage
+            else:
+                del out["usage_metadata"]
+        return out
     if isinstance(obj, list):
         return [_strip_ids(v) for v in obj]
     return obj

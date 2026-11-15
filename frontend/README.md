@@ -10,10 +10,9 @@ Requires Bun 1.4.4. Run the app from the repository root:
 make frontend-install
 make backend-install    # once; Python 3.11+
 make dev                # API on :8000 and Vite on :5173
-make backend-seed-kestrel   # in another terminal: upload and analyse the fictional Kestrel case
 ```
 
-Open [localhost:5173](http://localhost:5173), choose **Open projects**, then open Kestrel or upload a ZIP with **New project**. Vite proxies `/api` to the backend (`MAPLETRACE_API_URL`, default `http://127.0.0.1:8000`). Cases persist in `backend/data/`.
+Open [localhost:5173](http://localhost:5173). The demo buttons open the prepared Kestrel case instantly from a committed snapshot, including its cached LLM results. **New project** uploads a ZIP for real analysis; uploading `cases/kestrel/kestrel_case_upload.zip` replays the recorded LLM responses instead of calling the API. Vite proxies `/api` to the backend (`MAPLETRACE_API_URL`, default `http://127.0.0.1:8000`). Cases persist in `backend/data/`.
 
 To use the mock adapter instead, start Vite with `VITE_API_BASE_URL=mock`; see `.env.example`. Production builds use the mock unless `VITE_API_BASE_URL` is set at build time.
 

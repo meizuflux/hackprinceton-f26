@@ -264,7 +264,11 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
     case_id = (re.sub(r"[^a-z0-9]+", "-", (case_name or Path(file.filename or "case").stem).lower()).strip("-")[:40] or "case")
     case_id = f"{case_id}-{uuid.uuid4().hex[:6]}"
     case_dir = _cases() / case_id
-    info = await _save_upload(file, case_dir / "uploads" / "upload_1.zip")
+    try:
+        info = await _save_upload(file, case_dir / "uploads" / "upload_1.zip")
+    except ApiError:
+        shutil.rmtree(case_dir, ignore_errors=True)  # a rejected upload leaves no empty case behind
+        raise
     meta = {"caseId": case_id, "title": case_name or Path(file.filename or "case").stem, "created": _now(),
             "timezone": timezone_name, "llm": bool(llm), "uploads": [{**info, "stored": "upload_1.zip"}], "versions": [],
             "latest": None}

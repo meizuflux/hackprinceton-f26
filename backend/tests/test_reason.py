@@ -370,3 +370,31 @@ def test_citation_labels_identify_one_record():
         (4, 8, {"row": 4}, {"event_id": "9001"}),   # another file: no collision
     ])
     assert labels == {1: "row=4", 2: "row=5", 3: "event_id=BDG-1", 4: "event_id=9001"}
+
+
+def test_api_llm_mode_demo_and_rejected_upload(tmp_path, monkeypatch):
+    from fastapi.testclient import TestClient
+    monkeypatch.setenv("MAPLETRACE_DATA", str(tmp_path / "data"))
+    import importlib
+    import mapletrace_api.app as appmod
+    importlib.reload(appmod)
+    client = TestClient(appmod.app)
+
+    # an upload whose archive has recorded responses replays them; an explicit LLM request records
+    cache_dir = tmp_path / "llm_cache"
+    monkeypatch.setattr(appmod, "cache_path", lambda sha: cache_dir / f"{sha}.jsonl")
+    meta = {"uploads": [{"sha256": "abc"}], "llm": False}
+    assert appmod._llm_config(meta) is None
+    cache_dir.mkdir()
+    (cache_dir / "abc.jsonl").write_text("")
+    assert appmod._llm_config(meta)["cache_mode"] == "replay"
+    assert appmod._llm_config({**meta, "llm": True})["cache_mode"] == "record"
+
+    # a rejected upload leaves no case folder
+    r = client.post("/upload", files={"file": ("bad.zip", b"not a zip", "application/zip")})
+    assert r.status_code == 400 and r.json()["error"]["code"] == "not_a_zip"
+    assert not [d for d in (tmp_path / "data" / "cases").iterdir() if not d.name.startswith(".")]
+
+    monkeypatch.setattr(appmod, "DEMO_SNAPSHOT", tmp_path / "missing.tar.gz")
+    r = client.post("/demo")
+    assert r.status_code == 404 and r.json()["error"]["code"] == "no_demo_snapshot"

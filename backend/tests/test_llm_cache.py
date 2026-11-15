@@ -44,3 +44,25 @@ def test_key_ignores_random_message_ids():
     b = dumps([HumanMessage("hi", id="22222222-bbbb"), AIMessage("yo", id="run-2")])
     assert request_key(a, "m") == request_key(b, "m")
     assert request_key(a, "m") != request_key(a, "other model")
+
+
+def test_replayed_history_matches_the_recording(tmp_path):
+    """LangChain marks cached responses with total_cost=0; a conversation that continues from a replayed response
+    must still hash like the recorded one."""
+    from langchain_core.load import dumps
+
+    usage = {"input_tokens": 5, "output_tokens": 2, "total_tokens": 7}
+    live = dumps([HumanMessage("q"), AIMessage("a", usage_metadata=usage), HumanMessage("next")])
+    replayed = dumps([HumanMessage("q"), AIMessage("a", usage_metadata={**usage, "total_cost": 0}), HumanMessage("next")])
+    assert request_key(live, "m") == request_key(replayed, "m")
+
+
+def test_multi_turn_replay(tmp_path):
+    path = tmp_path / "abc.jsonl"
+    model = _model(ReplayCache(path, "record"), ["one", "two"])
+    first = model.invoke([HumanMessage("q")])
+    model.invoke([HumanMessage("q"), first, HumanMessage("more")])
+
+    replay = _model(ReplayCache(path, "replay"), [])
+    first = replay.invoke([HumanMessage("q")])  # comes back with total_cost=0
+    assert replay.invoke([HumanMessage("q"), first, HumanMessage("more")]).content == "two"
