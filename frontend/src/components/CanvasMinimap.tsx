@@ -1,4 +1,11 @@
-import { useEffect, useId, useMemo, useRef, type KeyboardEvent } from "react";
+import {
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent,
+} from "react";
 import {
   ControlButton,
   getBezierPath,
@@ -26,6 +33,7 @@ import {
   frameContent,
   grabOffset,
   mapToFlow,
+  unionBounds,
   viewRect,
   type Bounds,
   type MapFrame,
@@ -56,11 +64,80 @@ function useFlowView(): Bounds & { zoom: number } {
   };
 }
 
+const sameBounds = (a: Bounds, b: Bounds, tolerance = 0) =>
+  Math.abs(a.x - b.x) <= tolerance &&
+  Math.abs(a.y - b.y) <= tolerance &&
+  Math.abs(a.width - b.width) <= tolerance &&
+  Math.abs(a.height - b.height) <= tolerance;
+
+const prefersReducedMotion = () =>
+  typeof window !== "undefined" &&
+  window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+
 /**
- * Overview of the pins. The map frames the pins alone, so its scale holds still
- * while the view moves; the viewport rectangle tracks pan and zoom, and dragging
- * it moves the board as if holding the rectangle. `frameNodes` (every pin of the
- * case) keeps the scale fixed while a replay reveals pins one by one.
+ * Eases the framed extent toward its target, so the map rescales smoothly when
+ * the view leaves the pins or comes back. Reduced motion jumps straight there.
+ */
+function useEasedBounds(target: Bounds): Bounds {
+  const shown = useRef(target);
+  const goal = useRef(target);
+  goal.current = target;
+  const frameRequest = useRef(0);
+  const [, rerender] = useState(0);
+  const { x, y, width, height } = target;
+  useEffect(() => {
+    const next = { x, y, width, height };
+    if (sameBounds(shown.current, next)) return;
+    if (
+      prefersReducedMotion() ||
+      typeof requestAnimationFrame === "undefined"
+    ) {
+      shown.current = next;
+      rerender((tick) => tick + 1);
+      return;
+    }
+    if (frameRequest.current) return; // the running loop reads `goal`
+    let last = performance.now();
+    const step = (now: number) => {
+      const k = 1 - Math.exp(-Math.max(now - last, 0) / 70);
+      last = now;
+      const to = goal.current;
+      const from = shown.current;
+      const eased = {
+        x: from.x + (to.x - from.x) * k,
+        y: from.y + (to.y - from.y) * k,
+        width: from.width + (to.width - from.width) * k,
+        height: from.height + (to.height - from.height) * k,
+      };
+      if (sameBounds(eased, to, Math.max(to.width, to.height) / 1500)) {
+        shown.current = to;
+        frameRequest.current = 0;
+      } else {
+        shown.current = eased;
+        frameRequest.current = requestAnimationFrame(step);
+      }
+      rerender((tick) => tick + 1);
+    };
+    frameRequest.current = requestAnimationFrame(step);
+  }, [x, y, width, height]);
+  useEffect(
+    () => () => {
+      cancelAnimationFrame(frameRequest.current);
+      frameRequest.current = 0;
+    },
+    [],
+  );
+  return shown.current;
+}
+
+/**
+ * Overview of the pins. The map frames the pins and, once the view reaches past
+ * them, the view as well, so the viewport rectangle is always on the map (as in
+ * Excalidraw): zooming far out or panning away shrinks the pins instead of
+ * losing the rectangle. The map's size follows the pins alone, the scale eases
+ * between framings, and it holds still while the rectangle is dragged. Dragging
+ * moves the board as if holding the rectangle. `frameNodes` (every pin of the
+ * case) keeps the framing fixed while a replay reveals pins one by one.
  */
 export function CanvasMinimap({ frameNodes }: { frameNodes?: Node[] } = {}) {
   const rawId = useId();
@@ -70,18 +147,22 @@ export function CanvasMinimap({ frameNodes }: { frameNodes?: Node[] } = {}) {
   const view = useFlowView();
   const { setViewport } = useReactFlow();
   const framed = frameNodes?.length ? frameNodes : nodes;
-  const frame = useMemo(
+  const pins = useMemo(
     () =>
-      frameContent(
-        boundsOf(
-          framed.map((node) => ({ ...node.position, ...nodeSize(node) })),
-        ),
-      ),
+      boundsOf(framed.map((node) => ({ ...node.position, ...nodeSize(node) }))),
     [framed],
   );
-  const latest = useRef({ frame, view });
-  latest.current = { frame, view };
-  const drag = useRef<{ offset: Point; pointerId: number } | null>(null);
+  // While the rectangle is dragged, the framing is frozen at the press.
+  const [frozen, setFrozen] = useState<Bounds | null>(null);
+  const extent = useEasedBounds(frozen ?? unionBounds(pins, view));
+  const frame = useMemo(() => frameContent(extent, { pins }), [extent, pins]);
+  const latest = useRef({ frame, view, pins });
+  latest.current = { frame, view, pins };
+  const drag = useRef<{
+    offset: Point;
+    pointerId: number;
+    bounds: Bounds;
+  } | null>(null);
   const byId = useMemo(
     () => new Map(nodes.map((node) => [node.id, node])),
     [nodes],
@@ -107,7 +188,7 @@ export function CanvasMinimap({ frameNodes }: { frameNodes?: Node[] } = {}) {
 
   function onKeyDown(event: KeyboardEvent<SVGSVGElement>) {
     const step = event.shiftKey ? 0.5 : 0.2;
-    const { view: current, frame: currentFrame } = latest.current;
+    const { view: current, pins: currentPins } = latest.current;
     const delta =
       event.key === "ArrowLeft"
         ? { x: -current.width * step, y: 0 }
@@ -120,16 +201,17 @@ export function CanvasMinimap({ frameNodes }: { frameNodes?: Node[] } = {}) {
               : null;
     if (!delta) return;
     event.preventDefault();
+    // Arrow keys move within the pins, or the pins plus wherever the view already is.
     moveTo(
       clampViewToContent(
         { ...current, x: current.x + delta.x, y: current.y + delta.y },
-        currentFrame.content,
+        unionBounds(currentPins, current),
       ),
       180,
     );
   }
 
-  // Overlays stacked above the minimap (the Ask widget) position themselves from its rendered height,
+  // Overlays that must clear the minimap (the Ask widget on narrow boards, the run panel) read its rendered height,
   // which follows the board's aspect ratio. Published on the board panel, which both share.
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
@@ -170,8 +252,13 @@ export function CanvasMinimap({ frameNodes }: { frameNodes?: Node[] } = {}) {
           );
           const { view: current, frame: currentFrame } = latest.current;
           const offset = grabOffset(current, pointer);
-          drag.current = { offset, pointerId: event.pointerId };
-          moveTo(dragView(current, pointer, offset, currentFrame.content));
+          // Freeze the framing so the map holds still under the pointer; the
+          // drag stays within what the map shows (the pins, plus the view if it
+          // was already past them).
+          const bounds = currentFrame.content;
+          drag.current = { offset, pointerId: event.pointerId, bounds };
+          setFrozen(bounds);
+          moveTo(dragView(current, pointer, offset, bounds));
         }}
         onPointerMove={(event) => {
           if (drag.current?.pointerId !== event.pointerId) return;
@@ -180,21 +267,22 @@ export function CanvasMinimap({ frameNodes }: { frameNodes?: Node[] } = {}) {
             event.clientY,
             event.currentTarget,
           );
-          const { view: current, frame: currentFrame } = latest.current;
           moveTo(
             dragView(
-              current,
+              latest.current.view,
               pointer,
               drag.current.offset,
-              currentFrame.content,
+              drag.current.bounds,
             ),
           );
         }}
         onPointerUp={() => {
           drag.current = null;
+          setFrozen(null);
         }}
         onPointerCancel={() => {
           drag.current = null;
+          setFrozen(null);
         }}
         onWheel={(event) => {
           event.stopPropagation();

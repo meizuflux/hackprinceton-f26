@@ -6,6 +6,7 @@ import {
   frameContent,
   grabOffset,
   mapToFlow,
+  unionBounds,
   viewRect,
 } from "./minimap-geometry";
 
@@ -70,6 +71,36 @@ describe("minimap framing", () => {
     const back = mapToFlow(frame, flowToMap(frame, point));
     expect(back.x).toBeCloseTo(point.x);
     expect(back.y).toBeCloseTo(point.y);
+  });
+
+  it("rescales to keep a view that leaves the pins on the map, without resizing it", () => {
+    const pins = { x: 0, y: 0, width: 2000, height: 1000 };
+    const view = { x: 3000, y: -500, width: 1000, height: 600 };
+    const extent = unionBounds(pins, view);
+    expect(extent).toEqual({ x: 0, y: -500, width: 4000, height: 1500 });
+    const pinsOnly = frameContent(pins);
+    const framed = frameContent(extent, { pins });
+    // Same map size, smaller scale.
+    expect(framed.width).toBe(pinsOnly.width);
+    expect(framed.height).toBe(pinsOnly.height);
+    expect(framed.scale).toBeLessThan(pinsOnly.scale);
+    // The whole view rectangle lands inside the map.
+    const start = flowToMap(framed, view);
+    const end = flowToMap(framed, {
+      x: view.x + view.width,
+      y: view.y + view.height,
+    });
+    expect(start.x).toBeGreaterThanOrEqual(0);
+    expect(start.y).toBeGreaterThanOrEqual(0);
+    expect(end.x).toBeLessThanOrEqual(framed.width);
+    expect(end.y).toBeLessThanOrEqual(framed.height);
+  });
+
+  it("frames the pins alone while the view stays over them", () => {
+    const pins = { x: 0, y: 0, width: 2000, height: 1000 };
+    expect(
+      unionBounds(pins, { x: 200, y: 100, width: 600, height: 400 }),
+    ).toEqual(pins);
   });
 
   it("clips the view rectangle to the map so every edge stays visible", () => {
