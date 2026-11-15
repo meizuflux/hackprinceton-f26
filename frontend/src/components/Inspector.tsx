@@ -376,7 +376,8 @@ export function Inspector({
             <h3>Recommended evidence</h3>
             {gap.suggestedEvidence.length ? (
               <ul>
-                {gap.suggestedEvidence.map((evidence) => (
+                {/* A gap can request the same kind of evidence for several people; list each kind once. */}
+                {[...new Set(gap.suggestedEvidence)].map((evidence) => (
                   <li key={evidence}>
                     {data.suggestions.find((s) => s.id === evidence)?.title ??
                       humanize(evidence)}
