@@ -6,7 +6,7 @@ import { useCaseChat } from "./useCaseChat";
 import "./chat-panel.css";
 import "./ask-widget.css";
 
-/** Floating "Ask a question" on the mind map. Sits above the minimap and zoom controls, clear of the legend. */
+/** Floating "Ask" pill on the mind map. Sits above the minimap (or in the corner without one), clear of the zoom controls and the key. */
 export function AskWidget({
   caseId,
   sourceIds,
@@ -98,13 +98,16 @@ export function AskWidget({
         className="ask-toggle"
         aria-expanded={open}
         aria-controls="ask-widget-panel"
+        aria-label="Ask a question about this case"
+        title={
+          recorded
+            ? `Ask a question (${recorded} recorded answers)`
+            : "Ask a question"
+        }
         onClick={() => setOpen((value) => !value)}
       >
-        <MessageSquareText size={16} aria-hidden="true" />
-        <span>Ask a question</span>
-        {!open && !!recorded && (
-          <span className="ask-toggle-count">{recorded} recorded</span>
-        )}
+        <MessageSquareText size={15} aria-hidden="true" />
+        <span>Ask</span>
       </button>
     </div>
   );

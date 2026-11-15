@@ -21,21 +21,26 @@
 .ask-widget > * {
   pointer-events: auto;
 }
+/* Without a minimap (it may be hidden in the story view) the pill takes the board's bottom-right corner. */
+.case-board-panel:not(:has(.board-minimap)) > .ask-widget {
+  --ask-bottom: 16px;
+}
 .case-board-panel:has(.review-dock.is-open) > .ask-widget {
   right: 432px; /* dock width 400 + its inset 16 + gap 16 */
 }
+/* Collapsed, the widget is a small pill so it never competes with the board. */
 .ask-toggle {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 0 14px 0 12px;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 13px 0 11px;
   border: 1px solid var(--chrome-border);
-  border-radius: var(--radius);
+  border-radius: 999px;
   background: var(--surface);
   color: var(--text);
-  font-size: 13px;
-  font-weight: 500;
+  font-size: 12px;
+  font-weight: 550;
   box-shadow: var(--shadow);
   cursor: pointer;
   transition:
@@ -51,13 +56,6 @@
 .ask-toggle[aria-expanded="true"] {
   border-color: var(--brand-border);
   background: #1c2732;
-}
-.ask-toggle-count {
-  padding-left: 8px;
-  border-left: 1px solid var(--chrome-border);
-  color: var(--brand-text);
-  font-size: 11px;
-  font-weight: 400;
 }
 .ask-panel {
   display: flex;
