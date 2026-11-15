@@ -25,74 +25,13 @@ const num = (value: unknown): number =>
 const str = (value: unknown): string =>
   typeof value === "string" ? value : "";
 
-/** Advance the replay clock by wall time at a speed, never past `capMs`. */
-export function advanceClock(
-  tMs: number,
-  wallDeltaMs: number,
-  speed: number,
-  capMs: number,
-): number {
-  if (wallDeltaMs <= 0 || speed <= 0) return Math.min(tMs, capMs);
-  return Math.min(capMs, tMs + wallDeltaMs * speed);
-}
-
-/** Number of events (sorted by seq/tMs) at or before the clock. */
-export function countUpTo(events: readonly TraceEvent[], tMs: number): number {
-  let lo = 0;
-  let hi = events.length;
-  while (lo < hi) {
-    const mid = (lo + hi) >> 1;
-    if (events[mid].tMs <= tMs) lo = mid + 1;
-    else hi = mid;
-  }
-  return lo;
-}
-
-/** Events closer together than this on the replay clock count as one burst. */
-const BURST_WINDOW_MS = 5;
-/** Replay-clock spacing a burst is spread over per event (~150 ms on screen at 10×). */
-const BURST_STEP_MS = 1500;
-
-/**
- * Presentation times for events. The agent issues tool calls in batches (up to
- * ~60 at one instant), so each burst is spread evenly across at most 80% of the
- * gap before the next event, `BURST_STEP_MS` apart. Order is kept and no event
- * moves past the next burst; the feed still labels each event with its `tMs`.
- */
-export function displayTimes(events: readonly TraceEvent[]): number[] {
-  const out = events.map((e) => e.tMs);
-  let i = 0;
-  while (i < events.length) {
-    let j = i + 1;
-    while (
-      j < events.length &&
-      events[j].tMs - events[i].tMs <= BURST_WINDOW_MS
-    )
-      j++;
-    const n = j - i;
-    if (n > 1 && j < events.length) {
-      const span = Math.min(
-        (events[j].tMs - events[i].tMs) * 0.8,
-        (n - 1) * BURST_STEP_MS,
-      );
-      for (let k = 0; k < n; k++)
-        out[i + k] = Math.max(
-          events[i + k].tMs,
-          events[i].tMs + (span * k) / (n - 1),
-        );
-    }
-    i = j;
-  }
-  return out;
-}
-
-/** Number of events whose display time is at or before the clock. */
-export function countShownBy(times: readonly number[], tMs: number): number {
+/** Number of entries in a sorted list at or before `at` (events shown by a wall position). */
+export function countShownBy(times: readonly number[], at: number): number {
   let lo = 0;
   let hi = times.length;
   while (lo < hi) {
     const mid = (lo + hi) >> 1;
-    if (times[mid] <= tMs) lo = mid + 1;
+    if (times[mid] <= at) lo = mid + 1;
     else hi = mid;
   }
   return lo;
@@ -330,97 +269,160 @@ export function formatCost(usd: number): string {
   return `$${usd.toFixed(usd < 1 ? 3 : 2)}`;
 }
 
-/** Minimum on-screen time per phase, so short phases stay watchable. */
-export const phaseMinWallMs: Partial<Record<TracePhase, number>> = {
-  ingest: 4000,
-  rules: 2000,
-  ml: 2500,
-};
+/*
+ * Pacing. A schedule gives every event the wall time (ms after playback
+ * starts) at which it shows; the replay clock between two events is
+ * interpolated from their real `tMs`, so the clock on screen is always the
+ * recorded one. Wall time is the real gap divided by the speed, except:
+ *
+ * - short phases get a minimum on-screen time (slowed, never skipped);
+ * - above 1x, a wait for the model in the LLM, agent and output phases is
+ *   shown for at most `modelWaitCapMs` (compressed, and the HUD says so);
+ * - events recorded at one instant (the agent's batched tool calls) are
+ *   spread a short step apart so they can be seen arriving.
+ *
+ * Only presentation: no event is dropped, reordered or retimed in the feed.
+ */
 
-export interface PhaseSegment {
-  phase: TracePhase;
-  startMs: number;
+/** Minimum on-screen time per run of one phase, so short phases stay watchable. */
+export const phaseMinWallMs: Partial<Record<TracePhase, number>> = {
+  ingest: 3000,
+  rules: 1200,
+  ml: 2000,
+};
+/** Above 1x a wait for the model is shown for less than this; long waits approach it. */
+export const modelWaitCapMs = 650;
+const compressedPhases = new Set<TracePhase>(["llm", "agent", "output"]);
+/** Events this close together on the replay clock (chained) are one instant. */
+const BURST_WINDOW_MS = 10;
+/** Wall step between events of one instant at the default speed, and the most one instant may take. */
+const BURST_STEP_MS = 60;
+const BURST_MAX_MS = 800;
+/** Recorded insights land at least this far apart, so the counters can be seen to count. */
+const INSIGHT_STEP_MS = 420;
+
+export type Pace =
+  /** A short phase shown slower than the chosen speed. */
+  | { kind: "slowed"; phase: TracePhase; speed: number; realMs: number }
+  /** A model wait shown faster than the chosen speed: `realMs` of waiting in `wallMs`. */
+  | { kind: "compressed"; phase: TracePhase; realMs: number; wallMs: number };
+
+export interface Schedule {
+  /** Wall time at which each event shows (non-decreasing). */
+  wall: number[];
+  /** Each event's replay-clock time. */
+  clock: number[];
+  /** How the stretch up to each event is paced, when not at the chosen speed. */
+  pace: Array<Pace | undefined>;
+  /** The clock at the end, and the wall time it is reached. */
   endMs: number;
+  totalMs: number;
+  /** Pace of the stretch after the last event. */
+  tailPace?: Pace;
 }
 
-/**
- * Split the replay clock into phase segments at each phase's first event.
- * Phases without events get no segment. The last segment ends at `endMs`.
- */
-export function phaseSegments(
+/** Build the wall-time schedule for a trace at a speed. `endMs` is the end of the clock. */
+export function buildSchedule(
   events: readonly TraceEvent[],
   endMs: number,
-): PhaseSegment[] {
-  const starts: Array<{ phase: TracePhase; startMs: number }> = [];
-  for (const e of events) {
-    if (!starts.some((s) => s.phase === e.phase))
-      starts.push({ phase: e.phase, startMs: e.tMs });
+  speed: number,
+): Schedule {
+  const n = events.length;
+  const deltas = new Array<number>(n).fill(0);
+  const pace = new Array<Pace | undefined>(n).fill(undefined);
+  // Steps within an instant shrink at faster speeds, never grow at slower ones.
+  const fast = Math.min(1, defaultSpeed / Math.max(speed, 1e-9));
+  const compress = speed > 1;
+  const gapWall = (realMs: number, phase: TracePhase): [number, Pace?] => {
+    const wall = realMs / speed;
+    if (!compress || !compressedPhases.has(phase)) return [wall];
+    // Eases toward the cap: short waits keep their length, long ones approach it.
+    const shown = modelWaitCapMs * (1 - Math.exp(-wall / modelWaitCapMs));
+    return shown < wall * 0.85
+      ? [shown, { kind: "compressed", phase, realMs, wallMs: shown }]
+      : [wall];
+  };
+
+  // Gaps between instants, and steps within an instant.
+  let i = 0;
+  while (i < n) {
+    let j = i + 1;
+    while (j < n && events[j].tMs - events[j - 1].tMs <= BURST_WINDOW_MS) j++;
+    const before = i ? events[i - 1].tMs : 0;
+    [deltas[i], pace[i]] = gapWall(
+      Math.max(0, events[i].tMs - before),
+      events[i].phase,
+    );
+    const step = Math.min(BURST_STEP_MS, BURST_MAX_MS / Math.max(1, j - i - 1));
+    for (let k = i + 1; k < j; k++)
+      deltas[k] =
+        (events[k].type === "insight_recorded" ? INSIGHT_STEP_MS : step) * fast;
+    i = j;
   }
-  starts.sort((a, b) => a.startMs - b.startMs);
-  return starts.map((s, i) => ({
-    phase: s.phase,
-    startMs: i === 0 ? 0 : s.startMs,
-    endMs:
-      i + 1 < starts.length
-        ? starts[i + 1].startMs
-        : Math.max(endMs, s.startMs),
-  }));
+
+  // Runs of a phase with a minimum on-screen time are stretched to it.
+  let s = 0;
+  while (s < n) {
+    let e = s;
+    while (e + 1 < n && events[e + 1].phase === events[s].phase) e++;
+    const phase = events[s].phase;
+    const min = (phaseMinWallMs[phase] ?? 0) * fast;
+    const realMs = events[e].tMs - (s ? events[s - 1].tMs : 0);
+    if (min && realMs / speed < min) {
+      // The run takes exactly its minimum, its gaps and instants scaled to fit.
+      let sum = 0;
+      for (let k = s; k <= e; k++) sum += deltas[k];
+      for (let k = s; k <= e; k++) {
+        deltas[k] = sum > 0 ? (deltas[k] * min) / sum : min / (e - s + 1);
+        pace[k] = { kind: "slowed", phase, speed: realMs / min, realMs };
+      }
+    }
+    s = e + 1;
+  }
+
+  const wall: number[] = [];
+  let at = 0;
+  for (const d of deltas) wall.push((at += d));
+  const lastMs = events.at(-1)?.tMs ?? 0;
+  const [tailWall, tailPace] = n
+    ? gapWall(Math.max(0, endMs - lastMs), events[n - 1].phase)
+    : [0];
+  return {
+    wall,
+    clock: events.map((e) => e.tMs),
+    pace,
+    endMs: Math.max(endMs, lastMs),
+    totalMs: at + tailWall,
+    tailPace,
+  };
 }
 
-function segmentAt(
-  segments: readonly PhaseSegment[],
-  tMs: number,
-): PhaseSegment | undefined {
+/** The replay clock (real `tMs`) at a wall position. */
+export function clockAtWall(s: Schedule, wallMs: number): number {
+  if (wallMs <= 0) return 0;
+  if (wallMs >= s.totalMs) return s.endMs;
+  const i = countShownBy(s.wall, wallMs);
+  const fromWall = i ? s.wall[i - 1] : 0;
+  const fromClock = i ? s.clock[i - 1] : 0;
+  const toWall = i < s.wall.length ? s.wall[i] : s.totalMs;
+  const toClock = i < s.clock.length ? s.clock[i] : s.endMs;
+  if (toWall <= fromWall) return fromClock;
   return (
-    segments.find(
-      (s) => s.endMs > s.startMs && tMs >= s.startMs && tMs < s.endMs,
-    ) ?? undefined
+    fromClock +
+    ((wallMs - fromWall) / (toWall - fromWall)) * (toClock - fromClock)
   );
 }
 
-/** Replay-clock milliseconds advanced per wall millisecond at `tMs`. */
-export function playbackRate(
-  tMs: number,
-  segments: readonly PhaseSegment[],
-  speed: number,
-): number {
-  const seg = segmentAt(segments, tMs);
-  const min = seg ? (phaseMinWallMs[seg.phase] ?? 0) : 0;
-  if (!seg || !min) return speed;
-  return Math.min(speed, (seg.endMs - seg.startMs) / min);
+/** How the stretch being played at a wall position is paced; undefined at the chosen speed. */
+export function paceAtWall(s: Schedule, wallMs: number): Pace | undefined {
+  if (wallMs >= s.totalMs) return undefined;
+  const i = countShownBy(s.wall, wallMs);
+  return i < s.pace.length ? s.pace[i] : s.tailPace;
 }
 
-/** The phase being slowed for legibility at `tMs`, with its effective speed; undefined at the chosen speed. */
-export function slowedPhase(
-  tMs: number,
-  segments: readonly PhaseSegment[],
-  speed: number,
-): { phase: TracePhase; speed: number } | undefined {
-  const seg = segmentAt(segments, tMs);
-  if (!seg) return undefined;
-  const rate = playbackRate(tMs, segments, speed);
-  return rate < speed ? { phase: seg.phase, speed: rate } : undefined;
-}
-
-/**
- * Replay-clock time reached after `wallMs` of playback from the start at a
- * speed: each phase takes max(real length / speed, its minimum on-screen time).
- */
-export function playbackTime(
-  wallMs: number,
-  segments: readonly PhaseSegment[],
-  speed: number,
-  endMs: number,
-): number {
-  let left = Math.max(0, wallMs);
-  let t = 0;
-  for (const seg of segments) {
-    const length = seg.endMs - seg.startMs;
-    if (length <= 0) continue;
-    const wall = Math.max(length / speed, phaseMinWallMs[seg.phase] ?? 0);
-    if (left < wall) return seg.startMs + (left / wall) * length;
-    left -= wall;
-    t = seg.endMs;
-  }
-  return Math.min(endMs, t + left * speed);
+/** A playback speed for display: "23×", "1.5×", "0.12×". */
+export function formatSpeed(speed: number): string {
+  if (speed >= 10) return `${Math.round(speed)}×`;
+  if (speed >= 1) return `${Number(speed.toFixed(1))}×`;
+  return `${Number(speed.toPrecision(2))}×`;
 }

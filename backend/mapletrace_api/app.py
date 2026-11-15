@@ -54,7 +54,7 @@ from mapletrace_ingest.verify import verify_run
 from mapletrace_ingest.db import GENESIS_HASH, verify_audit_chain
 from mapletrace_ingest.pipeline import ingest_zip
 from mapletrace_ingest.trace import TraceWriter
-from mapletrace_reason import history
+from mapletrace_reason import history, models
 from mapletrace_reason.llm_cache import cache_path
 from mapletrace_reason.pipeline import analyze
 from mapletrace_reason.store import PROTECTED_KEYS, citation_id, unique_labels
@@ -66,7 +66,10 @@ MAX_UPLOAD = int(os.environ.get("MAPLETRACE_MAX_UPLOAD_MB", "100")) * 1024 * 102
 SECTIONS = {"graph", "gaps", "insights", "suggestions", "contradictions", "explanations", "timeline", "audit", "changes",
             "sources", "nodes", "edges", "uncertainTimes", "missingPeriods", "sourceGroups", "signals"}
 _lock = threading.Lock()
-LLM_MODEL = os.environ.get("MAPLETRACE_LLM_MODEL", "claude-sonnet-5-5")
+# Import-time analysis (investigator and verifier) and image descriptions; see mapletrace_reason/models.py.
+INVESTIGATOR = models.resolve("investigator")
+VISION = models.resolve("vision")
+LLM_MODEL = INVESTIGATOR.label  # "claude-sonnet-5-5" by default: the string in cache keys, audit and agent labels
 REPO = Path(__file__).resolve().parents[2]
 DEMO_SNAPSHOT = Path(__file__).resolve().parents[1] / "demo" / "kestrel.tar.gz"
 DEMO_ARCHIVE = REPO / "cases" / "kestrel" / "kestrel_case_upload.zip"
@@ -173,25 +176,30 @@ def _combined_zip(case_dir: Path, meta: dict, version: int) -> Path:
     return out
 
 
+def _models_cfg() -> dict:
+    return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "vision_model": VISION.label}
+
+
 def _llm_config(meta: dict, case_dir: Optional[Path] = None) -> Optional[dict]:
     """LLM settings for a case. An upload whose archive has recorded responses (`backend/llm_cache/`) replays them for
     free, without calling the API; an explicit LLM request records responses it does not have yet (billed).
     `analysis_mode: live` makes real calls and neither reads nor writes the committed cache: its responses go to a
     case-local cache (`<case>/llm_cache/`), which only a re-analysis of that same case replays."""
     if meta.get("analysis_mode") == "live" and case_dir is not None:
-        return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": "record",
-                "cache_dir": str(case_dir / "llm_cache")}
+        return {**_models_cfg(), "cache_mode": "record", "cache_dir": str(case_dir / "llm_cache")}
     sha = meta["uploads"][0]["sha256"] if len(meta.get("uploads", [])) == 1 else None
     cached = bool(sha) and cache_path(sha).exists()
     if meta.get("vision_record") and cached:  # make backend-vision-record: replay the analysis, record only images
-        return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": "replay", "vision_mode": "record"}
+        return {**_models_cfg(), "cache_mode": "replay", "vision_mode": "record"}
+    if meta.get("label_record") and cached:  # make backend-label-record: replay the analysis, record only labels
+        return {**_models_cfg(), "cache_mode": "replay", "label_mode": "record"}
     if meta.get("llm"):
         mode = "record"
     elif cached:
         mode = "replay"
     else:
         return None
-    return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": mode}
+    return {**_models_cfg(), "cache_mode": mode}
 
 
 def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str], reingest: bool = True) -> None:
@@ -203,7 +211,8 @@ def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str
         llm = _llm_config(meta, case_dir)
         trace = TraceWriter(ingest_dir / "trace.jsonl",
                             {"mode": "live" if meta.get("analysis_mode") == "live" else "replay", "llm": bool(llm),
-                             "model": LLM_MODEL if llm else None})
+                             "model": LLM_MODEL if llm else None,
+                             **({"models": {"investigator": INVESTIGATOR.id, "vision": VISION.id}} if llm else {})})
         if reingest:
             _job(job_id, status="processing", progress=5, stage="ingest", message="Hashing and reading evidence")
             src = _combined_zip(case_dir, meta, version)
@@ -271,8 +280,9 @@ def _scalar(v) -> bool:
 # --------------------------------------------------------------------------- routes
 @app.get("/health")
 def health():
-    # llmLive: a server API key is configured, so an upload may ask for analysis_mode=live (billed)
-    return {"ok": True, "time": _now(), "llmLive": bool(os.environ.get("ANTHROPIC_API_KEY"))}
+    # llmLive: the investigator's provider key is configured, so an upload may ask for analysis_mode=live (billed).
+    # models: the resolved provider:model per role (never keys), and whether each could call its provider live.
+    return {"ok": True, "time": _now(), "llmLive": INVESTIGATOR.live(), "models": models.summary()}
 
 
 @app.post("/upload")
@@ -285,9 +295,9 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
     analysis_mode = (analysis_mode or "").strip().lower() or "replay"
     if analysis_mode not in ("replay", "live"):
         raise ApiError(400, "bad_analysis_mode", "analysis_mode must be 'replay' or 'live'")
-    if analysis_mode == "live" and not os.environ.get("ANTHROPIC_API_KEY"):
-        raise ApiError(400, "needs_api_key", "live analysis makes billed model calls and needs ANTHROPIC_API_KEY on the "
-                                             "server; use analysis_mode=replay")
+    if analysis_mode == "live" and not INVESTIGATOR.live():
+        raise ApiError(400, "needs_api_key", f"live analysis makes billed model calls with {INVESTIGATOR.id} and needs "
+                                             f"{INVESTIGATOR.key_hint()} on the server; use analysis_mode=replay")
     if timezone_name:
         from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
         try:
@@ -315,30 +325,83 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
     return {"jobId": job_id, "caseId": case_id}
 
 
+DEMO_STAMP = "demo_snapshot.sha256"  # in the installed demo case dir: the snapshot it was installed from
+_snapshot_sha: dict[tuple, str] = {}
+
+
+def _demo_snapshot_sha256() -> str:
+    st = DEMO_SNAPSHOT.stat()
+    memo = (st.st_mtime_ns, st.st_size)
+    if memo not in _snapshot_sha:
+        _snapshot_sha.clear()
+        _snapshot_sha[memo] = hashlib.sha256(DEMO_SNAPSHOT.read_bytes()).hexdigest()
+    return _snapshot_sha[memo]
+
+
+def _demo_current(case_dir: Path, snapshot_sha: str) -> bool:
+    """The installed demo came from this snapshot and has its run trace (installs from before the trace existed, or
+    from an older snapshot, are stale: their replay would never play or would show an old board)."""
+    stamp = case_dir / DEMO_STAMP
+    if not (case_dir / "case.json").exists() or not stamp.exists():
+        return False
+    if stamp.read_text(encoding="utf-8").strip() != snapshot_sha:
+        return False
+    meta = _read_json(case_dir / "case.json")
+    ingest_dirs = {v["ingest_dir"] for v in meta.get("versions", [])}
+    return bool(ingest_dirs) and all((case_dir / d / "trace.jsonl").exists() for d in ingest_dirs)
+
+
 @app.post("/demo")
-def open_demo():
-    """Install the committed Kestrel snapshot (ingestion + analysis with recorded LLM results) once, then reuse it."""
+def open_demo(background: BackgroundTasks):
+    """Install the committed Kestrel snapshot (ingestion + analysis with recorded LLM results), then reuse it until the
+    snapshot changes. A stale install (other snapshot, or no run trace) is replaced; its investigator overrides
+    (`overrides.jsonl`) are kept and re-applied by a re-analysis job (`jobId` in the reply)."""
     case_dir = _cases() / DEMO_CASE_ID
-    if (case_dir / "case.json").exists():
-        return {"caseId": DEMO_CASE_ID}
     if not DEMO_SNAPSHOT.exists():
+        if (case_dir / "case.json").exists():
+            return {"caseId": DEMO_CASE_ID}
         raise ApiError(404, "no_demo_snapshot", "no demo snapshot; build it with make backend-demo-snapshot")
+    snapshot_sha = _demo_snapshot_sha256()
+    if _demo_current(case_dir, snapshot_sha):
+        return {"caseId": DEMO_CASE_ID}
+    reapply = False
     with _lock:
-        tmp = Path(tempfile.mkdtemp(dir=_cases(), prefix=".demo-"))
-        try:
-            with tarfile.open(DEMO_SNAPSHOT) as t:
-                t.extractall(tmp, filter="data")
-            meta = _read_json(tmp / "case.json")
-            # the uploaded archive is not in the snapshot; it is the repository's Kestrel ZIP (checked by hash)
-            upload = meta["uploads"][0]
-            if DEMO_ARCHIVE.exists() and hashlib.sha256(DEMO_ARCHIVE.read_bytes()).hexdigest() == upload["sha256"]:
-                (tmp / "uploads").mkdir(exist_ok=True)
-                shutil.copyfile(DEMO_ARCHIVE, tmp / "uploads" / upload["stored"])
-            if not (case_dir / "case.json").exists():
-                shutil.rmtree(case_dir, ignore_errors=True)
-                tmp.rename(case_dir)
-        finally:
-            shutil.rmtree(tmp, ignore_errors=True)
+        if not _demo_current(case_dir, snapshot_sha):
+            tmp = Path(tempfile.mkdtemp(dir=_cases(), prefix=".demo-"))
+            old = _cases() / f".demo-old-{uuid.uuid4().hex[:8]}"
+            try:
+                with tarfile.open(DEMO_SNAPSHOT) as t:
+                    t.extractall(tmp, filter="data")
+                meta = _read_json(tmp / "case.json")
+                # the uploaded archive is not in the snapshot; it is the repository's Kestrel ZIP (checked by hash)
+                upload = meta["uploads"][0]
+                if DEMO_ARCHIVE.exists() and hashlib.sha256(DEMO_ARCHIVE.read_bytes()).hexdigest() == upload["sha256"]:
+                    (tmp / "uploads").mkdir(exist_ok=True)
+                    shutil.copyfile(DEMO_ARCHIVE, tmp / "uploads" / upload["stored"])
+                (tmp / DEMO_STAMP).write_text(snapshot_sha, encoding="utf-8")
+                overrides = case_dir / "overrides.jsonl"
+                if overrides.exists() and overrides.stat().st_size:
+                    shutil.copyfile(overrides, tmp / "overrides.jsonl")  # never lose an investigator's corrections
+                    reapply = True
+                if case_dir.exists():
+                    case_dir.rename(old)
+                try:
+                    tmp.rename(case_dir)
+                except OSError:
+                    if old.exists():
+                        old.rename(case_dir)  # keep the previous install rather than none
+                    raise
+            finally:
+                shutil.rmtree(tmp, ignore_errors=True)
+                shutil.rmtree(old, ignore_errors=True)
+            chat_service.forget(DEMO_CASE_ID)
+    if reapply:
+        meta = _read_json(case_dir / "case.json")
+        job_id = uuid.uuid4().hex
+        _job(job_id, status="processing", progress=0, stage="queued", message="Re-applying analysis",
+             caseId=DEMO_CASE_ID)
+        background.add_task(_reanalyse, job_id, DEMO_CASE_ID, meta["versions"][meta["latest"]])
+        return {"caseId": DEMO_CASE_ID, "jobId": job_id}
     return {"caseId": DEMO_CASE_ID}
 
 

@@ -26,12 +26,8 @@ import {
   Check,
   FileArchive,
   Focus,
-  GitBranch,
-  History,
-  Layers,
   Lightbulb,
   LoaderCircle,
-  Minus,
   Network,
   Search,
   ShieldCheck,
@@ -53,13 +49,21 @@ import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
   arrangePins,
-  layoutCaseGraph,
   getPinDimensions,
   settlePinMoves,
-  threadHandles,
   type Pin,
   type Point,
 } from "./components/board-layout";
+import { layoutCaseGraph } from "./components/graph-layout";
+import {
+  ZoomLevelWatcher,
+  cardWording,
+  createReuse,
+  searchText,
+  threadLayout,
+  useHoverLabels,
+} from "./components/board-render";
+import { cardTitle, sourceHeading } from "./components/readable";
 import {
   StoryCardNode,
   StoryGroupNode,
@@ -85,7 +89,6 @@ import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
 import {
   boardColorVars,
-  cardKind,
   threadBadge,
   threadCategory,
   threadColors,
@@ -94,7 +97,6 @@ import {
 import { BoardLegend } from "./components/BoardLegend";
 import {
   formatCaseSubtitle,
-  formatCaseTime,
   insightKind,
   insightStrength,
   scoreLabel,
@@ -109,7 +111,7 @@ import {
 } from "./components/board-focus";
 import { casePath, useRouter } from "./routing";
 import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
-import { CaseWorkspace } from "./components/CaseWorkspace";
+import { CaseTitle, CaseWorkspace } from "./components/CaseWorkspace";
 import { AskWidget } from "./components/AskWidget";
 import { AnalysisEntries } from "./components/AnalysisEntries";
 import { HeadlinePanel } from "./components/HeadlinePanel";
@@ -117,10 +119,9 @@ import { resolveHeadline } from "./components/headline";
 import { ReplayedCase } from "./replay/ReplayedCase";
 import { replayRequested, requestReplay } from "./replay/intent";
 import { RUN_PANEL_EVENT } from "./replay/ReplayHud";
+import { useStoryMorph } from "./replay/useStoryMorph";
 import { UploadConfirm, type AnalysisMode } from "./onboarding/UploadConfirm";
-
-/** A request from another section to open the board's review dock. */
-export type ReviewRequest = { panel: Tab | "audit"; id: number };
+import { UPLOADS_ENABLED, UPLOADS_OFF_REASON } from "./config";
 import {
   Landing,
   ProjectManager,
@@ -190,24 +191,6 @@ function threadEdge(e: EvidenceEdge): Edge<ThreadData> {
   };
 }
 
-/** Labels of parallel threads between the same two cards are stacked apart. */
-function labelOffsets(
-  edges: Array<{ id: string; source: string; target: string }>,
-) {
-  const pairs = new Map<string, string[]>();
-  for (const edge of edges) {
-    const key = [edge.source, edge.target].sort().join("|");
-    pairs.set(key, [...(pairs.get(key) ?? []), edge.id]);
-  }
-  const offsets = new Map<string, number>();
-  for (const ids of pairs.values()) {
-    if (ids.length < 2) continue;
-    ids.forEach((id, index) =>
-      offsets.set(id, (index - (ids.length - 1) / 2) * 34),
-    );
-  }
-  return offsets;
-}
 function BoardCanvas({
   data,
   layoutData = data,
@@ -217,8 +200,6 @@ function BoardCanvas({
   active,
   focusSelection,
   onClearFocusSelection,
-  reviewRequest,
-  onClearReviewRequest,
 }: {
   data: CaseData;
   /** The full case, laid out once so cards revealed by a replay keep their final positions. */
@@ -230,8 +211,6 @@ function BoardCanvas({
   active: boolean;
   focusSelection?: Selection | null;
   onClearFocusSelection?: () => void;
-  reviewRequest?: ReviewRequest | null;
-  onClearReviewRequest?: () => void;
 }) {
   const { fitView, fitBounds, getViewport, setViewport } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -273,8 +252,17 @@ function BoardCanvas({
     [],
   );
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [hoveredNodeId, setHoveredNodeId] = useState<string | null>(null);
-  const [hoveredEdgeId, setHoveredEdgeId] = useState<string | null>(null);
+  const hover = useHoverLabels();
+  // Far zoom shows titles only; set by ZoomLevelWatcher on threshold crossings.
+  const [farZoom, setFarZoom] = useState(false);
+  // Card actions stay stable across renders so memoized cards skip re-rendering.
+  const inspectRef = useRef<(kind: Selection["kind"], id: string) => void>(
+    () => {},
+  );
+  const stableInspect = useCallback(
+    (kind: Selection["kind"], id: string) => inspectRef.current(kind, id),
+    [],
+  );
   const storyPin = useCallback(
     (id: string, position: Point, arriveFrom?: Point): Node<StoryNodeState> => {
       const size = isGroupId(id)
@@ -484,21 +472,12 @@ function BoardCanvas({
   // The backend's headline finding opens in the dock when the case loads.
   const headline = useMemo(() => resolveHeadline(data), [data]);
   const [dockMode, setDockMode] = useState<
-    "closed" | "overview" | "analysis" | "inspector" | "audit"
+    "closed" | "overview" | "analysis" | "inspector"
   >(() => (headline ? "overview" : "closed"));
-  const auditChain = useQuery({
-    queryKey: ["audit-chain", data.id],
-    queryFn: () => api.getAuditChain(data.id),
-    enabled: !isMock && dockMode === "audit",
-  });
   const [returnMode, setReturnMode] = useState<
-    "closed" | "overview" | "analysis" | "audit"
-  >("analysis");
-  const [auditReturnMode, setAuditReturnMode] = useState<
     "closed" | "overview" | "analysis"
-  >("closed");
+  >("analysis");
   const [search, setSearch] = useState("");
-  const [boardView, setBoardView] = useState<"graph" | "list">("graph");
   const dockRef = useRef<HTMLElement>(null);
   const analysisRef = useRef<HTMLElement>(null);
   const previousDockMode = useRef(dockMode);
@@ -606,7 +585,8 @@ function BoardCanvas({
   // The story fit leaves room for an open run panel; refit when it opens or collapses so the story uses the space.
   useEffect(() => {
     const refit = () => {
-      if (storyModeRef.current) resetBoardView();
+      // A morph is already easing the camera to the story.
+      if (storyModeRef.current && !morph.morphingRef.current) resetBoardView();
     };
     window.addEventListener(RUN_PANEL_EVENT, refit);
     return () => window.removeEventListener(RUN_PANEL_EVENT, refit);
@@ -631,6 +611,7 @@ function BoardCanvas({
     },
     [dockMode, returnMode, data, focusTarget],
   );
+  inspectRef.current = inspect;
 
   const closeInspector = useCallback(() => {
     setSelection(null);
@@ -671,24 +652,6 @@ function BoardCanvas({
     },
     [dockMode, tab, data, focusTarget, resetBoardView],
   );
-  const toggleAudit = useCallback(
-    (options?: { toggle?: boolean }) => {
-      if (dockMode === "audit") {
-        if (options?.toggle !== false) setDockMode(auditReturnMode);
-        return;
-      }
-      setAuditReturnMode(
-        dockMode === "analysis" || dockMode === "overview"
-          ? dockMode
-          : dockMode === "inspector" &&
-              (returnMode === "analysis" || returnMode === "overview")
-            ? returnMode
-            : "closed",
-      );
-      setDockMode("audit");
-    },
-    [dockMode, auditReturnMode, returnMode],
-  );
   const analysisShown =
     dockMode === "analysis" ||
     (dockMode === "inspector" && returnMode === "analysis");
@@ -724,13 +687,6 @@ function BoardCanvas({
   );
 
   useEffect(() => {
-    if (!reviewRequest || !active) return;
-    if (reviewRequest.panel === "audit") toggleAudit({ toggle: false });
-    else openAnalysis(reviewRequest.panel, { toggle: false });
-    onClearReviewRequest?.();
-  }, [reviewRequest, active, openAnalysis, toggleAudit, onClearReviewRequest]);
-
-  useEffect(() => {
     if (focusSelection && active) {
       inspect(focusSelection.kind, focusSelection.id, focusSelection.sourceId);
       onClearFocusSelection?.();
@@ -748,10 +704,11 @@ function BoardCanvas({
         layoutData.nodes.map((n) => {
           const dim = getPinDimensions(n);
           const laidOut = layout?.get(n.id);
+          const wording = cardWording(n, layoutData);
           return {
             id: n.id,
             type: "evidence",
-            ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
+            ariaLabel: `${wording.title}. ${n.type}. Inspect evidence and sources`,
             position: laidOut
               ? { x: 100 + laidOut.x, y: laidOut.y }
               : { x: 100 + n.position.x, y: n.position.y * 1.2 },
@@ -759,19 +716,20 @@ function BoardCanvas({
             height: dim.height,
             data: {
               ...n,
+              ...wording,
               timeZone: layoutData.timezone,
               caseId: layoutData.id,
               width: dim.width,
               height: dim.height,
-              onInspect: () => inspect("node", n.id),
+              onInspect: () => stableInspect("node", n.id),
               onInspectGap: n.gapId
-                ? () => inspect("gap", n.gapId!)
+                ? () => stableInspect("gap", n.gapId!)
                 : undefined,
             },
           };
         }),
       ),
-    [layoutData, inspect, layout],
+    [layoutData, stableInspect, layout],
   );
   const initialEdges: Edge<ThreadData>[] = useMemo(
     () => layoutData.edges.map(threadEdge),
@@ -807,6 +765,20 @@ function BoardCanvas({
     () => new Set(data.edges.map((e) => e.id)),
     [data.edges],
   );
+  // Full graph <-> story animation, also when a replay hands over to the story.
+  const morph = useStoryMorph({
+    caseId: data.id,
+    growing,
+    active,
+    opensOnStory: storyMode,
+    fullNodes: nodes,
+    storyNodes,
+    groups,
+    shownIds: revealedNodeIds,
+    getViewport,
+    fitView,
+    storyPadding,
+  });
   // Fit the board beside the dock when it is open, including the headline on load.
   dockOpenRef.current = dockMode !== "closed";
   const fitPadding = storyMode
@@ -873,9 +845,7 @@ function BoardCanvas({
     () =>
       normalizedSearch
         ? revealedNodes.filter((n) =>
-            `${n.data.label} ${n.data.summary}`
-              .toLowerCase()
-              .includes(normalizedSearch),
+            searchText(n.data).includes(normalizedSearch),
           )
         : revealedNodes,
     [revealedNodes, normalizedSearch],
@@ -917,24 +887,18 @@ function BoardCanvas({
       citations.slice(0, 3).flatMap((id) => {
         const source = sourceById.get(id);
         if (!source) return [];
-        const evidenceId = source.metadata?.evidence_id;
-        const locator = source.metadata?.locator;
-        return [
-          {
-            id,
-            locator: evidenceId
-              ? `${evidenceId}${locator ? ` ${locator}` : ""}`
-              : source.path.split("/").pop() || id,
-            text: source.excerpt,
-          },
-        ];
+        return [{ id, ...sourceHeading(source), text: source.excerpt }];
       }),
     [sourceById],
   );
 
+  // Story card actions go through a ref so their data objects can be reused.
+  const storyActions = useRef({ toggleGroup, showConnections });
+  storyActions.current = { toggleGroup, showConnections };
+  const reuseStory = useMemo(() => createReuse<Node>(), []);
   const storyFlowNodes = useMemo(() => {
     if (!storyMode || !story) return [];
-    return storyNodes.map((n) => {
+    return storyNodes.map((n): Node => {
       const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
       const group = groupById.get(n.id);
       if (group) {
@@ -943,68 +907,87 @@ function BoardCanvas({
               (id) => matchingNodeIds.has(id) && !storyVisibleIds.has(id),
             ).length
           : 0;
-        const isDimmed =
-          (matchingNodeIds && matches === 0) || (focusedNodeIds && !isFocused);
-        return {
-          ...n,
-          className:
-            `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
-          data: {
-            title: group.title,
-            rule: group.rule,
-            nodeType: group.nodeType,
-            total: group.memberIds.length,
-            hidden: group.memberIds.filter((id) => !storyVisibleIds.has(id))
-              .length,
-            width: n.width ?? STORY_GROUP.width,
-            height: n.height ?? STORY_GROUP.height,
-            isFocused,
-            matches,
-            onToggle: () => toggleGroup(n.id),
-          },
-        };
+        const isDimmed = Boolean(
+          (matchingNodeIds && matches === 0) || (focusedNodeIds && !isFocused),
+        );
+        const hidden = group.memberIds.filter(
+          (id) => !storyVisibleIds.has(id),
+        ).length;
+        return reuseStory(
+          n.id,
+          [n, group, isFocused, isDimmed, matches, hidden],
+          () => ({
+            ...n,
+            className:
+              `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+            data: {
+              title: group.title,
+              rule: group.rule,
+              nodeType: group.nodeType,
+              total: group.memberIds.length,
+              hidden,
+              width: n.width ?? STORY_GROUP.width,
+              height: n.height ?? STORY_GROUP.height,
+              isFocused,
+              matches,
+              onToggle: () => storyActions.current.toggleGroup(n.id),
+            },
+          }),
+        );
       }
       const source = nodeById.get(n.id)!;
       const expanded = expandedId === n.id;
-      const isDimmed =
+      const isDimmed = Boolean(
         (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
-        (focusedNodeIds && !isFocused);
-      return {
-        ...n,
-        zIndex: expanded ? 1000 : undefined,
-        className:
-          `${isDimmed && !expanded ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
-        data: {
-          label: source.label,
-          type: source.type,
-          subtitle: source.subtitle,
-          summary: source.summary,
-          citations: source.citations,
-          time: source.time,
-          timeZone: data.timezone,
-          certainty: source.certainty,
-          gapId: source.gapId,
-          width: n.width ?? STORY_CARD.width,
-          height: n.height ?? STORY_CARD.height,
-          hero: n.id === story.centerId,
-          expanded,
-          active:
-            selection?.kind === "node" ? selection.id === n.id : isFocused,
-          isFocused,
-          excerpts: expanded ? excerptsFor(source.citations) : [],
-          hiddenNeighbours: hiddenNeighbours(n.id, data.edges, storyVisibleIds)
-            .length,
-          arriveFrom: n.data.arriveFrom,
-          onToggle: () =>
-            setExpandedId((current) => (current === n.id ? null : n.id)),
-          onCollapse: () => setExpandedId(null),
-          onInspect: () => inspect("node", n.id),
-          onInspectGap: source.gapId
-            ? () => inspect("gap", source.gapId!)
-            : undefined,
-          onShowConnections: () => showConnections(n.id),
-        },
-      };
+        (focusedNodeIds && !isFocused),
+      );
+      const active =
+        selection?.kind === "node" ? selection.id === n.id : isFocused;
+      const hiddenCount = hiddenNeighbours(
+        n.id,
+        data.edges,
+        storyVisibleIds,
+      ).length;
+      return reuseStory(
+        n.id,
+        [n, source, isFocused, isDimmed, expanded, active, hiddenCount, data],
+        () => ({
+          ...n,
+          zIndex: expanded ? 1000 : undefined,
+          className:
+            `${isDimmed && !expanded ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+          data: {
+            ...cardWording(source, data),
+            label: source.label,
+            type: source.type,
+            subtitle: source.subtitle,
+            citations: source.citations,
+            time: source.time,
+            timeZone: data.timezone,
+            certainty: source.certainty,
+            origin: source.origin,
+            stage: source.stage,
+            gapId: source.gapId,
+            width: n.width ?? STORY_CARD.width,
+            height: n.height ?? STORY_CARD.height,
+            hero: n.id === story.centerId,
+            expanded,
+            active,
+            isFocused,
+            excerpts: expanded ? excerptsFor(source.citations) : [],
+            hiddenNeighbours: hiddenCount,
+            arriveFrom: n.data.arriveFrom,
+            onToggle: () =>
+              setExpandedId((current) => (current === n.id ? null : n.id)),
+            onCollapse: () => setExpandedId(null),
+            onInspect: () => stableInspect("node", n.id),
+            onInspectGap: source.gapId
+              ? () => stableInspect("gap", source.gapId!)
+              : undefined,
+            onShowConnections: () => storyActions.current.showConnections(n.id),
+          },
+        }),
+      );
     });
   }, [
     storyMode,
@@ -1014,14 +997,13 @@ function BoardCanvas({
     groupById,
     matchingNodeIds,
     storyVisibleIds,
-    toggleGroup,
     nodeById,
     expandedId,
     data,
     selection,
     excerptsFor,
-    inspect,
-    showConnections,
+    stableInspect,
+    reuseStory,
   ]);
 
   /** Story threads: real threads between visible cards, plus one aggregate per card and group. */
@@ -1048,7 +1030,8 @@ function BoardCanvas({
       const kind = thread.kind === "mixed" ? "inference" : thread.kind;
       const label = aggregateLabel(thread);
       const group = groupById.get(thread.target);
-      const from = nodeById.get(thread.source)?.label ?? thread.source;
+      const fromNode = nodeById.get(thread.source);
+      const from = fromNode ? cardTitle(fromNode) : thread.source;
       return {
         id: thread.id,
         source: thread.source,
@@ -1088,111 +1071,145 @@ function BoardCanvas({
 
   // Items revealed in the same tick fade in a few tens of ms apart.
   const revealDelays = useRef(new Map<string, number>());
+  // Unchanged cards and threads keep their object identity, so React Flow
+  // re-renders only what a selection, search, drag or reveal changed.
+  const reuseNode = useMemo(() => createReuse<Node<PinData>>(), []);
   const visibleNodes = useMemo(() => {
     let fresh = 0;
     return revealedNodes.map((n) => {
       const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
-      const isDimmed =
+      const isDimmed = Boolean(
         (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
-        (focusedNodeIds && !isFocused);
+        (focusedNodeIds && !isFocused),
+      );
       if (growing && !revealDelays.current.has(n.id))
         revealDelays.current.set(n.id, Math.min(fresh++, 6) * 50);
       const delay = revealDelays.current.get(n.id);
-      return {
+      const active =
+        selection?.kind === "node" ? selection.id === n.id : isFocused;
+      return reuseNode(n.id, [n, isFocused, isDimmed, active, delay], () => ({
         ...n,
         ...(delay
           ? { style: { ...n.style, "--reveal-delay": `${delay}ms` } }
           : {}),
         className:
           `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
-        data: {
-          ...n.data,
-          active:
-            selection?.kind === "node" ? selection.id === n.id : isFocused,
-          isFocused,
-          onInspect: () => inspect("node", n.id),
-          onInspectGap: n.data.gapId
-            ? () => inspect("gap", n.data.gapId!)
-            : undefined,
-        },
-      };
+        data: { ...n.data, active, isFocused },
+      }));
     });
   }, [
     revealedNodes,
     matchingNodeIds,
     focusedNodeIds,
     selection,
-    inspect,
     growing,
+    reuseNode,
   ]);
 
+  const { decorate: decorateMorph } = morph;
+  const flowNodes = useMemo(
+    () => decorateMorph((storyMode ? storyFlowNodes : visibleNodes) as Node[]),
+    [decorateMorph, storyMode, storyFlowNodes, visibleNodes],
+  );
+
+  // Handles and label spots follow the cards; while a card is being dragged
+  // the label spots keep their last placement so dragging stays smooth.
+  const lastSpots = useRef({
+    spots: new Map<string, number>(),
+    covered: new Set<string>(),
+  });
+  const edgeList = useMemo(
+    () =>
+      storyMode
+        ? storyEdges
+        : edges.filter((edge) => revealedEdgeIds.has(edge.id)),
+    [storyMode, storyEdges, edges, revealedEdgeIds],
+  );
+  const placedCards: Node[] = storyMode ? storyNodes : revealedNodes;
+  const threadGeometry = useMemo(() => {
+    // An expanded story card overlays its neighbours; labels avoid it too,
+    // while its threads still attach to its compact footprint.
+    const expanded =
+      storyMode && expandedId
+        ? placedCards.find((node) => node.id === expandedId)
+        : undefined;
+    const obstacles = expanded
+      ? [
+          {
+            x:
+              expanded.position.x -
+              (STORY_EXPANDED.width - (expanded.width ?? 0)) / 2,
+            y: expanded.position.y,
+            ...STORY_EXPANDED,
+          },
+        ]
+      : [];
+    const dragging = placedCards.some((node) => node.dragging);
+    const result = threadLayout(edgeList, placedCards, obstacles);
+    if (dragging) return { ...result, ...lastSpots.current };
+    lastSpots.current = { spots: result.spots, covered: result.covered };
+    return result;
+  }, [edgeList, placedCards, storyMode, expandedId]);
+  const reuseEdge = useMemo(() => createReuse<Edge<ThreadData>>(), []);
   const visibleEdges = useMemo(() => {
-    // In the full graph a running replay shows only the threads revealed so far.
-    const list = storyMode
-      ? storyEdges
-      : edges.filter((edge) => revealedEdgeIds.has(edge.id));
-    const positioned: Array<{
-      id: string;
-      position: Point;
-      width?: number;
-      height?: number;
-    }> = storyMode ? storyNodes : nodes;
-    const nodesById = new Map(positioned.map((node) => [node.id, node]));
-    const offsets = labelOffsets(list);
-    return list.map((edge) => {
-      const source = nodesById.get(edge.source);
-      const target = nodesById.get(edge.target);
+    const { handles, spots, covered } = threadGeometry;
+    return edgeList.map((edge) => {
       const isFocused = focusedNodeIds
         ? focusedNodeIds.has(edge.source) && focusedNodeIds.has(edge.target)
         : false;
-      const isDimmed = focusedNodeIds && !isFocused;
-      const touches = (id: string | null) =>
-        id !== null && (edge.source === id || edge.target === id);
-      return {
-        ...edge,
-        className:
-          `${edge.className ?? ""} ${isDimmed ? "dimmed-edge" : ""} ${isFocused ? "focused-edge" : ""}`.trim(),
-        ...(source && target
-          ? storyMode
-            ? // Story cards differ in size, so threads attach by centres.
-              threadHandles(centreOf(source), centreOf(target))
-            : threadHandles(source.position, target.position)
-          : {}),
-        selected:
-          selection?.kind === "edge" ? selection.id === edge.id : isFocused,
-        data: edge.data
-          ? {
-              ...edge.data,
-              isFocused,
-              isDimmed: Boolean(isDimmed),
-              labelOffset: offsets.get(edge.id),
-              hovered: hoveredEdgeId === edge.id || touches(hoveredNodeId),
-              onInspect: edge.data.aggregateCount
-                ? edge.data.onInspect
-                : () => inspect("edge", edge.id),
-            }
-          : undefined,
-      };
+      const isDimmed = Boolean(focusedNodeIds && !isFocused);
+      const selected =
+        selection?.kind === "edge" ? selection.id === edge.id : isFocused;
+      const pair = handles.get(edge.id);
+      const labelT = spots.get(edge.id);
+      const labelCovered = covered.has(edge.id);
+      return reuseEdge(
+        edge.id,
+        [
+          edge,
+          isFocused,
+          isDimmed,
+          selected,
+          pair?.sourceHandle,
+          pair?.targetHandle,
+          labelT,
+          labelCovered,
+        ],
+        () => ({
+          ...edge,
+          className:
+            `${edge.className ?? ""} ${isDimmed ? "dimmed-edge" : ""} ${isFocused ? "focused-edge" : ""}`.trim(),
+          ...(pair ?? {}),
+          selected,
+          data: edge.data
+            ? {
+                ...edge.data,
+                isFocused,
+                isDimmed,
+                labelT,
+                labelCovered,
+                onInspect: edge.data.aggregateCount
+                  ? edge.data.onInspect
+                  : () => stableInspect("edge", edge.id),
+              }
+            : undefined,
+        }),
+      );
     });
   }, [
-    storyMode,
-    storyEdges,
-    storyNodes,
-    edges,
-    revealedEdgeIds,
-    nodes,
+    threadGeometry,
+    edgeList,
     focusedNodeIds,
     selection,
-    inspect,
-    hoveredEdgeId,
-    hoveredNodeId,
-    expandedId,
+    stableInspect,
+    reuseEdge,
   ]);
 
   const switchView = useCallback(
     (mode: "story" | "full") => {
       if (mode === viewMode) return;
       setExpandedId(null);
+      const morphing = morph.start(mode);
       setViewMode(mode);
       window.setTimeout(() => {
         const targets = selection
@@ -1200,10 +1217,11 @@ function BoardCanvas({
           : null;
         if (targets && targets.size && mode === "full")
           focusTarget(targets, { reveal: false });
+        else if (morphing && mode === "story") morph.fitStory();
         else resetBoardView();
       }, 40);
     },
-    [viewMode, selection, data, focusTarget, resetBoardView],
+    [viewMode, selection, data, focusTarget, resetBoardView, morph],
   );
   const onStoryNodesChange = useCallback(
     (changes: NodeChange<Node<StoryNodeState>>[]) => {
@@ -1222,6 +1240,17 @@ function BoardCanvas({
   // when it has cards; otherwise the camera would stay fixed on an empty frame.
   const framedReplay = useRef<CaseData | null>(null);
   const [flowReady, setFlowReady] = useState(false);
+  // Opening on the story as a replay ends: ease from the growing board's camera.
+  const morphFit = useRef(false);
+  const { handoff: morphHandoff, begin: beginMorph, fitStory } = morph;
+  useEffect(() => {
+    if (!morphHandoff || !flowReady || morphFit.current) return;
+    morphFit.current = true;
+    window.setTimeout(() => {
+      beginMorph();
+      fitStory();
+    }, 30);
+  }, [morphHandoff, flowReady, beginMorph, fitStory]);
   useEffect(() => {
     if (!growing) {
       framedReplay.current = null;
@@ -1251,10 +1280,10 @@ function BoardCanvas({
       <div className="workspace">
         <div className="board-area">
           <div className="board-toolbar">
-            <div className="board-title">
-              <h1>{projectName || data.title}</h1>
-              <span>{formatCaseSubtitle(data.subtitle, data.timezone)}</span>
-            </div>
+            <CaseTitle
+              title={projectName || data.title}
+              subtitle={formatCaseSubtitle(data.subtitle, data.timezone)}
+            />
             <div className="board-actions">
               <label className="board-search">
                 <Search size={14} />
@@ -1285,31 +1314,6 @@ function BoardCanvas({
                   </button>
                 )}
               </label>
-              <button
-                className="text-button view-toggle"
-                aria-pressed={boardView === "list"}
-                onClick={() =>
-                  setBoardView(boardView === "graph" ? "list" : "graph")
-                }
-              >
-                {boardView === "graph" ? (
-                  <Layers size={15} />
-                ) : (
-                  <GitBranch size={15} />
-                )}
-                {boardView === "graph" ? "List" : "Board"}
-              </button>
-              <button
-                className="text-button"
-                aria-pressed={
-                  dockMode === "audit" ||
-                  (dockMode === "inspector" && returnMode === "audit")
-                }
-                aria-controls="review-dock"
-                onClick={() => toggleAudit()}
-              >
-                <History size={15} /> Audit trail
-              </button>
               <AnalysisEntries
                 data={data}
                 active={analysisShown ? tab : null}
@@ -1318,141 +1322,74 @@ function BoardCanvas({
             </div>
           </div>
           <div
-            className={`canvas-wrap ${storyMode && boardView === "graph" ? "is-story" : ""}${growing ? " replay-growing" : ""}`}
-            style={boardColorVars()}
+            className={`canvas-wrap ${storyMode ? "is-story" : ""}${growing ? " replay-growing" : ""}${farZoom ? " is-far" : ""}${morph.className}`}
+            style={{ ...boardColorVars(), ...morph.style }}
           >
-            {boardView === "list" ? (
-              <div className="evidence-list">
-                <h2>Evidence & connections</h2>
-                <p>Inspect any record to review its original sources.</p>
-                {matchingNodes.map((n) => (
-                  <button
-                    key={n.id}
-                    className={
-                      focusedNodeIds && focusedNodeIds.has(n.id)
-                        ? "is-focused"
-                        : ""
-                    }
-                    onClick={() => inspect("node", n.id)}
-                  >
-                    <span
-                      className={`list-record-type kind-${cardKind(n.data.type)}`}
-                    >
-                      {n.data.type}
-                    </span>
-                    <strong>{n.data.label}</strong>
-                    <span>
-                      {n.data.citations.length} sources{" "}
-                      <ArrowUpRight size={14} />
-                    </span>
-                  </button>
-                ))}
-                <h3>Relationships</h3>
-                {data.edges
-                  .filter(
-                    (e) =>
-                      !matchingNodeIds ||
-                      matchingNodeIds.has(e.source) ||
-                      matchingNodeIds.has(e.target),
-                  )
-                  .map((e) => (
-                    <button key={e.id} onClick={() => inspect("edge", e.id)}>
-                      <span className="list-record-type">
-                        {relationshipKind(e.type, e.certainty) === "observed"
-                          ? "Observed"
-                          : relationshipKind(e.type, e.certainty) ===
-                              "inference"
-                            ? "Inference"
-                            : "Claim"}
-                      </span>
-                      <strong>
-                        {data.nodes.find((n) => n.id === e.source)?.label}{" "}
-                        {e.directed ? (
-                          <ArrowRight size={12} />
-                        ) : (
-                          <Minus size={12} />
-                        )}{" "}
-                        {e.label}{" "}
-                        {e.directed ? (
-                          <ArrowRight size={12} />
-                        ) : (
-                          <Minus size={12} />
-                        )}{" "}
-                        {data.nodes.find((n) => n.id === e.target)?.label}
-                      </strong>
-                      <span>
-                        {e.citations.length} sources <ArrowUpRight size={14} />
-                      </span>
-                    </button>
-                  ))}
-              </div>
-            ) : (
-              <ReactFlow
-                nodes={(storyMode ? storyFlowNodes : visibleNodes) as Node[]}
-                edges={visibleEdges}
-                onNodesChange={
-                  (storyMode ? onStoryNodesChange : onNodesChange) as (
-                    changes: NodeChange<Node>[],
-                  ) => void
+            <ReactFlow
+              nodes={flowNodes}
+              edges={visibleEdges}
+              onNodesChange={
+                (storyMode ? onStoryNodesChange : onNodesChange) as (
+                  changes: NodeChange<Node>[],
+                ) => void
+              }
+              onEdgesChange={onEdgesChange}
+              nodeTypes={nodeTypes}
+              edgeTypes={edgeTypes}
+              onNodeClick={(event, n) => {
+                if (!storyMode) {
+                  inspect("node", n.id);
+                  return;
                 }
-                onEdgesChange={onEdgesChange}
-                nodeTypes={nodeTypes}
-                edgeTypes={edgeTypes}
-                onNodeClick={(event, n) => {
-                  if (!storyMode) {
-                    inspect("node", n.id);
-                    return;
-                  }
-                  if (isGroupId(n.id)) toggleGroup(n.id);
-                  else if (
-                    !(event.target as HTMLElement).closest(".story-card-body")
-                  )
-                    setExpandedId((current) =>
-                      current === n.id ? null : n.id,
-                    );
-                }}
-                onEdgeClick={(_, e) => {
-                  const edge = visibleEdges.find((entry) => entry.id === e.id);
-                  if (edge?.data?.aggregateCount) edge.data.onInspect();
-                  else inspect("edge", e.id);
-                }}
-                onNodeMouseEnter={(_, n) => setHoveredNodeId(n.id)}
-                onNodeMouseLeave={() => setHoveredNodeId(null)}
-                onEdgeMouseEnter={(_, e) => setHoveredEdgeId(e.id)}
-                onEdgeMouseLeave={() => setHoveredEdgeId(null)}
-                onPaneClick={() => {
-                  if (expandedId) setExpandedId(null);
-                  else if (dockMode === "inspector") closeInspector();
-                }}
-                onInit={() => setFlowReady(true)}
-                fitView={!growing}
+                if (isGroupId(n.id)) toggleGroup(n.id);
+                else if (
+                  !(event.target as HTMLElement).closest(".story-card-body")
+                )
+                  setExpandedId((current) => (current === n.id ? null : n.id));
+              }}
+              onEdgeClick={(_, e) => {
+                const edge = visibleEdges.find((entry) => entry.id === e.id);
+                if (edge?.data?.aggregateCount) edge.data.onInspect();
+                else inspect("edge", e.id);
+              }}
+              onNodeMouseEnter={hover.onNodeMouseEnter}
+              onNodeMouseLeave={hover.onLeave}
+              onEdgeMouseEnter={hover.onEdgeMouseEnter}
+              onEdgeMouseLeave={hover.onLeave}
+              onPaneClick={() => {
+                if (expandedId) setExpandedId(null);
+                else if (dockMode === "inspector") closeInspector();
+              }}
+              onInit={() => setFlowReady(true)}
+              fitView={!growing && !morph.handoff}
+              defaultViewport={morph.handoff?.viewport}
+              fitViewOptions={{ padding: fitPadding, ...fitZoom }}
+              panOnScroll
+              panOnScrollSpeed={1}
+              zoomOnScroll={false}
+              zoomOnPinch
+              minZoom={0.15}
+              maxZoom={1.8}
+              nodesConnectable={false}
+              // Each card's inspect button and each thread's label button are
+              // the keyboard stops; the wrappers would add a second, unstyled
+              // stop per card and thread.
+              nodesFocusable={false}
+              edgesFocusable={false}
+              deleteKeyCode={null}
+              proOptions={{ hideAttribution: true }}
+            >
+              <Controls
+                position="bottom-right"
+                showInteractive={false}
                 fitViewOptions={{ padding: fitPadding, ...fitZoom }}
-                panOnScroll
-                panOnScrollSpeed={1}
-                zoomOnScroll={false}
-                zoomOnPinch
-                minZoom={0.15}
-                maxZoom={1.8}
-                nodesConnectable={false}
-                // Each card's inspect button and each thread's label button are
-                // the keyboard stops; the wrappers would add a second, unstyled
-                // stop per card and thread.
-                nodesFocusable={false}
-                edgesFocusable={false}
-                deleteKeyCode={null}
-                proOptions={{ hideAttribution: true }}
               >
-                <Controls
-                  position="bottom-right"
-                  showInteractive={false}
-                  fitViewOptions={{ padding: fitPadding, ...fitZoom }}
-                >
-                  <ZoomReadout />
-                </Controls>
-                {!storyMode && <CanvasMinimap frameNodes={nodes} />}
-              </ReactFlow>
-            )}
-            {story && boardView === "graph" && !growing && (
+                <ZoomReadout />
+              </Controls>
+              {!storyMode && <CanvasMinimap frameNodes={nodes} />}
+              <ZoomLevelWatcher onFarChange={setFarZoom} />
+            </ReactFlow>
+            {story && !growing && (
               <div
                 className="board-view-switch"
                 role="group"
@@ -1482,9 +1419,9 @@ function BoardCanvas({
             {search.trim() && (
               <div className="search-feedback" role="status">
                 {matchingNodes.length
-                  ? `${matchingNodes.length} matching pin${matchingNodes.length === 1 ? "" : "s"}.${boardView === "graph" ? " Other pins are dimmed." : ""}`
+                  ? `${matchingNodes.length} matching pin${matchingNodes.length === 1 ? "" : "s"}. Other pins are dimmed.`
                   : "No matching evidence. Try a name, device, or location."}
-                {boardView === "graph" && hiddenMatches.length > 0 && (
+                {hiddenMatches.length > 0 && (
                   <>
                     {" "}
                     {hiddenMatches.length} folded into groups.{" "}
@@ -1503,13 +1440,11 @@ function BoardCanvas({
                 )}
               </div>
             )}
-            {boardView === "graph" && (
-              <BoardLegend
-                nodes={data.nodes}
-                edges={data.edges}
-                yield={dockMode !== "closed"}
-              />
-            )}
+            <BoardLegend
+              nodes={data.nodes}
+              edges={data.edges}
+              yield={dockMode !== "closed"}
+            />
           </div>
         </div>
         <aside
@@ -1523,20 +1458,12 @@ function BoardCanvas({
           {dockMode !== "inspector" && (
             <div className="review-dock-header">
               <div>
-                <h2>{dockMode === "audit" ? "Audit trail" : "Analysis"}</h2>
+                <h2>Analysis</h2>
               </div>
               <button
                 className="icon-button"
-                aria-label={
-                  dockMode === "audit" && auditReturnMode !== "closed"
-                    ? "Back to review"
-                    : "Close review dock"
-                }
+                aria-label="Close review dock"
                 onClick={() => {
-                  if (dockMode === "audit") {
-                    setDockMode(auditReturnMode);
-                    return;
-                  }
                   setSelection(null);
                   setDockMode("closed");
                   resetBoardView();
@@ -1734,118 +1661,20 @@ function BoardCanvas({
                 focusTarget(targetNodes, { dockOpen: true });
             }}
             backLabel={
-              returnMode === "audit"
-                ? "Back to audit"
-                : returnMode === "overview"
-                  ? "Back to key finding"
-                  : returnMode === "closed"
-                    ? "Back to board"
-                    : tab === "gaps"
-                      ? "Back to gaps"
-                      : tab === "insights"
-                        ? "Back to insights"
-                        : "Back to next evidence"
+              returnMode === "overview"
+                ? "Back to key finding"
+                : returnMode === "closed"
+                  ? "Back to board"
+                  : tab === "gaps"
+                    ? "Back to gaps"
+                    : tab === "insights"
+                      ? "Back to insights"
+                      : "Back to next evidence"
             }
           />
-          <section className="audit-panel" hidden={dockMode !== "audit"}>
-            {auditChain.data && (
-              <div
-                className={`audit-chain ${auditChain.data.verified ? "verified" : "failed"}`}
-                role="status"
-              >
-                <strong>
-                  {auditChain.data.verified
-                    ? "Audit chain verified"
-                    : "Audit chain verification failed"}
-                </strong>
-                <span>
-                  {auditChain.data.entries.length} hash-chained entries from
-                  ingestion and analysis · head{" "}
-                  <code>{auditChain.data.head.slice(0, 16)}…</code>
-                </span>
-                <ul>
-                  {auditChain.data.checks.map((check) => (
-                    <li key={check.message} className={check.ok ? "" : "bad"}>
-                      {check.ok ? "✓" : "✗"} {check.message}
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            )}
-            {auditChain.isError && (
-              <p className="error-message" role="alert">
-                Could not verify the audit chain: {auditChain.error.message}
-              </p>
-            )}
-            <div className="audit-steps">
-              {data.audit.map((a) => (
-                <div className="audit-step" key={a.id}>
-                  <Check size={13} />
-                  <time dateTime={a.time}>
-                    {formatCaseTime(a.time, data.timezone)}
-                  </time>
-                  <h3>{a.title}</h3>
-                  <AuditDescription text={a.description} />
-                  {a.citations.map((id) => (
-                    <button
-                      key={id}
-                      onClick={() => {
-                        inspect("source", id);
-                      }}
-                    >
-                      {data.sources
-                        .find((s) => s.id === id)
-                        ?.path.split("/")
-                        .pop()}{" "}
-                      <ArrowUpRight size={10} />
-                    </button>
-                  ))}
-                </div>
-              ))}
-            </div>
-          </section>
         </aside>
       </div>
     </>
-  );
-}
-
-/**
- * Audit entries from the backend carry their step payload as JSON. Show it as
- * labelled fields with long hashes shortened (full value on hover) instead of a
- * raw JSON string; anything else is shown as written.
- */
-function AuditDescription({ text }: { text: string }) {
-  let fields: [string, string][] | null = null;
-  if (text.trim().startsWith("{")) {
-    try {
-      const parsed: unknown = JSON.parse(text);
-      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-        fields = Object.entries(parsed).map(([key, value]) => [
-          key.replace(/_/g, " "),
-          value === null
-            ? "none"
-            : typeof value === "object"
-              ? JSON.stringify(value)
-              : String(value),
-        ]);
-      }
-    } catch {
-      fields = null;
-    }
-  }
-  if (!fields) return <p>{text}</p>;
-  return (
-    <dl className="audit-fields">
-      {fields.map(([key, value]) => (
-        <div key={key}>
-          <dt>{key}</dt>
-          <dd title={value.length > 24 ? value : undefined}>
-            {/^[0-9a-f]{32,}$/i.test(value) ? `${value.slice(0, 16)}…` : value}
-          </dd>
-        </div>
-      ))}
-    </dl>
   );
 }
 
@@ -1861,8 +1690,6 @@ function Board(props: {
   active: boolean;
   focusSelection?: Selection | null;
   onClearFocusSelection?: () => void;
-  reviewRequest?: ReviewRequest | null;
-  onClearReviewRequest?: () => void;
 }) {
   return (
     <>
@@ -1880,9 +1707,6 @@ export default function App() {
   const queryClient = useQueryClient();
   const [openingCase, setOpeningCase] = useState(false);
   const [focusSelection, setFocusSelection] = useState<Selection | null>(null);
-  const [reviewRequest, setReviewRequest] = useState<ReviewRequest | null>(
-    null,
-  );
   const uploadOpen = route.kind === "new-project";
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState<SessionProject[]>([]);
@@ -2218,10 +2042,6 @@ export default function App() {
                       route.kind === "case" ? route.insightsTab : undefined
                     }
                     navigate={navigate}
-                    onOpenReview={(panel) => {
-                      setReviewRequest({ panel, id: Date.now() });
-                      navigate(casePath(route.caseId));
-                    }}
                     onFocusOnBoard={(sel) => {
                       setFocusSelection(sel);
                       if (route.kind !== "case" || route.view) {
@@ -2244,8 +2064,6 @@ export default function App() {
                       active={route.kind === "case" && !route.view}
                       focusSelection={focusSelection}
                       onClearFocusSelection={() => setFocusSelection(null)}
-                      reviewRequest={reviewRequest}
-                      onClearReviewRequest={() => setReviewRequest(null)}
                       projectName={
                         projects.find(
                           (project) => project.caseId === route.caseId,
@@ -2296,28 +2114,33 @@ export default function App() {
               <Upload size={24} />
             </div>
             <h2 id="upload-title">Add a new project</h2>
-            <p>Name your project and select a ZIP archive.</p>
-            <label className="project-name-field">
+            <p>
+              {UPLOADS_ENABLED
+                ? "Name your project and select a ZIP archive."
+                : `${UPLOADS_OFF_REASON} Open the fictional Kestrel case instead.`}
+            </p>
+            <label className="project-name-field" hidden={!UPLOADS_ENABLED}>
               Project name <span>(optional)</span>
               <input
                 maxLength={80}
                 placeholder="e.g. Inventory review"
                 value={projectName}
-                disabled={uploading}
+                disabled={uploading || !UPLOADS_ENABLED}
                 onChange={(e) => setProjectName(e.target.value)}
               />
             </label>
             <div
-              className={`dropzone ${dragging ? "dragging" : ""}`}
+              className={`dropzone ${dragging ? "dragging" : ""} ${UPLOADS_ENABLED ? "" : "is-off"}`}
+              aria-disabled={UPLOADS_ENABLED ? undefined : true}
               onDragOver={(e) => {
                 e.preventDefault();
-                setDragging(true);
+                if (UPLOADS_ENABLED) setDragging(true);
               }}
               onDragLeave={() => setDragging(false)}
               onDrop={(e) => {
                 e.preventDefault();
                 setDragging(false);
-                if (!uploading) {
+                if (!uploading && UPLOADS_ENABLED) {
                   setFile(e.dataTransfer.files[0] ?? null);
                   setError("");
                 }
@@ -2327,17 +2150,22 @@ export default function App() {
               <strong>
                 {file
                   ? file.name
-                  : api.mode === "live"
-                    ? "Choose a ZIP of case evidence"
-                    : "Choose a ZIP to preview the workspace"}
+                  : !UPLOADS_ENABLED
+                    ? "ZIP uploads are off"
+                    : api.mode === "live"
+                      ? "Choose a ZIP of case evidence"
+                      : "Choose a ZIP to preview the workspace"}
               </strong>
               <span>
                 {file
                   ? `${(file.size / 1024 / 1024).toFixed(2)} MB`
-                  : "ZIP archive"}
+                  : UPLOADS_ENABLED
+                    ? "ZIP archive"
+                    : "The demo case shows a finished analysis."}
               </span>
               <button
-                disabled={uploading}
+                disabled={uploading || !UPLOADS_ENABLED}
+                hidden={!UPLOADS_ENABLED}
                 className="text-button"
                 onClick={() => inputRef.current?.click()}
               >
@@ -2389,25 +2217,37 @@ export default function App() {
             )}
             <button
               className="button button-primary full-width"
-              disabled={!file || (uploading && !ready) || openingCase}
+              disabled={
+                UPLOADS_ENABLED
+                  ? !file || (uploading && !ready) || openingCase
+                  : openingCase
+              }
               onClick={
-                ready
-                  ? () =>
-                      void openCase(
-                        statusQuery.data?.caseId ?? uploadedCaseId ?? undefined,
-                      )
-                  : api.mode === "live"
-                    ? () => {
-                        setError("");
-                        setConfirmOpen(true);
-                      }
-                    : () => void upload()
+                !UPLOADS_ENABLED
+                  ? () => void openCase()
+                  : ready
+                    ? () =>
+                        void openCase(
+                          statusQuery.data?.caseId ??
+                            uploadedCaseId ??
+                            undefined,
+                        )
+                    : api.mode === "live"
+                      ? () => {
+                          setError("");
+                          setConfirmOpen(true);
+                        }
+                      : () => void upload()
               }
             >
               {openingCase ? (
                 <>
                   <LoaderCircle size={16} className="spin" /> Opening evidence
                   board
+                </>
+              ) : !UPLOADS_ENABLED ? (
+                <>
+                  Explore the demo case <ArrowRight size={16} />
                 </>
               ) : ready ? (
                 <>
@@ -2428,7 +2268,8 @@ export default function App() {
                 </>
               )}
             </button>
-            {api.mode === "live" ? (
+            {!UPLOADS_ENABLED && api.mode === "live" ? null : api.mode ===
+              "live" ? (
               <p className="upload-disclosure">
                 The ZIP is uploaded to the case service, which hashes every file
                 and keeps read-only copies. Evidence is never modified. Limit

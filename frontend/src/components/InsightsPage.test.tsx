@@ -246,9 +246,186 @@ describe("insights page", () => {
     expect(html).toContain("Someone else may have used the badge.");
     expect(html).toContain("Medium confidence");
     expect(html).toContain("Lead · Place cluster");
+    expect(html).toContain("ML model");
+    expect(html).toContain("DBSCAN");
     expect(html).toContain("Model score 0.71");
     expect(html).toContain("Open source EV-4:row=4");
     expect(html).not.toMatch(/\d+%/);
     expect(html).not.toContain("Statement conflicts with records");
+  });
+});
+
+/*
+ * ML leads in the shape `GET /cases/kestrel-demo` returns after `POST /demo`
+ * (trimmed copies of ML-05 and ML-19, the ML-05 board card and agent insight I-11).
+ */
+const liveSource = (id: string) => source(id);
+const ml05 = {
+  id: "ML-05",
+  title: "Unusual day for Richard Halvorsen: Sat 17 Oct 2026",
+  text: "Compared with 95 days of their own location data, this day stands out: 5 records away from home after 21:00 (typical: 0). An unusual day is a lead for where to look, not evidence of wrongdoing.",
+  type: "routine_outlier",
+  score: 0.65,
+  certainty: "inferred" as const,
+  method: {
+    name: "IsolationForest on daily movement profiles",
+    n_estimators: 300,
+    contamination: 0.032,
+    random_state: 7,
+    days: 95,
+  },
+  citations: ["EV-063:id=PV-00248", "EV-063:id=AS-00242"],
+  key: "bb496e57c7518722",
+  origin: "ml" as const,
+  status: "open",
+};
+const ml19 = {
+  id: "ML-19",
+  title:
+    "Message triage for halvorsen_iphone.csv: 23 of 172 look automated or spam",
+  text: "A text classifier marks 23 of 172 messages as automated or spam; 149 look like human conversation.",
+  type: "message_triage",
+  score: 0.25,
+  certainty: "inferred" as const,
+  method: {
+    name: "TF-IDF (char 3-5 grams) + logistic regression, weakly labelled",
+    C: 2.0,
+  },
+  citations: ["EV-050:record_id=HMSG-00037"],
+  key: "2cd98692dbd3f1c4",
+  origin: "ml" as const,
+  status: "open",
+};
+const live: CaseData = {
+  ...board,
+  id: "kestrel-demo",
+  gaps: [],
+  suggestions: [],
+  contradictions: [],
+  explanations: [],
+  sourceGroups: [],
+  missingPeriods: [],
+  uncertainTimes: [],
+  sources: [...ml05.citations, ...ml19.citations, "EV-071:seq=40162"].map(
+    liveSource,
+  ),
+  nodes: [
+    {
+      id: "sig-bb496e57c7518722",
+      type: "event",
+      label: ml05.title,
+      citations: ml05.citations,
+      position: { x: 80, y: 580 },
+      summary: ml05.text,
+      subtitle: "ML signal",
+      certainty: "inferred",
+      origin: "ml",
+      stage: "ml_signals",
+      itemId: "ML-05",
+      key: ml05.key,
+      evidenceIds: ["EV-063"],
+    },
+  ],
+  insights: [
+    {
+      id: "I-11",
+      title: "Camera outage was requested in advance",
+      text: "",
+      score: 0.6,
+      citations: ["EV-071:seq=40162"],
+      certainty: "inferred",
+      confidence: "medium",
+      origin: "agent",
+      observations: [
+        {
+          text: "A ticket asked for the outage.",
+          citations: ["EV-071:seq=40162"],
+        },
+      ],
+      inference: "The outage was planned rather than a fault.",
+    },
+    ...board.insights.map((insight) => ({
+      ...insight,
+      origin: "rules" as const,
+    })),
+  ],
+  // The API lists signals by ID; the page ranks them by model score.
+  signals: [ml19, ml05],
+};
+
+const renderLive = (onFocusOnBoard?: () => void) =>
+  renderToStaticMarkup(
+    <InsightsPage
+      data={live}
+      tab="inferences"
+      onInspect={() => {}}
+      onOpenSource={() => {}}
+      onFocusOnBoard={onFocusOnBoard}
+    />,
+  );
+
+describe("ML leads from the live backend", () => {
+  it("groups every signal as an ML lead, best model score first, apart from agent and rule insights", () => {
+    const { signals, agentInsights, ruleInsights } =
+      buildInsightsModel(live).inferences;
+    expect(signals.map((s) => s.id)).toEqual(["ML-05", "ML-19"]);
+    expect(agentInsights.map((i) => i.id)).toEqual(["I-11"]);
+    expect(ruleInsights.map((i) => i.id)).toEqual(["I-01", "I-02"]);
+    expect(tabCounts(buildInsightsModel(live)).inferences).toBe(5);
+    expect(
+      buildInsightsModel(live, "isolationforest").inferences.signals,
+    ).toHaveLength(1);
+    expect(
+      buildInsightsModel(live, "routine outlier").inferences.signals,
+    ).toHaveLength(1);
+  });
+
+  it("lists ML leads in the jump rail and labels them with the model, method and score", () => {
+    const html = renderLive(() => {});
+    expect(html).toContain('href="#inferences-signals"');
+    expect(html).toContain("ML model leads");
+    expect(html).toContain(
+      "Unusual day for Richard Halvorsen: Sat 17 Oct 2026",
+    );
+    expect(html).toContain("IsolationForest on daily movement profiles");
+    expect(html).toContain("Model score 0.65");
+    expect(html).toContain("Model score 0.25");
+    expect(html).toContain("Open source EV-063:id=PV-00248");
+    expect(html).not.toMatch(/\d+%/);
+    // Agent insights come before ML leads, and ML leads before the rules.
+    const agent = html.indexOf('id="inferences-agent"');
+    const ml = html.indexOf('id="inferences-signals"');
+    const rules = html.indexOf('id="inferences-rules"');
+    expect(agent).toBeGreaterThan(-1);
+    expect(agent).toBeLessThan(ml);
+    expect(ml).toBeLessThan(rules);
+    expect(html).toContain("AI agent");
+  });
+
+  it("reaches a lead's board card through its itemId", () => {
+    const html = renderLive(() => {});
+    const ml05Card = html.slice(
+      html.indexOf("ML-05"),
+      html.indexOf("ML-19") > html.indexOf("ML-05")
+        ? html.indexOf("ML-19")
+        : undefined,
+    );
+    expect(ml05Card).toContain("Inspect lead");
+    expect(ml05Card).toContain("Locate on mind map");
+    // ML-19 has no board card, so it offers its sources only.
+    const ml19Card = html.slice(html.indexOf("ML-19"));
+    expect(ml19Card).not.toContain("Inspect lead");
+  });
+
+  it("explains an empty tab instead of showing a blank panel", () => {
+    const html = renderToStaticMarkup(
+      <InsightsPage
+        data={live}
+        tab="questions"
+        onInspect={() => {}}
+        onOpenSource={() => {}}
+      />,
+    );
+    expect(html).toContain("No questions for this case yet.");
   });
 });

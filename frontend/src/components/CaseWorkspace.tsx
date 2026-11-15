@@ -19,17 +19,38 @@ import { RecordsBrowser } from "./RecordsBrowser";
 import { RawEvidence } from "./RawEvidence";
 import { InsightsPage } from "./InsightsPage";
 import { ChatPanel } from "./ChatPanel";
+import { AuditTrail } from "./AuditTrail";
+import { BrandMark } from "./BrandMark";
 import { Inspector, type Selection } from "./Inspector";
-import type { Tab } from "./board-focus";
 import "./case-workspace.css";
 
 const views = [
   { id: "board", label: "Mind map", icon: GitBranch },
+  { id: "files", label: "Generalized files", icon: Files },
   { id: "insights", label: "Insights", icon: Lightbulb },
   { id: "evidence", label: "Raw evidence", icon: ScanText },
-  { id: "files", label: "Generalized files", icon: Files },
   { id: "chat", label: "Chat", icon: MessageSquare },
+  { id: "audit", label: "Audit trail", icon: History },
 ] as const;
+
+/** The case heading shared by the mind map's top bar and the section pages. */
+export function CaseTitle({
+  title,
+  subtitle,
+}: {
+  title: string;
+  subtitle: string;
+}) {
+  return (
+    <div className="board-title">
+      <div className="case-title-line">
+        <span className="case-eyebrow">Investigation</span>
+        <h1>{title}</h1>
+      </div>
+      <span>{subtitle}</span>
+    </div>
+  );
+}
 
 export function CaseWorkspace({
   data,
@@ -39,7 +60,6 @@ export function CaseWorkspace({
   insightsTab,
   navigate,
   onFocusOnBoard,
-  onOpenReview,
   children,
 }: {
   data: CaseData;
@@ -49,8 +69,6 @@ export function CaseWorkspace({
   insightsTab?: InsightsTab;
   navigate: (path: string) => void;
   onFocusOnBoard?: (selection: Selection) => void;
-  /** Returns to the mind map with the review dock open on this panel. */
-  onOpenReview?: (panel: Tab | "audit") => void;
   children: ReactNode;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -61,8 +79,10 @@ export function CaseWorkspace({
   // the first visit so later section changes preserve pan, zoom and selection.
   const [boardVisited, setBoardVisited] = useState(view === "board");
   const [filesVisited, setFilesVisited] = useState(view === "files");
+  const [auditVisited, setAuditVisited] = useState(view === "audit");
   useEffect(() => {
     if (view === "files") setFilesVisited(true);
+    if (view === "audit") setAuditVisited(true);
   }, [view]);
   useEffect(() => {
     if (view === "board") setBoardVisited(true);
@@ -195,12 +215,8 @@ export function CaseWorkspace({
               <PanelLeftOpen size={16} />
             )}
           </button>
-          <span
-            className="case-toolbar-caption"
-            hidden={!toolbarExpanded}
-            title={projectName || data.title}
-          >
-            Workspace
+          <span className="case-toolbar-caption" hidden={!toolbarExpanded}>
+            <BrandMark size={16} /> MapleTrace
           </span>
         </div>
         <div id="case-toolbar-content" className="case-toolbar-content">
@@ -259,26 +275,10 @@ export function CaseWorkspace({
       </aside>
       {view !== "board" && (
         <header className="workspace-topbar">
-          <div className="board-title">
-            <h1>{projectName || data.title}</h1>
-            <span>
-              {formatCaseSubtitle(data.subtitle, data.timezone)} ·{" "}
-              {views.find((v) => v.id === view)?.label}
-            </span>
-          </div>
-          <div className="board-actions">
-            <button
-              type="button"
-              className="text-button"
-              onClick={() =>
-                onOpenReview
-                  ? onOpenReview("audit")
-                  : navigate(casePath(data.id))
-              }
-            >
-              <History size={15} /> Audit trail
-            </button>
-          </div>
+          <CaseTitle
+            title={projectName || data.title}
+            subtitle={`${formatCaseSubtitle(data.subtitle, data.timezone)} · ${views.find((v) => v.id === view)?.label}`}
+          />
         </header>
       )}
       <div className="case-panels">
@@ -356,6 +356,19 @@ export function CaseWorkspace({
             onOpenSource={openSource}
             sourceIds={data.sources.map((source) => source.id)}
           />
+        </section>
+        <section
+          className="case-content-panel"
+          aria-label="Audit trail"
+          hidden={view !== "audit"}
+        >
+          {(view === "audit" || auditVisited) && (
+            <AuditTrail
+              data={data}
+              onOpenEvidence={openSource}
+              onInspectSource={(id) => inspect({ kind: "source", id })}
+            />
+          )}
         </section>
         {view !== "board" && selection && (
           <aside

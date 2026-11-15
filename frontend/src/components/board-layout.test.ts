@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   arrangePins,
+  cardVariant,
   freePinPosition,
   getPinDimensions,
   PIN_HEIGHT,
@@ -78,37 +79,26 @@ describe("board geometry", () => {
     }
   });
 
-  it("calculates varied card dimensions tailored to evidence roles", () => {
-    // Location hub: wider anchor node
-    expect(getPinDimensions({ type: "location" })).toEqual({
-      width: 276,
-      height: 236,
-    });
-    // Statement memo: taller document aspect ratio
-    expect(getPinDimensions({ type: "statement" })).toEqual({
-      width: 256,
-      height: 252,
-    });
-    // Incident event with open question: extra room for question alert
-    expect(getPinDimensions({ type: "event", gapId: "gap-1" })).toEqual({
-      width: 264,
-      height: 244,
-    });
-    // Device with recording gap
-    expect(getPinDimensions({ type: "device", gapId: "gap-cam" })).toEqual({
-      width: 252,
-      height: 236,
-    });
-    // Standard hardware reader
-    expect(getPinDimensions({ type: "device" })).toEqual({
-      width: 240,
-      height: 216,
-    });
-    // Compact person card
-    expect(getPinDimensions({ type: "person" })).toEqual({
-      width: 236,
-      height: 216,
-    });
+  it("shapes cards by role", () => {
+    // A person is a small name tag; phones and places are compact.
+    const person = getPinDimensions({ type: "person" });
+    const phone = getPinDimensions({ type: "device" });
+    const place = getPinDimensions({ type: "location" });
+    const event = getPinDimensions({ type: "event" });
+    expect(person.height).toBeLessThan(phone.height);
+    expect(phone.height).toBeLessThan(event.height);
+    expect(place.height).toBeLessThan(event.height);
+    expect(cardVariant({ type: "person" })).toBe("person");
+    expect(cardVariant({ type: "device" })).toBe("compact");
+    // Analysis cards keep the full shape for their reasoning, whatever the type.
+    expect(cardVariant({ type: "location", origin: "ml" })).toBe("full");
+    expect(
+      getPinDimensions({ type: "location", origin: "ml" }).height,
+    ).toBeGreaterThan(place.height);
+    // An open question adds room for its button.
+    expect(
+      getPinDimensions({ type: "event", gapId: "G-1" }).height,
+    ).toBeGreaterThan(event.height);
     // Explicit size override
     expect(
       getPinDimensions({

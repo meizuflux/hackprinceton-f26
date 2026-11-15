@@ -49,7 +49,13 @@ describe("application routes", () => {
   });
 
   it("round-trips each workspace section and evidence citation deep link", () => {
-    for (const view of ["evidence", "files", "insights", "chat"] as const) {
+    for (const view of [
+      "evidence",
+      "files",
+      "insights",
+      "chat",
+      "audit",
+    ] as const) {
       expect(parseRoute(casePath("case one", view))).toEqual({
         kind: "case",
         caseId: "case one",
@@ -65,6 +71,7 @@ describe("application routes", () => {
     for (const path of [
       "/cases/a/unknown",
       "/cases/a/chat/source",
+      "/cases/a/audit/entry",
       "/cases/a/evidence/%2F",
       "/cases/a/evidence/%ZZ",
       "/cases/a/evidence/..",

@@ -3,7 +3,6 @@ import {
   BaseEdge,
   EdgeLabelRenderer,
   getBezierPath,
-  Position,
   type Edge,
   type EdgeProps,
 } from "@xyflow/react";
@@ -15,6 +14,7 @@ import {
   type ThreadCategory,
 } from "./board-colors";
 import { OriginIcon } from "./OriginBadge";
+import { sideOf, threadPoint, THREAD_CURVATURE } from "./thread-geometry";
 
 export type ThreadData = {
   kind: "observed" | "claim" | "inference";
@@ -28,10 +28,10 @@ export type ThreadData = {
   isDimmed?: boolean;
   /** Story view: the label waits for hover, focus or selection. */
   quiet?: boolean;
-  /** The thread or one of its cards is under the pointer. */
-  hovered?: boolean;
-  /** Label offset for parallel threads between the same cards, across the thread. */
-  labelOffset?: number;
+  /** Where the label sits along the thread (0 source, 1 target), chosen to clear cards. */
+  labelT?: number;
+  /** No clear spot: the label folds to a small knot until hovered, focused or selected. */
+  labelCovered?: boolean;
   /** Stands for this many real threads into a group's hidden cards. */
   aggregateCount?: number;
   ariaLabel?: string;
@@ -41,15 +41,29 @@ export type ThreadData = {
 export const ThreadEdge = memo(function ThreadEdge(
   props: EdgeProps<Edge<ThreadData>>,
 ) {
-  const [path, x, y] = getBezierPath({ ...props, curvature: 0.22 });
+  const [path, midX, midY] = getBezierPath({
+    ...props,
+    curvature: THREAD_CURVATURE,
+  });
   const data = props.data;
   if (!data) return null;
-  const horizontal =
-    props.sourcePosition === Position.Left ||
-    props.sourcePosition === Position.Right;
-  const labelWidth = horizontal
-    ? Math.max(88, Math.min(166, Math.abs(props.targetX - props.sourceX) - 4))
-    : 166;
+  const t = data.labelT ?? 0.5;
+  const { x, y } =
+    t === 0.5
+      ? { x: midX, y: midY }
+      : threadPoint(
+          {
+            x: props.sourceX,
+            y: props.sourceY,
+            side: sideOf(props.sourcePosition),
+          },
+          {
+            x: props.targetX,
+            y: props.targetY,
+            side: sideOf(props.targetPosition),
+          },
+          t,
+        );
   const mark = markedOrigin(data.origin);
   return (
     <>
@@ -63,10 +77,12 @@ export const ThreadEdge = memo(function ThreadEdge(
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`thread-label nodrag nopan ${data.kind} thread-${data.category} ${props.selected || data.isFocused ? "is-selected" : ""} ${data.isDimmed ? "is-dimmed" : ""} ${data.quiet ? "is-quiet" : ""} ${data.hovered ? "is-hovered" : ""} ${data.aggregateCount ? "is-aggregate" : ""} ${mark ? `has-origin origin-${mark}` : ""}`}
+          className={`thread-label nodrag nopan ${data.kind} thread-${data.category} ${props.selected || data.isFocused ? "is-selected" : ""} ${data.isDimmed ? "is-dimmed" : ""} ${data.quiet ? "is-quiet" : ""} ${data.aggregateCount ? "is-aggregate" : ""} ${data.labelCovered && !data.aggregateCount ? "is-covered" : ""} ${mark ? `has-origin origin-${mark}` : ""}`}
+          data-edge={props.id}
+          data-source={props.source}
+          data-target={props.target}
           style={{
-            transform: `translate(-50%, -50%) translate(${x + (horizontal ? 0 : (data.labelOffset ?? 0) * 4.25)}px, ${y + (horizontal ? (data.labelOffset ?? 0) : 0)}px)`,
-            maxWidth: labelWidth,
+            transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
           }}
           onClick={(event) => {
             event.stopPropagation();
@@ -82,13 +98,15 @@ export const ThreadEdge = memo(function ThreadEdge(
               : `${threadColors[data.category].label}: ${data.label}`
           }
         >
-          {mark && <OriginIcon origin={data.origin} size={11} />}
           {data.aggregateCount ? (
             <strong className="thread-count">{data.aggregateCount}</strong>
           ) : (
-            data.badge && <strong>{data.badge}</strong>
+            data.badge && <strong className="thread-badge">{data.badge}</strong>
           )}
-          <span>{data.label}</span>
+          <span className="thread-text">
+            {mark && <OriginIcon origin={data.origin} size={11} />}
+            {data.label}
+          </span>
         </button>
       </EdgeLabelRenderer>
     </>

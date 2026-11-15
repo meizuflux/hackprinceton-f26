@@ -5,8 +5,12 @@ Cost control:
   the same question in the same thread state replays for free.
 - Suggested questions are always answered without the thread's history, so their recorded answers replay in any
   thread. `python -m mapletrace_api.chat record` (make backend-chat-record) records them for the Kestrel demo; billed.
-- With ANTHROPIC_API_KEY the cache records (a miss calls the model, billed). Without it the cache only replays: a miss
-  raises before any request is sent and the API answers `needs_api_key`.
+- With the chat model provider's API key (ANTHROPIC_API_KEY for the default) the cache records (a miss calls the
+  model, billed). Without it the cache only replays: a miss raises before any request is sent and the API answers
+  `needs_api_key`.
+- The chat model is its own role (`MAPLETRACE_CHAT_MODEL`, see `mapletrace_reason/models.py`) and may differ from
+  the model that analysed the case. The cache key contains the model class and name, so answers recorded with one
+  model never replay as another's.
 
 Conversation memory is per thread in server memory, bounded (`MAX_THREADS`, `HISTORY_TURNS`), and lost on restart.
 """
@@ -25,9 +29,11 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from mapletrace_reason.chat import HISTORY_TURNS, CaseChat
+from mapletrace_reason import models
 from mapletrace_reason.llm_cache import CACHE_DIR, CacheMiss, ReplayCache
 
-CHAT_MODEL = os.environ.get("MAPLETRACE_CHAT_MODEL", os.environ.get("MAPLETRACE_LLM_MODEL", "claude-sonnet-5-5"))
+CHAT = models.resolve("chat")  # MAPLETRACE_CHAT_MODEL, else the investigator's model
+CHAT_MODEL = CHAT.label         # "claude-sonnet-5-5" by default
 CHAT_REASONING_EFFORT = "medium"
 MAX_THREADS = 200
 MAX_MESSAGE = 1000
@@ -67,7 +73,7 @@ class ChatService:
     # ------------------------------------------------------------------ setup
     @staticmethod
     def live() -> bool:
-        return bool(os.environ.get("ANTHROPIC_API_KEY"))
+        return CHAT.live()
 
     def case_chat(self, case_id: str, ingest_dir: Path, analysis_dir: Path) -> CaseChat:
         key = (case_id, str(analysis_dir))
@@ -78,6 +84,12 @@ class ChatService:
                     del self._chats[k]  # an older analysis version of this case
                 chat = self._chats[key] = CaseChat(ingest_dir, analysis_dir)
         return chat
+
+    def forget(self, case_id: str) -> None:
+        """Drop the loaded analysis of a case whose files were replaced in place (a reinstalled demo)."""
+        with self._lock:
+            for k in [k for k in self._chats if k[0] == case_id]:
+                del self._chats[k]
 
     def cache(self, sha: str) -> ReplayCache:
         """The shared cache for answering: records with a key, replays without one."""
@@ -120,10 +132,11 @@ class ChatService:
         live = self.live()
         suggestions = [{"question": q, "recorded": self.recorded(chat, q)} for q in chat.suggestions]
         out = {"available": True, "authoritative": True, "case_id": case_id, "live": live,
-               "mode": "live" if live else "replay", "model": CHAT_MODEL, "suggestions": suggestions}
+               "mode": "live" if live else "replay", "model": CHAT_MODEL, "modelId": CHAT.id,
+               "suggestions": suggestions}
         if not live:
-            out["reason"] = ("Live questions need an Anthropic API key on the server. Recorded answers to suggested "
-                             "questions still replay.")
+            out["reason"] = (f"Live questions need an API key ({CHAT.key_hint()}) for {CHAT.id} on the server. "
+                             "Recorded answers to suggested questions still replay.")
         return out
 
     # ------------------------------------------------------------------ answering
@@ -156,8 +169,9 @@ class ChatService:
                     ans = chat.answer(question, t.history, self.model(cache), t.record_ids)
             except CacheMiss:
                 raise ChatError(503, "needs_api_key",
-                                "This answer has not been recorded, and live questions need an Anthropic API key on "
-                                "the server. Suggested questions replay once their answers are recorded.") from None
+                                f"This answer has not been recorded, and live questions need an API key "
+                                f"({CHAT.key_hint()}) on the server. Suggested questions replay once their answers "
+                                "are recorded.") from None
             except ChatError:
                 raise
             except Exception as exc:  # noqa: BLE001 - report model and network failures without a stack trace
@@ -171,12 +185,12 @@ class ChatService:
 
 # ---------------------------------------------------------------------- recording
 def record(argv=None) -> int:
-    """Record answers to the Kestrel demo's suggested questions (billed: needs ANTHROPIC_API_KEY)."""
+    """Record answers to the Kestrel demo's suggested questions (billed: needs the chat model's API key)."""
     p = argparse.ArgumentParser(prog="mapletrace_api.chat")
     p.add_argument("command", choices=["record", "suggestions"])
     args = p.parse_args(argv)
-    if args.command == "record" and not os.environ.get("ANTHROPIC_API_KEY"):
-        raise SystemExit("recording calls the API: set ANTHROPIC_API_KEY (billed)")
+    if args.command == "record" and not CHAT.live():
+        raise SystemExit(f"recording calls the API: set {CHAT.key_hint()} for {CHAT.id} (billed)")
     import shutil
     import tempfile
     data = tempfile.mkdtemp(prefix="mapletrace-chat-")

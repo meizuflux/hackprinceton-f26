@@ -140,9 +140,18 @@
 .thread-label strong {
   color: var(--thread-ink, #5d493c);
 }
-.thread-label:not(.observed) {
+/* Chip edge mirrors the thread: solid for observed, dashed for inference and claim. */
+.thread-label.observed {
   box-shadow: inset 0 0 0 1px
-    color-mix(in srgb, var(--thread-ink, #79442f) 35%, transparent);
+    color-mix(in srgb, var(--thread-ink, #79442f) 22%, transparent);
+}
+.thread-label:not(.observed) {
+  outline: 1.5px dashed
+    color-mix(in srgb, var(--thread-ink, #79442f) 60%, transparent);
+  outline-offset: -1.5px;
+}
+.thread-label.claim {
+  outline-style: dotted;
 }
 .thread-label {
   transition: opacity 0.3s cubic-bezier(0.2, 0, 0, 1);
@@ -154,8 +163,7 @@
   opacity: 1;
 }
 .thread-label.thread-contradicts > span {
-  display: block;
-  margin-top: 2px;
+  display: flex;
 }
 .react-flow__edge:hover .react-flow__edge-path,
 .react-flow__edge.selected .react-flow__edge-path {
@@ -199,13 +207,15 @@
   stroke-width: 2;
 }
 
-/* Key: a compact chrome button at the bottom left; the colour key opens above it on paper, in the card inks. */
+/* Key: a compact chrome button at the bottom right, left of an open review dock; the colour key opens above it on
+   paper, in the card inks. */
 .board-legend {
   position: absolute;
   z-index: 6;
-  bottom: var(--chrome-bottom, var(--board-inset));
-  left: var(--board-inset);
+  bottom: var(--board-inset);
+  right: calc(var(--board-inset) + var(--dock-offset));
   font-size: 12px;
+  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
 }
 .board-legend-toggle {
   display: inline-flex;
@@ -239,7 +249,7 @@
 .board-legend-body {
   position: absolute;
   bottom: calc(100% + 8px);
-  left: 0;
+  right: 0;
   display: grid;
   grid-template-columns: auto auto;
   gap: 14px 22px;
@@ -251,7 +261,7 @@
   background: #faf8f1;
   color: #3f4238;
   box-shadow: var(--shadow);
-  transform-origin: bottom left;
+  transform-origin: bottom right;
   animation: legend-open 0.18s cubic-bezier(0.16, 1, 0.3, 1);
 }
 @keyframes legend-open {
@@ -292,6 +302,9 @@
   border-top: 1px solid #d9d2c3;
 }
 @media (prefers-reduced-motion: reduce) {
+  .board-legend {
+    transition: none;
+  }
   .board-legend-body {
     animation: none;
   }
@@ -341,21 +354,6 @@
   );
 }
 
-/* List view: the same record-type ink as a small swatch. */
-.list-record-type[class*="kind-"] {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-.list-record-type[class*="kind-"]::before {
-  content: "";
-  flex-shrink: 0;
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: color-mix(in srgb, var(--pin-ink) 50%, #f4f1e8);
-}
-
 /* Origin: graphite stamp + texture, never a new hue (see board-colors.ts). */
 .origin-badge,
 .origin-tag {
@@ -389,39 +387,52 @@
   clip: rect(0 0 0 0);
   white-space: nowrap;
 }
-.evidence-pin.has-origin::after {
+.evidence-pin.has-origin::after,
+.story-card.has-origin::after {
   content: "";
   position: absolute;
-  left: 14px;
-  right: 14px;
-  bottom: 3px;
-  height: 4px;
+  left: 12px;
+  right: 12px;
+  bottom: 4px;
+  height: 7px;
   border-radius: 2px;
   pointer-events: none;
-  opacity: 0.55;
+  opacity: 0.7;
   background-color: transparent;
 }
-.evidence-pin.origin-ml::after {
+.evidence-pin.origin-ml::after,
+.story-card.origin-ml::after {
   background-image: radial-gradient(circle, #33373d 1px, transparent 1.3px);
   background-size: 5px 4px;
 }
-.evidence-pin.origin-agent::after {
+.evidence-pin.origin-agent::after,
+.story-card.origin-agent::after {
   background-image: repeating-linear-gradient(
     135deg,
     #33373d 0 1.5px,
     transparent 1.5px 5px
   );
 }
-.evidence-pin.origin-llm::after {
+.evidence-pin.origin-llm::after,
+.story-card.origin-llm::after {
   background-image: repeating-linear-gradient(
     0deg,
     #33373d 0 1px,
     transparent 1px 2px
   );
 }
-.thread-label.has-origin > svg {
+.thread-label.has-origin .thread-text > svg {
   flex-shrink: 0;
   color: #33373d;
+}
+/* Story cards are short, so their origin strip runs down the left edge. */
+.story-card.has-origin::after {
+  left: 4px;
+  right: auto;
+  top: 14px;
+  bottom: 14px;
+  width: 5px;
+  height: auto;
 }
 .legend-origin-mark {
   display: grid;

@@ -29,7 +29,7 @@ see below), `phase`, `type`.
 
 | type | phase | extra fields |
 |---|---|---|
-| `run_started` | ingest | `mode`: `live` or `replay`; `llm`: bool; `model`: string or null; `archive`: {`filename`, `sha256`, `bytes`} |
+| `run_started` | ingest | `mode`: `live` or `replay`; `llm`: bool; `model`: string or null (the investigator's model as recorded in cache keys); `models`: {`investigator`, `vision`} as `provider:model` (LLM runs only); `archive`: {`filename`, `sha256`, `bytes`} |
 | `phase_started` | any | `label` (human text, e.g. "Hashing and parsing evidence") |
 | `phase_finished` | any | `label`, `durationMs` |
 | `file_hashed` | ingest | `evidenceId`, `filename`, `sha256`, `bytes`, `manifestMatch` (bool or null) |
@@ -37,7 +37,7 @@ see below), `phase`, `type`.
 | `entities_linked` | ingest | `entities` (int), `links` (int) |
 | `stage_finished` | rules, ml, llm, agent | `stage` (pipeline stage name, e.g. `connections`, `findings`, `ml_signals`, `claims`, `contradictions`, `gaps`, `insights`, `agent_insights`), `label`, `counts` ({name: int}), `durationMs` |
 | `ml_signal` | ml | `id` (`ML-xx`), `signalType`, `title`, `method` (model name) |
-| `llm_call` | llm, agent | `purpose` (`claim_extraction`, `investigator`, `verifier`), `model`, `inputTokens`, `outputTokens`, `cacheReadTokens`, `cacheWriteTokens`, `costUsd`, `durationMs`, `durationSource` (`recorded`, `estimated`, `live`), `replayed` (bool), `startMs` (replay-clock start; `tMs` is the end) |
+| `llm_call` | llm, agent | `purpose` (`claim_extraction`, `investigator`, `verifier`, `media_vision`, `display_labels`), `model`, `inputTokens`, `outputTokens`, `cacheReadTokens`, `cacheWriteTokens`, `costUsd`, `durationMs`, `durationSource` (`recorded`, `estimated`, `live`), `replayed` (bool), `startMs` (replay-clock start; `tMs` is the end) |
 | `agent_tool` | agent | `tool` (tool name), `args` (short object; strings truncated to 120 chars), `resultChars` (int) |
 | `insight_recorded` | agent | `id` (always `null`: display IDs are assigned when the run ends, match the board insight by `key`), `key`, `title` |
 | `run_finished` | output | `status` (`ready` or `failed`), `durationMs`, `totals` ({`records`, `nodes`, `edges`, `gaps`, `insights`, `signals`, `llmCalls`, `toolCalls`, `costUsd`}) |

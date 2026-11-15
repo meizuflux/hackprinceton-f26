@@ -1,0 +1,103 @@
+/* Full graph <-> story morph (useStoryMorph). Cards move with the independent
+   `translate` property on the node wrapper, on top of React Flow's transform,
+   so their layout positions never change. The wrapper moves as a whole, so the
+   handle offsets React Flow measures when a card mounts stay correct; only
+   parts without handles (the group face, ghosts) are scaled. */
+.react-flow__node.morph-from {
+  animation: morph-from var(--morph-ms, 1150ms) cubic-bezier(0.45, 0, 0.2, 1)
+    both;
+}
+.react-flow__node.morph-from.morph-fade {
+  animation-name: morph-from-fade;
+}
+.react-flow__node.morph-from.morph-fade .story-group {
+  animation: morph-gather var(--morph-ms, 1150ms) cubic-bezier(0.45, 0, 0.2, 1)
+    both;
+}
+@keyframes morph-from {
+  from {
+    translate: var(--morph-x, 0) var(--morph-y, 0);
+  }
+}
+@keyframes morph-from-fade {
+  from {
+    translate: var(--morph-x, 0) var(--morph-y, 0);
+    opacity: 0;
+  }
+  40% {
+    opacity: 0.7;
+  }
+}
+@keyframes morph-gather {
+  from {
+    scale: 0.35;
+  }
+}
+
+/* Cards leaving the full graph: those on the story fade as their story card
+   takes over; the rest shrink into their group card. */
+.react-flow__node.morph-ghost {
+  pointer-events: none;
+  animation: morph-ghost var(--morph-ms, 1150ms) cubic-bezier(0.45, 0, 0.2, 1)
+    both;
+}
+.react-flow__node.morph-ghost.morph-shrink {
+  animation-name: morph-ghost-shrink;
+}
+@keyframes morph-ghost {
+  0%,
+  10% {
+    opacity: 1;
+  }
+  45% {
+    opacity: 0;
+  }
+  to {
+    translate: var(--morph-x, 0) var(--morph-y, 0);
+    opacity: 0;
+  }
+}
+@keyframes morph-ghost-shrink {
+  0%,
+  15% {
+    opacity: 1;
+  }
+  to {
+    translate: var(--morph-x, 0) var(--morph-y, 0);
+    scale: 0.15;
+    opacity: 0;
+  }
+}
+
+/* Threads are drawn between final places, so they wait for the cards. */
+.story-morphing .react-flow__edges,
+.story-morphing .react-flow__edgelabel-renderer {
+  animation: morph-threads calc(var(--morph-ms, 1150ms) * 0.35) ease-out
+    calc(var(--morph-ms, 1150ms) * 0.75) both;
+}
+@keyframes morph-threads {
+  from {
+    opacity: 0;
+  }
+}
+
+/* Held: everything waits at its starting frame until the camera moves. */
+.morph-hold .react-flow__node.morph-from,
+.morph-hold .react-flow__node.morph-from .story-group,
+.morph-hold .react-flow__node.morph-ghost,
+.morph-hold .react-flow__edges,
+.morph-hold .react-flow__edgelabel-renderer {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node.morph-from,
+  .react-flow__node.morph-from .story-group,
+  .story-morphing .react-flow__edges,
+  .story-morphing .react-flow__edgelabel-renderer {
+    animation: none;
+  }
+  .react-flow__node.morph-ghost {
+    display: none;
+  }
+}

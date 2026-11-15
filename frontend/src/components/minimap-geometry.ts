@@ -11,7 +11,7 @@ export interface MapFrame {
   /** Map position of the content origin. */
   offsetX: number;
   offsetY: number;
-  /** The pins, unpadded, in flow units. */
+  /** What the map shows, in flow units: the pins, plus the view when it reaches past them. */
   content: Bounds;
 }
 
@@ -43,10 +43,23 @@ export function boundsOf(
   };
 }
 
+/** The smallest box containing both. */
+export function unionBounds(a: Bounds, b: Bounds): Bounds {
+  const x = Math.min(a.x, b.x);
+  const y = Math.min(a.y, b.y);
+  return {
+    x,
+    y,
+    width: Math.max(a.x + a.width, b.x + b.width) - x,
+    height: Math.max(a.y + a.height, b.y + b.height) - y,
+  };
+}
+
 /**
- * Frames the pins alone. The visible area is deliberately excluded, so the map
- * keeps one scale while the view pans or zooms, and its height follows the
- * pins' aspect ratio so they fill the map instead of floating in margins.
+ * Frames `content` (the pins, or the pins plus a view that reaches past them)
+ * inside a map whose height follows the pins' aspect ratio alone, so the map
+ * keeps its size while only its scale changes, and the pins fill it instead of
+ * floating in margins while the view stays over them.
  */
 export function frameContent(
   content: Bounds,
@@ -55,14 +68,17 @@ export function frameContent(
     minHeight?: number;
     maxHeight?: number;
     inset?: number;
+    /** Bounds that set the map's height; defaults to `content`. */
+    pins?: Bounds;
   } = {},
 ): MapFrame {
   const width = options.width ?? MAP_WIDTH;
   const minHeight = options.minHeight ?? MAP_MIN_HEIGHT;
   const maxHeight = options.maxHeight ?? MAP_MAX_HEIGHT;
   const inset = options.inset ?? MAP_INSET;
+  const sizing = options.pins ?? content;
   const innerWidth = width - inset * 2;
-  const natural = (content.height / content.width) * innerWidth + inset * 2;
+  const natural = (sizing.height / sizing.width) * innerWidth + inset * 2;
   const height = Math.round(clamp(natural, minHeight, maxHeight));
   const scale = Math.min(
     innerWidth / content.width,
@@ -135,7 +151,7 @@ function clampSpan(
   return clamp(origin, contentOrigin, contentOrigin + contentSpan - span);
 }
 
-/** Keep a minimap-driven viewport over the pins. Canvas panning is not clamped. */
+/** Keep a minimap-driven viewport over the framed content. Canvas panning is not clamped. */
 export function clampViewToContent(view: Bounds, content: Bounds) {
   return {
     x: clampSpan(view.x, view.width, content.x, content.width),

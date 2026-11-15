@@ -1,20 +1,20 @@
 import { describe, expect, it } from "vitest";
 import type { CaseData, TraceEvent } from "../api/types";
 import { emptyCase, itemRevealed, revealCase } from "./reveal";
+import { countFrame } from "./CountUp";
 import {
-  advanceClock,
-  countUpTo,
+  buildSchedule,
+  clockAtWall,
   countShownBy,
-  displayTimes,
   feedRows,
   describeEvent,
   formatCost,
   formatDuration,
+  formatSpeed,
   mergeEvents,
-  phaseSegments,
-  playbackRate,
-  playbackTime,
-  slowedPhase,
+  modelWaitCapMs,
+  paceAtWall,
+  phaseMinWallMs,
   runEndMs,
   summarize,
 } from "./trace";
@@ -76,16 +76,12 @@ const data = {
   signals: [],
 } as unknown as CaseData;
 
-describe("clock pacing", () => {
-  it("scales wall time by speed and caps at the end", () => {
-    expect(advanceClock(0, 100, 10, 5000)).toBe(1000);
-    expect(advanceClock(4900, 100, 10, 5000)).toBe(5000);
-    expect(advanceClock(100, -5, 10, 5000)).toBe(100);
-  });
-  it("counts events reached", () => {
-    expect(countUpTo(events, -1)).toBe(0);
-    expect(countUpTo(events, 100)).toBe(2);
-    expect(countUpTo(events, 9999)).toBe(events.length);
+describe("trace helpers", () => {
+  it("counts entries reached", () => {
+    const times = events.map((e) => e.tMs);
+    expect(countShownBy(times, -1)).toBe(0);
+    expect(countShownBy(times, 100)).toBe(2);
+    expect(countShownBy(times, 9999)).toBe(events.length);
   });
   it("merges polled pages without repeats", () => {
     const merged = mergeEvents(events.slice(0, 3), events.slice(1, 5));
@@ -98,12 +94,23 @@ describe("clock pacing", () => {
     expect(formatDuration(292_000)).toBe("4:52");
     expect(formatCost(1.3)).toBe("$1.30");
     expect(formatCost(0.0123)).toBe("$0.012");
+    expect(formatSpeed(23.4)).toBe("23×");
+    expect(formatSpeed(1.25)).toBe("1.3×");
+    expect(formatSpeed(0.117)).toBe("0.12×");
   });
 });
 
 describe("summarize", () => {
   it("accumulates counters up to the clock", () => {
-    const p = summarize(events.slice(0, countUpTo(events, 450)));
+    const p = summarize(
+      events.slice(
+        0,
+        countShownBy(
+          events.map((e) => e.tMs),
+          450,
+        ),
+      ),
+    );
     expect(p.records).toBe(10);
     expect(p.recordTypes).toEqual({ call: 10 });
     expect(p.inputTokens).toBe(1100);
@@ -150,62 +157,101 @@ describe("reveal", () => {
   });
 });
 
-describe("per-phase pacing", () => {
-  const pe = [
-    ev(0, "run_started", "ingest"),
-    ev(1500, "file_parsed", "ingest"),
-    ev(1800, "stage_finished", "rules"),
-    ev(1900, "ml_signal", "ml"),
-    ev(2000, "llm_call", "llm"),
-    ev(102_000, "run_finished", "output"),
+describe("pacing schedule", () => {
+  let n = 0;
+  const at = (
+    tMs: number,
+    phase: TraceEvent["phase"],
+    type: TraceEvent["type"] = "agent_tool",
+  ) => ({ seq: ++n, tMs, phase, type }) as TraceEvent;
+  const trace = [
+    at(0, "ingest", "run_started"),
+    at(300, "ingest", "file_parsed"),
+    at(400, "rules", "stage_finished"),
+    at(60_400, "llm", "llm_call"), // a one-minute model wait
+    at(61_400, "agent", "llm_call"), // a one-second wait
+    at(61_400, "agent", "insight_recorded"),
+    at(61_401, "agent", "insight_recorded"),
+    at(61_402, "agent", "agent_tool"),
+    at(70_000, "output", "run_finished"),
   ];
-  const segs = phaseSegments(pe, 102_000);
-  it("segments the clock at each phase start", () => {
-    expect(segs.map((s) => [s.phase, s.startMs, s.endMs])).toEqual([
-      ["ingest", 0, 1800],
-      ["rules", 1800, 1900],
-      ["ml", 1900, 2000],
-      ["llm", 2000, 102_000],
-      ["output", 102_000, 102_000],
-    ]);
-  });
-  it("slows short phases but keeps the chosen speed for long ones", () => {
-    expect(playbackRate(100, segs, 10)).toBeCloseTo(1800 / 4000);
-    expect(playbackRate(1850, segs, 10)).toBeCloseTo(100 / 2000);
-    expect(playbackRate(50_000, segs, 10)).toBe(10);
-    expect(slowedPhase(50_000, segs, 10)).toBeUndefined();
-    expect(slowedPhase(100, segs, 10)?.phase).toBe("ingest");
-  });
-  it("maps wall time to replay time", () => {
-    expect(playbackTime(2000, segs, 10, 102_000)).toBeCloseTo(900);
-    expect(playbackTime(4000, segs, 10, 102_000)).toBeCloseTo(1800);
-    expect(playbackTime(4000 + 2000 + 2500, segs, 10, 102_000)).toBeCloseTo(
-      2000,
+  const end = 70_000;
+  const s10 = buildSchedule(trace, end, 10);
+
+  it("gives short phases their minimum on-screen time, stated as slowed", () => {
+    expect(s10.wall[1]).toBeCloseTo(phaseMinWallMs.ingest!);
+    expect(s10.wall[2] - s10.wall[1]).toBeCloseTo(phaseMinWallMs.rules!);
+    expect(paceAtWall(s10, 100)).toMatchObject({
+      kind: "slowed",
+      phase: "ingest",
+    });
+    expect((paceAtWall(s10, 100) as { speed: number }).speed).toBeCloseTo(
+      300 / phaseMinWallMs.ingest!,
     );
-    expect(playbackTime(8500 + 1000, segs, 10, 102_000)).toBeCloseTo(12_000);
-    expect(playbackTime(1e9, segs, 10, 102_000)).toBe(102_000);
+  });
+
+  it("shortens long model waits below the cap and says so", () => {
+    const wait = s10.wall[3] - s10.wall[2];
+    expect(wait).toBeLessThan(modelWaitCapMs);
+    expect(wait).toBeGreaterThan(modelWaitCapMs * 0.9);
+    expect(paceAtWall(s10, s10.wall[2] + 1)).toMatchObject({
+      kind: "compressed",
+      phase: "llm",
+      realMs: 60_000,
+    });
+    // A short wait keeps its length at the chosen speed.
+    expect(s10.wall[4] - s10.wall[3]).toBeCloseTo(100);
+    expect(paceAtWall(s10, s10.wall[3] + 1)).toBeUndefined();
+  });
+
+  it("plays recorded waits in full at 1x", () => {
+    const s1 = buildSchedule(trace, end, 1);
+    expect(s1.wall[3] - s1.wall[2]).toBeCloseTo(60_000);
+    expect(s1.pace[3]).toBeUndefined();
+  });
+
+  it("spreads an instant so insights land one at a time", () => {
+    expect(s10.wall[5] - s10.wall[4]).toBeGreaterThanOrEqual(400);
+    expect(s10.wall[6] - s10.wall[5]).toBeGreaterThanOrEqual(400);
+    expect(countShownBy(s10.wall, s10.wall[5])).toBe(6);
+    expect([...s10.wall].sort((a, b) => a - b)).toEqual(s10.wall);
+  });
+
+  it("shows the real clock at every wall position", () => {
+    expect(clockAtWall(s10, 0)).toBe(0);
+    expect(clockAtWall(s10, s10.wall[3])).toBe(60_400);
+    const mid = (s10.wall[2] + s10.wall[3]) / 2;
+    expect(clockAtWall(s10, mid)).toBeCloseTo(30_400);
+    expect(clockAtWall(s10, s10.totalMs + 1)).toBe(end);
+    expect(clockAtWall(s10, Infinity)).toBe(end);
+  });
+
+  it("ends in a fraction of the real run at the default speed", () => {
+    expect(s10.totalMs).toBeLessThan(9000);
+    expect(buildSchedule(trace, end, 50).totalMs).toBeLessThan(s10.totalMs);
+  });
+
+  it("handles an empty trace", () => {
+    const empty = buildSchedule([], 0, 10);
+    expect(empty.totalMs).toBe(0);
+    expect(clockAtWall(empty, 100)).toBe(0);
   });
 });
 
-describe("display pacing", () => {
+describe("count up", () => {
+  it("eases from the old value to the new one and lands on it", () => {
+    expect(countFrame(10, 14, 0, 600)).toBe(10);
+    const mid = countFrame(10, 14, 300, 600);
+    expect(mid).toBeGreaterThan(10);
+    expect(mid).toBeLessThanOrEqual(14);
+    expect(countFrame(10, 14, 600, 600)).toBe(14);
+    expect(countFrame(0, 10, 9999, 600)).toBe(10);
+  });
+});
+
+describe("feed", () => {
   const ev = (seq: number, tMs: number, extra: Partial<TraceEvent> = {}) =>
     ({ seq, tMs, phase: "agent", type: "agent_tool", ...extra }) as TraceEvent;
-
-  it("spreads a burst across the gap before the next event, in order", () => {
-    const burst = [1, 2, 3, 4].map((s) => ev(s, 1000));
-    const times = displayTimes([...burst, ev(5, 11000)]);
-    expect(times[0]).toBe(1000);
-    expect(times[3]).toBeLessThanOrEqual(1000 + 10000 * 0.8);
-    expect([...times].sort((a, b) => a - b)).toEqual(times);
-    expect(times[4]).toBe(11000);
-    expect(countShownBy(times, 1000)).toBe(1);
-  });
-
-  it("keeps a lone event and a final burst at their own times", () => {
-    expect(displayTimes([ev(1, 10), ev(2, 500), ev(3, 500)])).toEqual([
-      10, 500, 500,
-    ]);
-  });
 
   it("folds consecutive calls of one tool into a counted row", () => {
     const rows = feedRows(

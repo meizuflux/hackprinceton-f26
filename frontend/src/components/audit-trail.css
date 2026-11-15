@@ -1,0 +1,382 @@
+/* Audit trail section: the backend's hash-chained audit log in a framed panel. */
+.audit-trail {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
+}
+.audit-trail-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--line);
+  color: var(--brand-text);
+}
+.audit-trail-heading h2 {
+  color: var(--text);
+  font-size: 16px;
+  font-weight: 550;
+}
+.audit-trail-summary {
+  margin-left: auto;
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Verification result, as reported by the backend. */
+.audit-chain {
+  margin: 16px 20px 0;
+  padding: 12px 14px;
+  border: 1px solid #3f5266;
+  border-radius: 5px;
+  background: #1f2a36;
+  color: #c3cdd8;
+  font-size: 12px;
+  line-height: 1.55;
+}
+.audit-chain.failed {
+  border-color: #8a4a3a;
+  background: #3e2722;
+}
+.audit-chain-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+.audit-chain-status svg {
+  color: var(--brand-text);
+}
+.audit-chain.failed .audit-chain-status svg {
+  color: #f0a58f;
+}
+.audit-chain strong {
+  color: #e6eef6;
+  font-size: 13px;
+  font-weight: 550;
+}
+.audit-chain-status > span {
+  margin-left: auto;
+  color: var(--muted);
+}
+.audit-chain ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 0 16px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 11px;
+}
+.audit-chain li.bad {
+  color: #f0a58f;
+}
+.audit-chain code,
+.audit-entry-hashes {
+  font-family: "IBM Plex Mono", monospace;
+}
+.audit-chain code {
+  font-size: 11px;
+}
+.audit-chain-error {
+  margin: 16px 20px 0;
+}
+
+.audit-toolbar {
+  position: sticky;
+  z-index: 1;
+  top: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  margin-top: 12px;
+  padding: 10px 20px;
+  border-block: 1px solid #222c37;
+  background: var(--surface);
+}
+.audit-filter {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+.audit-filter button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 32px;
+  padding: 0 12px;
+  background: transparent;
+  color: var(--muted);
+  font-size: 12px;
+  cursor: pointer;
+}
+.audit-filter button + button {
+  border-left: 1px solid var(--line);
+}
+.audit-filter button:hover {
+  color: var(--text);
+  background: #ffffff0c;
+}
+.audit-filter button[aria-pressed="true"] {
+  color: var(--brand-text);
+  background: var(--brand-selected);
+}
+.audit-filter span {
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
+}
+.audit-search {
+  display: flex;
+  flex: 1 1 220px;
+  align-items: center;
+  gap: 8px;
+  max-width: 420px;
+  height: 34px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: #11161b;
+  color: var(--muted);
+}
+.audit-search:focus-within {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 1px;
+}
+.audit-search input {
+  flex: 1;
+  min-width: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+}
+.audit-chain-note {
+  padding: 10px 20px 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+/* The chain reads top to bottom: a rail joins each step to the one it hashes from. */
+.audit-chain-list {
+  margin: 0;
+  padding: 10px 20px 20px;
+  list-style: none;
+}
+.audit-entry {
+  position: relative;
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid #222c37;
+}
+.audit-entry::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 25px;
+  border-left: 1px solid var(--line);
+}
+.audit-entry:first-child::before {
+  top: 18px;
+}
+.audit-entry:last-child::before {
+  bottom: calc(100% - 18px);
+}
+.audit-entry-seq {
+  position: relative;
+  align-self: start;
+  justify-self: center;
+  min-width: 40px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font:
+    11px "IBM Plex Mono",
+    monospace;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+.audit-entry[data-source="analysis"] .audit-entry-seq {
+  border-color: #35587a;
+  color: var(--brand-text);
+}
+.audit-entry-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+.audit-entry-title h3 {
+  font-size: 13px;
+  font-weight: 550;
+  text-transform: none;
+}
+.audit-entry-title h3 span {
+  color: var(--muted);
+  font-weight: 400;
+}
+.audit-entry-source,
+.audit-entry-title time {
+  color: var(--muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+.audit-entry-title time {
+  margin-left: auto;
+}
+.audit-entry-hashes {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 8px;
+  margin-right: 6px;
+  color: #c3cdd8;
+  font-size: 11px;
+  line-height: 20px;
+}
+.audit-hash-label {
+  color: var(--muted);
+}
+.audit-entry-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 10px;
+  margin-top: 3px;
+}
+.audit-entry-actions details {
+  font-size: 12px;
+}
+.audit-entry-actions details[open] {
+  flex-basis: 100%;
+}
+.audit-entry-actions summary {
+  width: max-content;
+  color: var(--brand-text);
+  font-size: 11px;
+  line-height: 20px;
+  cursor: pointer;
+}
+.audit-entry-actions details[open] summary {
+  margin-bottom: 4px;
+}
+.audit-cite {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border-radius: 3px;
+  background: var(--brand-selected);
+  color: var(--brand-text);
+  font:
+    11px "IBM Plex Mono",
+    monospace;
+  cursor: pointer;
+}
+.audit-cite:hover {
+  background: var(--brand-hover);
+  color: var(--brand-100);
+}
+.audit-empty {
+  padding: 16px 20px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* Mock adapter: the case's audit records, without a chain. */
+.audit-steps {
+  padding: 16px 20px;
+}
+.audit-step {
+  position: relative;
+  padding: 0 0 16px 24px;
+}
+.audit-step:not(:last-child) {
+  margin-bottom: 16px;
+  border-bottom: 1px solid var(--line);
+}
+.audit-step > svg {
+  position: absolute;
+  top: 3px;
+  left: 0;
+  color: var(--brand-text);
+}
+.audit-step time {
+  color: var(--muted);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+.audit-step h3 {
+  margin: 2px 0 6px;
+  font-size: 14px;
+  font-weight: 550;
+}
+.audit-step p {
+  color: #c3cdd8;
+  font-size: 13px;
+  line-height: 1.65;
+  overflow-wrap: anywhere;
+}
+.audit-step .audit-cite {
+  margin: 10px 5px 0 0;
+}
+
+.audit-fields {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 12px;
+}
+.audit-fields > div {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+  gap: 12px;
+}
+.audit-fields dt {
+  color: var(--muted);
+}
+.audit-fields dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  color: #c3cdd8;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+@media (max-width: 640px) {
+  .audit-trail-heading {
+    flex-wrap: wrap;
+  }
+  .audit-trail-summary {
+    flex-basis: 100%;
+    margin-left: 0;
+    white-space: normal;
+  }
+  .audit-entry {
+    grid-template-columns: 44px minmax(0, 1fr);
+    gap: 8px;
+  }
+  .audit-entry::before {
+    left: 21px;
+  }
+  .audit-entry-seq {
+    min-width: 36px;
+    padding-inline: 3px;
+  }
+  .audit-entry-title time {
+    margin-left: 0;
+  }
+}

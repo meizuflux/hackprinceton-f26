@@ -150,8 +150,9 @@ export function contrastRatio(a: string, b: string) {
 
 /**
  * Pipeline origin of a card or thread. Origin never changes hue: it is shown
- * by a graphite stamp chip (icon plus word), a hatched strip on the card and
- * the same icon on thread labels. `record` and `rules` stay unmarked so the
+ * by a graphite stamp (icon plus word; a dotted outline for a classical ML
+ * model, solid for the AI agent, dashed for LLM extraction), a patterned strip
+ * on the card (dotted, hatched, ruled) and the same icon on thread labels. `record` and `rules` stay unmarked so the
  * board is not noisy; the graphite ink is neutral (not red, amber or blue).
  */
 export const ORIGIN_INK = "#33373d";
@@ -162,8 +163,12 @@ export const originMarks: Record<
   MarkedOrigin,
   { chip: string; label: string; pattern: string }
 > = {
-  ml: { chip: "ML", label: "Traditional ML", pattern: "dotted" },
-  agent: { chip: "Agent", label: "Agent investigator", pattern: "hatched" },
+  ml: { chip: "ML model", label: "Traditional ML model", pattern: "dotted" },
+  agent: {
+    chip: "AI agent",
+    label: "AI agent investigator",
+    pattern: "hatched",
+  },
   llm: { chip: "LLM", label: "LLM claim extraction", pattern: "ruled" },
 };
 

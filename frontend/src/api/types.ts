@@ -36,7 +36,14 @@ export interface MediaInfo {
 export interface EvidenceNode {
   id: string;
   type: NodeType;
+  /** Raw label from the records; stays visible as metadata so citations remain traceable. */
   label: string;
+  /** Readable title (at most 44 characters); absent on older cases. */
+  displayLabel?: string;
+  /** Readable one-line context; absent on older cases. */
+  displaySummary?: string;
+  /** `llm` marks a model-written display label, shown as LLM-inferred. */
+  labelOrigin?: "rules" | "llm";
   citations: CitationId[];
   position: { x: number; y: number };
   summary: string;
@@ -53,6 +60,8 @@ export interface EvidenceNode {
   stage?: string;
   evidenceIds?: string[];
   media?: MediaInfo;
+  /** Analysis item this card stands for (`ML-05`, `I-11`); absent on record cards. */
+  itemId?: string;
 }
 
 export interface EvidenceEdge {
@@ -76,6 +85,8 @@ export interface EvidenceEdge {
 export interface SourceRecord {
   id: CitationId;
   path: string;
+  /** Human file name for excerpt headings; absent on older cases. */
+  fileLabel?: string;
   kind: string;
   timestamp: string;
   hash: string;
@@ -215,6 +226,8 @@ export interface MlSignal {
   citations: CitationId[];
   status?: string;
   key?: string;
+  /** Always `ml` from the backend. */
+  origin?: Origin;
 }
 
 /** The same information repeated across several files; one origin. */
@@ -435,6 +448,8 @@ export interface AuditChainEntry {
   time: string;
   stage: string;
   action: string;
+  /** Ingestion file the step concerns, when there is one. */
+  fileId?: number | null;
   detail: Record<string, unknown>;
   hash: string;
   prevHash: string;

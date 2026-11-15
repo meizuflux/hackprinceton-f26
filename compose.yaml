@@ -9,10 +9,17 @@ services:
       MAPLETRACE_DATA: /data
       MAPLETRACE_MAX_UPLOAD_MB: "100"
       MAPLETRACE_CORS: http://localhost:5173,http://127.0.0.1:5173
-      MAPLETRACE_LLM_MODEL: ${MAPLETRACE_LLM_MODEL:-claude-sonnet-5-5}
+      # Models per role, provider:model (backend/README.md, "Choosing models"). Empty means the
+      # default: chat and vision follow the investigator; labels use claude-haiku-5-5.
+      MAPLETRACE_INVESTIGATOR_MODEL: ${MAPLETRACE_INVESTIGATOR_MODEL:-${MAPLETRACE_LLM_MODEL:-anthropic:claude-sonnet-5-5}}
+      MAPLETRACE_CHAT_MODEL: ${MAPLETRACE_CHAT_MODEL:-}
+      MAPLETRACE_VISION_MODEL: ${MAPLETRACE_VISION_MODEL:-}
+      MAPLETRACE_LABELS_MODEL: ${MAPLETRACE_LABELS_MODEL:-}
       # Optional. Without a key, POST /demo and replayed LLM caches still work; only new
-      # (unrecorded) LLM analyses need it. Never commit a key; export it or use a git-ignored .env.
+      # (unrecorded) LLM analyses need the key of the provider they use. Never commit a key;
+      # export it or use a git-ignored .env.
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+      GOOGLE_API_KEY: ${GOOGLE_API_KEY:-}
     volumes:
       - mapletrace-data:/data
     healthcheck:

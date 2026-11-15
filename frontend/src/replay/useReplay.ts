@@ -1,19 +1,18 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../api/client";
 import { isApiError } from "../api/http";
-import type { TraceEvent, TracePage, TracePhase } from "../api/types";
+import type { TraceEvent, TracePage } from "../api/types";
 import { clearReplayRequest, replayRequested } from "./intent";
 import {
-  advanceClock,
-  phaseSegments,
-  playbackRate,
-  slowedPhase,
+  buildSchedule,
+  clockAtWall,
   countShownBy,
-  displayTimes,
   defaultSpeed,
   mergeEvents,
+  paceAtWall,
   runEndMs,
   summarize,
+  type Pace,
   type TraceProgress,
 } from "./trace";
 
@@ -44,8 +43,8 @@ export interface ReplayState {
   finished: boolean;
   /** Increments when the run completes while being watched. */
   completedWatching: boolean;
-  /** A phase currently shown slower than the chosen speed so each step is visible. */
-  slowed?: { phase: TracePhase; speed: number };
+  /** The stretch being played runs slower (a short phase) or faster (a model wait) than the chosen speed. */
+  pace?: Pace;
   setSpeed: (speed: number) => void;
   togglePlaying: () => void;
   skipToEnd: () => void;
@@ -65,7 +64,8 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
   const [loaded, setLoaded] = useState(false);
   const [unavailable, setUnavailable] = useState(!enabled);
   const [autoplay, setAutoplay] = useState(() => replayRequested(caseId));
-  const [clockMs, setClockMs] = useState(0);
+  /** Playback position in wall milliseconds on the schedule; Infinity means "at the end". */
+  const [position, setPosition] = useState(0);
   const [wallMs, setWallMs] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState(defaultSpeed);
@@ -104,7 +104,7 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
             setPlaying(true);
           } else {
             // Opened later: show the finished run; "Replay run" starts it again.
-            setClockMs(runEndMs(heldRef.current));
+            setPosition(Infinity);
           }
           clearReplayRequest(caseId);
         }
@@ -135,14 +135,15 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
   const endMs = useMemo(() => runEndMs(events), [events]);
   const capMs = processing ? lastEventMs : endMs;
 
-  const segments = useMemo(() => phaseSegments(events, capMs), [events, capMs]);
-  const segmentsRef = useRef(segments);
-  segmentsRef.current = segments;
-  const slowed = slowedPhase(clockMs, segments, speed);
+  const schedule = useMemo(
+    () => buildSchedule(events, capMs, speed),
+    [events, capMs, speed],
+  );
+  const scheduleRef = useRef(schedule);
+  scheduleRef.current = schedule;
+  const at = Math.min(position, schedule.totalMs);
 
-  // Animation frame clock.
-  const clockRef = useRef(0);
-  clockRef.current = clockMs;
+  // Animation frame clock: advance the playback position by wall time.
   useEffect(() => {
     if (!playing || live) return;
     let frame = 0;
@@ -150,19 +151,22 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
     const tick = (now: number) => {
       const dt = now - last;
       last = now;
-      setClockMs((t) =>
-        advanceClock(t, dt, playbackRate(t, segmentsRef.current, speed), capMs),
-      );
+      setPosition((w) => Math.min(w, scheduleRef.current.totalMs) + dt);
       setWallMs((w) => w + dt);
       frame = requestAnimationFrame(tick);
     };
     frame = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(frame);
-  }, [playing, live, speed, capMs]);
+  }, [playing, live]);
+  // A live run shows everything as it arrives, and stays at the end once it finishes.
+  useEffect(() => {
+    if (live) setPosition(Infinity);
+  }, [live]);
 
-  const effectiveClock = live ? lastEventMs : clockMs;
+  const count = live ? events.length : countShownBy(schedule.wall, at);
+  const effectiveClock = live ? lastEventMs : clockAtWall(schedule, at);
   const reachedEnd =
-    !processing && loaded && events.length > 0 && effectiveClock >= endMs;
+    !processing && loaded && events.length > 0 && at >= schedule.totalMs;
 
   // Stop and mark completion when a watched run reaches its end.
   useEffect(() => {
@@ -173,13 +177,11 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
     }
   }, [reachedEnd, playing]);
 
-  const times = useMemo(() => displayTimes(events), [events]);
-  const count = countShownBy(times, effectiveClock);
   const shown = useMemo(() => events.slice(0, count), [events, count]);
   const progress = useMemo(() => summarize(shown), [shown]);
 
   const restart = useCallback(() => {
-    setClockMs(0);
+    setPosition(0);
     setWallMs(0);
     setWatched(false);
     setAutoplay(true);
@@ -208,14 +210,20 @@ export function useReplay(caseId: string, enabled = true): ReplayState {
     speed,
     finished: reachedEnd,
     completedWatching: watched,
-    slowed: playing && !live ? slowed : undefined,
-    setSpeed,
+    pace: playing && !live ? paceAtWall(schedule, at) : undefined,
+    setSpeed: (next: number) => {
+      // Keep what is shown: resume the new schedule at the last event shown.
+      if (next === speed) return;
+      const resumed = buildSchedule(events, capMs, next);
+      if (!reachedEnd) setPosition(count ? resumed.wall[count - 1] : 0);
+      setSpeed(next);
+    },
     togglePlaying: () => {
       if (reachedEnd) restart();
       else setPlaying((p) => !p);
     },
     skipToEnd: () => {
-      setClockMs(capMs);
+      setPosition(Infinity);
       if (!processing) setPlaying(false);
     },
     restart,

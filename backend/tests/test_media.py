@@ -60,7 +60,8 @@ def test_media_edges_cite_both_ends_and_follow_certainty_rules(kestrel):
         assert e["origin"] == "rules" and e["basis"].startswith(e["rule"] + ":")
         assert set(e["citations"]) & set(a["citations"]), "cites the media end"
         assert set(e["citations"]) & set(b["citations"]), "cites the other end"
-        assert e["certainty"] == ("inferred" if e["rule"] == "place" else "observed")
+        observed = e["rule"] in ("vms_export", "capture_device", "custodian")
+        assert e["certainty"] == ("observed" if observed else "inferred")
         assert e["directed"] is False
         assert "evidenceIds" in e and e["evidenceIds"]
     place = [e for e in edges if e["rule"] == "place"]
@@ -73,7 +74,9 @@ def test_kestrel_edges_per_rule(kestrel):
     for e in board["edges"]:
         if e["stage"] == "media_links":
             by_rule.setdefault(e["rule"], []).append(e)
-    assert {r: len(v) for r, v in by_rule.items()} == {"vms_export": 4, "capture_device": 10, "place": 9}
+    assert {r: len(v) for r, v in by_rule.items()} == {"vms_export": 4, "capture_device": 10, "place": 9,
+                                                       "custodian": 4, "camera_place": 3, "title_place": 3,
+                                                       "same_place_time": 2}
     clips = {e["source"]: e["target"] for e in by_rule["vms_export"]}
     assert clips["media-EV-021"] == clips["media-EV-022"], "both P2 clips join the one camera card"
     assert clips["media-EV-020"] != clips["media-EV-021"]
@@ -93,10 +96,38 @@ def test_media_cards_stay_out_of_gaps(kestrel):
 def test_trace_has_media_links_stage(kestrel):
     _, _, events = kestrel
     ev = [e for e in events if e["type"] == "stage_finished" and e["stage"] == "media_links"]
-    assert len(ev) == 1 and ev[0]["counts"]["media"] == 15 and ev[0]["counts"]["edges"] == 23
+    assert len(ev) == 1 and ev[0]["counts"]["media"] == 15 and ev[0]["counts"]["edges"] == 35
 
 
 def test_layout_gives_media_cards_distinct_positions(kestrel):
     _, board, _ = kestrel
     pos = [(n["position"]["x"], n["position"]["y"]) for n in board["nodes"]]
     assert len(set(pos)) == len(pos)
+
+
+def test_directory_links_join_media_to_the_case(kestrel):
+    """Clips reach the place and the events around them; photos reach their custodian and the places their manifest
+    title names. Each rule cites the directory row or record it relies on."""
+    _, board, _ = kestrel
+    nodes = {n["id"]: n for n in board["nodes"]}
+    edges = [e for e in board["edges"] if e["stage"] == "media_links"]
+    rule = lambda r: {(e["source"], e["target"]) for e in edges if e["rule"] == r}  # noqa: E731
+    assert ("media-EV-021", "loc-Garage P2") in rule("camera_place")
+    assert ("media-EV-020", "loc-Lobby") in rule("camera_place")
+    # the 21:35 garage clip runs while the P2 elevator lobby door is held open (BDG-000615, 21:36:49)
+    held = next(n["id"] for n in board["nodes"] if n["label"].startswith("DOOR_HELD_OPEN @ P2"))
+    assert ("media-EV-021", held) in rule("same_place_time")
+    assert all(nodes[t]["type"] == "event" for _, t in rule("same_place_time"))
+    assert ("media-EV-030", "loc-SC-EBC-01") in rule("title_place")
+    halvorsen = next(n["id"] for n in board["nodes"] if n["label"] == "Richard Halvorsen")
+    assert {s for s, t in rule("custodian") if t == halvorsen} == {"media-EV-036", "media-EV-037", "media-EV-038",
+                                                                     "media-EV-039"}
+    directory = {s["id"] for s in board["sources"] if s["id"].startswith("EV-077:")}
+    for e in edges:
+        if e["rule"] in ("camera_place", "title_place", "same_place_time"):
+            assert set(e["citations"]) & directory, "cites the directory row"
+            assert e["certainty"] == "inferred"
+    for e in [e for e in edges if e["rule"] == "same_place_time"]:
+        assert "EV-070:event_id=BDG-000615" in e["citations"]
+    # media stays one click away: the opening story does not change
+    assert not set(board["story"]["nodeIds"]) & {n for n in nodes if n.startswith("media-")}

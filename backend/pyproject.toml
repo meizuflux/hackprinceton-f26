@@ -19,9 +19,11 @@ dependencies = [
     "fastapi>=0.115",
     "uvicorn>=0.30",
     "python-multipart>=0.0.9",
-    # LLM layer (--llm, chat): LangChain deep agents + Anthropic
+    # LLM layer (--llm, chat): LangChain deep agents + Anthropic (default). deepagents already pulls in
+    # langchain-google-genai; it is listed so google_genai:<model> settings keep working (mapletrace_reason/models.py).
     "deepagents>=0.7.38,<0.8",
     "langchain-anthropic>=1.7",
+    "langchain-google-genai>=4.5",
     # xxhash 4.x ships a DLL that Windows Smart App Control blocks on some machines; 3.5 works everywhere
     "xxhash>=3.5,<4",
 ]

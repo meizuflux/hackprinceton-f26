@@ -9,8 +9,8 @@ Cache: `llm_cache/vision-<archive sha256>.jsonl`, one JSON object per request, k
 an image or decodes video. Recording needs Pillow and, for video, an `ffmpeg` binary.
 
 Modes follow the LLM layer: `record` answers from the cache and otherwise calls the model (billed); `replay`, or
-`record` without ANTHROPIC_API_KEY, only reads the cache. A miss skips that image and is counted in the summary; it
-never fails the run.
+`record` without the vision model's API key (`models.py`), only reads the cache. A miss skips that image and is
+counted in the summary; it never fails the run.
 """
 
 from __future__ import annotations
@@ -112,8 +112,8 @@ class AnthropicVision:
     """`describe(jpeg, prompt) -> (reply text, usage_metadata dict)`. Tests inject an object with the same method."""
 
     def __init__(self, model: str):
-        from langchain_anthropic import ChatAnthropic
-        self.model = ChatAnthropic(model=model, max_tokens=1500, max_retries=3, timeout=180)
+        from .models import make_model
+        self.model = make_model(model, max_tokens=1500, timeout=180)
 
     def describe(self, jpeg: bytes, prompt: str):
         from langchain_core.messages import HumanMessage
@@ -152,10 +152,11 @@ def prompt_for(frame_s: float | None) -> str:
 def run(case, cfg: dict, trace=None, audit=None) -> tuple[dict, dict]:
     """Describe every photo and video. Returns ({evidence_id: vision}, summary)."""
     from .llm_cache import CACHE_DIR, call_stats
-    model = cfg.get("model") or "claude-sonnet-5-5"
+    from .models import parse, resolve
+    model = cfg.get("vision_model") or resolve("vision", cfg.get("model")).label
     mode = cfg.get("vision_mode") or cfg.get("cache_mode", "record")  # vision_mode: record only the vision cache
     client = cfg.get("vision_client")
-    if client is None and mode == "record" and os.environ.get("ANTHROPIC_API_KEY"):
+    if client is None and mode == "record" and parse(model).has_key():
         client = AnthropicVision(model)
     archive = case.info.get("source_archive_sha256", "unknown")
     cache = VisionCache(cache_path(archive, Path(cfg.get("vision_cache_dir") or cfg.get("cache_dir") or CACHE_DIR)),

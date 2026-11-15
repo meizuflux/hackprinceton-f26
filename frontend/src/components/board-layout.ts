@@ -1,7 +1,10 @@
+import { rawLabelNote } from "./readable";
+
 export const DEFAULT_PIN_WIDTH = 248;
-export const DEFAULT_PIN_HEIGHT = 224;
-export const PIN_WIDTH = DEFAULT_PIN_WIDTH;
-export const PIN_HEIGHT = DEFAULT_PIN_HEIGHT;
+export const DEFAULT_PIN_HEIGHT = 184;
+/** The paper outline's drawing space, and the size assumed for a card without one. */
+export const PIN_WIDTH = 248;
+export const PIN_HEIGHT = 224;
 export const PIN_GAP = 40;
 
 export type Point = { x: number; y: number };
@@ -17,54 +20,71 @@ export interface PinDimensions {
   height: number;
 }
 
-/** Computes natural, content- and role-aware card dimensions for an organic corkboard look. */
+/** Card shape by role: a person is a name tag, phones, accounts and places are compact. */
+export type CardVariant = "person" | "compact" | "full";
+
+/** Analysis cards (ML, agent, LLM) carry a sentence of reasoning, so they keep the full shape. */
+const DERIVED_ORIGINS = new Set(["ml", "agent", "llm"]);
+
+export function cardVariant(node: {
+  type?: string;
+  origin?: string;
+  media?: unknown;
+}): CardVariant {
+  if (node.media) return "full";
+  if (DERIVED_ORIGINS.has(node.origin ?? "")) return "full";
+  if (node.type === "person") return "person";
+  if (node.type === "device" || node.type === "location") return "compact";
+  return "full";
+}
+
+/**
+ * Card dimensions by role, sized to what each card shows: a person is a small
+ * name tag, a phone or place a compact card, events, statements and analysis
+ * cards carry a summary, and media cards a print. Presentation only.
+ */
 export function getPinDimensions(node: {
   type?: string;
   gapId?: string;
+  origin?: string;
+  label?: string;
+  displayLabel?: string;
   size?: { width: number; height: number };
   media?: { kind: "photo" | "video" };
 }): PinDimensions {
   if (node.size?.width && node.size?.height) {
     return { width: node.size.width, height: node.size.height };
   }
+  // A readable title keeps the record's own label as one extra metadata line.
+  const raw =
+    node.label !== undefined &&
+    rawLabelNote({ label: node.label, displayLabel: node.displayLabel })
+      ? 16
+      : 0;
 
   // Photo-on-corkboard cards: a 4:3 photo or 16:9 clip frame above the label.
   if (node.media) {
     return node.media.kind === "video"
-      ? { width: 264, height: 304 }
-      : { width: 264, height: 348 };
+      ? { width: 224, height: 256 + raw }
+      : { width: 224, height: 288 + raw };
   }
 
-  switch (node.type) {
-    case "location":
-      // Primary location anchor: wider presence as the hub of activity
-      return { width: 276, height: 236 };
+  const variant = cardVariant(node);
+  if (variant === "person") return { width: 232, height: 80 + raw };
+  if (variant === "compact")
+    return {
+      width: node.type === "location" ? 228 : 224,
+      height: 112 + raw + (node.gapId ? 36 : 0),
+    };
 
-    case "statement":
-      // Witness / closing statement memo: taller document aspect ratio
-      return { width: 256, height: 252 };
-
-    case "event":
-      // Incident events: wider with extra vertical space if linked to an open question
-      return node.gapId
-        ? { width: 264, height: 244 }
-        : { width: 252, height: 228 };
-
-    case "device":
-      // Hardware devices: camera with recording gap gets extra room; standard reader is compact
-      return node.gapId
-        ? { width: 252, height: 236 }
-        : { width: 240, height: 216 };
-
-    case "person":
-      // Person cards: classic compact portrait index card
-      return { width: 236, height: 216 };
-
-    default:
-      return node.gapId
-        ? { width: 256, height: 236 }
-        : { width: DEFAULT_PIN_WIDTH, height: DEFAULT_PIN_HEIGHT };
-  }
+  const gap = node.gapId ? 32 : 0;
+  if (DERIVED_ORIGINS.has(node.origin ?? ""))
+    return { width: 256, height: 200 + raw + gap };
+  if (node.type === "statement") return { width: 256, height: 196 + raw + gap };
+  return {
+    width: node.gapId ? 252 : DEFAULT_PIN_WIDTH,
+    height: DEFAULT_PIN_HEIGHT + raw + gap,
+  };
 }
 
 /** Presentation geometry only; never changes evidence or relationships. */
@@ -147,100 +167,4 @@ export function threadHandles(source: Point, target: Point) {
   return dy >= 0
     ? { sourceHandle: "source-bottom", targetHandle: "target-top" }
     : { sourceHandle: "source-top", targetHandle: "target-bottom" };
-}
-
-/** Left-to-right bands: who and what they used, what they said, what happened, where. */
-const BAND_ORDER = ["device", "person", "statement", "event", "location"];
-const BAND_GAP_X = 96;
-const ROW_GAP_Y = 56;
-
-/**
- * Presentation-only layout for backend graphs, whose nodes arrive with column
- * placeholders. Groups nodes into bands by type, wraps tall bands into
- * sub-columns, orders each band by the average row of its neighbours to
- * shorten threads, and centres every column vertically. Never adds, removes or
- * reorders evidence: it only returns positions.
- */
-export function layoutCaseGraph(
-  nodes: Array<{
-    id: string;
-    type: string;
-    gapId?: string;
-    size?: { width: number; height: number };
-    media?: { kind: "photo" | "video" };
-  }>,
-  edges: Array<{ source: string; target: string }>,
-): Map<string, Point> {
-  const neighbours = new Map<string, string[]>();
-  for (const node of nodes) neighbours.set(node.id, []);
-  for (const edge of edges) {
-    neighbours.get(edge.source)?.push(edge.target);
-    neighbours.get(edge.target)?.push(edge.source);
-  }
-  const maxRows = Math.max(5, Math.ceil(Math.sqrt(nodes.length) * 1.1));
-  const bands = BAND_ORDER.map((type) =>
-    nodes.filter((node) => node.type === type),
-  );
-  const others = nodes.filter((node) => !BAND_ORDER.includes(node.type));
-  if (others.length) bands.push(others);
-
-  // Initial order: most connected first, so hubs sit in the middle rows.
-  const rank = new Map<string, number>();
-  for (const band of bands) {
-    band.sort(
-      (a, b) =>
-        (neighbours.get(b.id)?.length ?? 0) -
-          (neighbours.get(a.id)?.length ?? 0) || a.id.localeCompare(b.id),
-    );
-    band.forEach((node, index) => rank.set(node.id, index / band.length));
-  }
-  for (let sweep = 0; sweep < 4; sweep++) {
-    for (const band of bands) {
-      const centre = new Map<string, number>();
-      for (const node of band) {
-        const around = (neighbours.get(node.id) ?? [])
-          .map((id) => rank.get(id))
-          .filter((value): value is number => value !== undefined);
-        centre.set(
-          node.id,
-          around.length
-            ? around.reduce((sum, value) => sum + value, 0) / around.length
-            : (rank.get(node.id) ?? 0.5),
-        );
-      }
-      band.sort(
-        (a, b) =>
-          centre.get(a.id)! - centre.get(b.id)! || a.id.localeCompare(b.id),
-      );
-      band.forEach((node, index) =>
-        rank.set(node.id, (index + 0.5) / band.length),
-      );
-    }
-  }
-
-  const rowHeight =
-    Math.max(...nodes.map((node) => getPinDimensions(node).height), 0) +
-    ROW_GAP_Y;
-  const positions = new Map<string, Point>();
-  let x = 0;
-  for (const band of bands) {
-    if (!band.length) continue;
-    const columns = Math.ceil(band.length / maxRows);
-    const perColumn = Math.ceil(band.length / columns);
-    for (let column = 0; column < columns; column++) {
-      // Interleave so each sub-column spans the band's full vertical order.
-      const members = band.filter((_, index) => index % columns === column);
-      const width = Math.max(
-        ...members.map((node) => getPinDimensions(node).width),
-      );
-      const top = ((maxRows - perColumn) * rowHeight) / 2;
-      const stagger = column % 2 ? rowHeight / 2 : 0;
-      members.forEach((node, row) =>
-        positions.set(node.id, { x, y: top + stagger + row * rowHeight }),
-      );
-      x += width + BAND_GAP_X;
-    }
-    x += BAND_GAP_X;
-  }
-  return positions;
 }
