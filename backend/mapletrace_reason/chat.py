@@ -21,6 +21,7 @@ from typing import Literal
 
 from .analytics import Context, case_tz
 from .llm import read_tools
+from .llm_cache import call_stats
 from .model import Item, Results, plural
 from .store import Case
 
@@ -67,10 +68,8 @@ class Answer:
                 "inference": self.inference, "unknowns": self.unknowns}
 
 
-# Steps (backend/TRACE.md "Chat steps"). Usage comes from the response's usage_metadata; cost is an estimate from
-# list prices; duration is the measured wall time of a live call, else recorded latency_ms, else an estimate.
-PRICE_PER_MTOK = {"input": 3.0, "output": 15.0, "cache_read": 0.3, "cache_write": 3.75}
-LIVE_MIN_MS = 150  # a cached response returns far faster than any real model call
+# Steps (backend/TRACE.md "Chat steps"). Prices, tokens and duration estimates come from llm_cache.call_stats
+# (prices: backend/LLM_COSTS.md). A step is "live" only when the response was not served from the cache.
 
 
 def _short_args(args, limit: int = 120):
@@ -83,25 +82,16 @@ def _short_args(args, limit: int = 120):
     return args
 
 
-def model_step(resp, elapsed_ms: float) -> dict:
-    """One model call as a step. Private equivalent of llm_cache.call_stats (same estimate rule)."""
-    u = getattr(resp, "usage_metadata", None) or {}
-    details = u.get("input_token_details") or {}
-    cache_read, cache_write = int(details.get("cache_read") or 0), int(details.get("cache_creation") or 0)
-    out_tok = int(u.get("output_tokens") or 0)
-    in_tok = int(u.get("input_tokens") or 0)
-    fresh = max(in_tok - cache_read - cache_write, 0)
-    cost = (fresh * PRICE_PER_MTOK["input"] + out_tok * PRICE_PER_MTOK["output"]
-            + cache_read * PRICE_PER_MTOK["cache_read"] + cache_write * PRICE_PER_MTOK["cache_write"]) / 1e6
+def model_step(resp, elapsed_ms: float, cached: bool) -> dict:
+    """One model call as a step. `cached`: the response came from the replay cache (no model call was made)."""
     recorded = (getattr(resp, "response_metadata", None) or {}).get("latency_ms")
-    if elapsed_ms >= LIVE_MIN_MS:
-        ms, src = elapsed_ms, "live"
+    if not cached:
+        stats = call_stats(resp, elapsed_ms, "live")
     elif isinstance(recorded, (int, float)) and recorded > 0:
-        ms, src = recorded, "recorded"
+        stats = call_stats(resp, recorded)
     else:
-        ms, src = 800 + out_tok / 55 * 1000, "estimated"
-    return {"type": "model_call", "inputTokens": in_tok, "outputTokens": out_tok, "costUsd": round(cost, 6),
-            "durationMs": int(ms), "durationSource": src}
+        stats = call_stats(resp)
+    return {"type": "model_call", **stats}
 
 
 def load_results(analysis: dict) -> Results:
@@ -267,9 +257,12 @@ class CaseChat:
         messages.append(HumanMessage(question))
         model_calls = 0
         for _ in range(MAX_STEPS):
+            cache = getattr(chat_model, "cache", None)
+            misses = getattr(cache, "misses", None)
             t0 = time.perf_counter()
             resp = model.invoke(messages)
-            steps.append(model_step(resp, (time.perf_counter() - t0) * 1000))
+            cached = misses is not None and cache.misses == misses
+            steps.append(model_step(resp, (time.perf_counter() - t0) * 1000, cached))
             model_calls += 1
             messages.append(resp)
             tool_calls = getattr(resp, "tool_calls", None) or []
