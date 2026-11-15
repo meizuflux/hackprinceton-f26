@@ -8,7 +8,7 @@ Run:  uvicorn compstat_api.app:app --reload --port 8000      (from backend/)
     GET  /case                           latest ready case as CaseData (matches the frontend's getCase())
     GET  /cases/{caseId}                 CaseData for one case (board.json)
     GET  /cases/{caseId}/{section}       graph | gaps | insights | suggestions | contradictions | explanations |
-                                         timeline | audit | changes | sources
+                                         timeline | audit | changes | sources | signals
     GET  /cases/{caseId}/source?id=...   one cited record in full (source inspector)
     GET  /cases/{caseId}/evidence/{evidenceId}   original evidence file (read-only copy)
     POST /cases/{caseId}/evidence        add a ZIP of new evidence -> new version, compared with the previous one
@@ -44,7 +44,7 @@ from compstat_reason.pipeline import analyze
 DATA = Path(os.environ.get("COMPSTAT_DATA", Path(__file__).resolve().parents[1] / "data"))
 MAX_UPLOAD = int(os.environ.get("COMPSTAT_MAX_UPLOAD_MB", "100")) * 1024 * 1024
 SECTIONS = {"graph", "gaps", "insights", "suggestions", "contradictions", "explanations", "timeline", "audit", "changes",
-            "sources", "nodes", "edges", "uncertainTimes", "missingPeriods", "sourceGroups"}
+            "sources", "nodes", "edges", "uncertainTimes", "missingPeriods", "sourceGroups", "signals"}
 _lock = threading.Lock()
 
 app = FastAPI(title="Compstat API", version="0.1.0")

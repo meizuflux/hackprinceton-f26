@@ -41,7 +41,7 @@ class Results:
     """Accumulates items by kind and assigns short display IDs (F-01, G-03, ...)."""
     PREFIX = {"finding": "F", "claim": "C", "contradiction": "X", "hypothesis": "H", "gap": "G",
               "suggestion": "S", "insight": "I", "connection": "E", "source_group": "SG", "missing_period": "M",
-              "uncertain_time": "U", "episode": "K"}
+              "uncertain_time": "U", "episode": "K", "signal": "ML"}
 
     def __init__(self):
         self.items: dict[str, list[Item]] = {}

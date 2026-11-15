@@ -1,6 +1,7 @@
 """Logical reasoning pipeline (post-ingestion).
 
-    case.db ──► connections, findings (Stage A) ──► key events ──► source independence ──► timeline
+    case.db ──► ML signals (Stage 0: clustering + classification, see ml.py)
+            ──► connections, findings (Stage A) ──► key events ──► source independence ──► timeline
             ──► claims ──► contradictions ──► competing explanations ──► gaps ──► next steps ──► insights
             ──► [optional LLM: more claims + deep-agent investigator] ──► verification ──► overrides
             ──► comparison with the previous version ──► board.json / analysis.json / graph.json
@@ -20,7 +21,7 @@ from pathlib import Path
 from compstat_ingest.db import AuditLog, canonical_json
 
 from . import analytics, board as board_mod, claims as claims_mod, contradictions as contra_mod, gaps as gaps_mod
-from . import history, hypotheses as hyp_mod, insights as insights_mod, recommend, sources, timeline as tl
+from . import history, hypotheses as hyp_mod, insights as insights_mod, ml, recommend, sources, timeline as tl
 from .model import Results, plural
 from .store import Case
 from .verify import Verifier
@@ -67,6 +68,9 @@ def analyze(run_dir: str | Path, out_root: str | Path | None = None, previous: s
         say(name, pct)
         return items
 
+    # Stage 0: ML signals are leads for the board and the investigator agent. They are their own kind and are not
+    # passed to the later stages, so findings, explanations, gaps and next steps stay exactly as rules compute them.
+    stage("ml_signals", ml.run(ctx), 5)
     stage("connections", analytics.credential_and_alias_links(ctx), 10)
     findings = stage("findings", analytics.colocation(ctx) + analytics.access_anomalies(ctx) + analytics.concurrent_presence(ctx)
                      + analytics.communication_patterns(ctx), 25)

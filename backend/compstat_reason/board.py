@@ -103,6 +103,12 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
             edge(ent_node(d["source"]), ent_node(d["target_entity"]), "identity", "probably the same", cites(c), "inferred", c.text)
         elif d.get("edge") == "alias" and d.get("entity_a"):
             edge(ent_node(d["entity_a"]), ent_node(d["entity_b"]), "identity", "may be the same", cites(c), "inferred", c.text)
+    # ML identity signals: only between people already on the board, so the layout of existing nodes is unchanged
+    for s in R.get("signal"):
+        if s.data.get("signal_type") == "identity_cluster":
+            a, b = f"ent-{s.data['entity_a']}", f"ent-{s.data['entity_b']}"
+            if a in nodes and b in nodes:
+                edge(a, b, "identity", "may be the same (ML)", cites(s), "inferred", s.text)
     # statements and contradictions
     for x in R.get("contradiction"):
         d = x.data
@@ -173,6 +179,9 @@ def build_board(case, ctx, R, verdicts, timeline, changes, overrides, extras) ->
         "missingPeriods": [{"id": m.id, "title": m.title, "text": m.text, "kind": m.data["kind"], "start": m.data["start"],
                             "end": m.data["end"], "citations": cites(m)} for m in R.get("missing_period")],
         "sourceGroups": [{"id": s.id, "title": s.title, "text": s.text, "citations": cites(s)} for s in R.get("source_group")],
+        "signals": [{"id": s.id, "title": s.title, "text": s.text, "type": s.data.get("signal_type"), "score": s.score,
+                     "certainty": s.certainty, "method": s.data.get("method", {}), "citations": cites(s), "key": s.key,
+                     "status": s.status} for s in R.get("signal")],
         "changes": changes,
         "overrides": overrides,
         "audit": extras["audit"],
