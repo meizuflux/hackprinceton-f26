@@ -103,8 +103,11 @@ Rules and durable decisions for agents working in this repository. How-to materi
 
 ### Insights
 
-- Questions: gaps plus the suggestions tied to them. Evidence: contradictions, cited observations, source groups, missing periods and uncertain times. Inferences: insight inferences, competing explanations with the backend verdict, and ML signals as leads; dashed borders.
-- Cited observations always stay separate from the inference. One search covers all tabs. `insights-sections.ts` only groups API data; it never creates or scores facts.
+- Questions: gaps plus the suggestions tied to them. Evidence: contradictions, cited observations, source groups, missing periods and uncertain times. Inferences, in this order: competing explanations with the backend verdict (top 3 hypotheses, rest behind a toggle), AI agent insights (`origin` agent or llm), ML model leads (every `signals` item, by model score) and rule-based inferences; dashed borders.
+- Layout: one sticky header row (the "Insights" h2, tabs with counts, search on the right), then a sticky jump rail listing the tab's sections with counts (each question on Questions) beside the content; the rail hides at 1100px and below. Every item ends in one footer row: its source chips, then Locate on mind map and Inspect.
+- Inference cards put the inference first and the backend's observations under "Observed in records" with their own citations; never merge the two. Each item names its producer with icon plus word ("AI agent", "ML model", "Rules", "LLM"); ML leads show the method name and "Model score 0.xx". On the dark panel the origin tag uses light text, not the board's graphite ink.
+- ML leads reach the board through the card whose `itemId` matches the signal ID (`EvidenceNode.itemId`); a lead without a card offers its sources only.
+- One search covers all tabs (tab counts become match counts); Escape or the clear button empties it, and an empty tab links to the tabs that do match. `insights-sections.ts` only groups API data; it never creates or scores facts.
 
 ### Raw evidence and generalized files
 

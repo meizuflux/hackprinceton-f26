@@ -46,7 +46,11 @@ export interface InsightsModel {
   };
   inferences: {
     explanations: ExplanationSet[];
-    insights: Insight[];
+    /** Insights recorded by the AI agent or the LLM layer (API `origin`). */
+    agentInsights: Insight[];
+    /** Every other insight: the deterministic rules. */
+    ruleInsights: Insight[];
+    /** Traditional-ML leads, highest model score first. */
     signals: MlSignal[];
   };
 }
@@ -154,6 +158,19 @@ export function buildInsightsModel(data: CaseData, query = ""): InsightsModel {
     return hypotheses.length ? [{ ...set, hypotheses }] : [];
   });
 
+  const insights = data.insights.filter((item) =>
+    matches([
+      item.id,
+      item.title,
+      item.text,
+      item.inference,
+      ...(item.observations ?? []).map((o) => o.text),
+      ...item.citations,
+    ]),
+  );
+  const byModel = (item: Insight) =>
+    item.origin === "agent" || item.origin === "llm";
+
   return {
     questions: { items, unlinked },
     evidence: {
@@ -168,19 +185,14 @@ export function buildInsightsModel(data: CaseData, query = ""): InsightsModel {
     },
     inferences: {
       explanations,
-      insights: data.insights.filter((item) =>
-        matches([
-          item.id,
-          item.title,
-          item.text,
-          item.inference,
-          ...(item.observations ?? []).map((o) => o.text),
-          ...item.citations,
-        ]),
-      ),
-      signals: cited(data.signals, (s) => [s.type, s.method?.name]).sort(
-        (a, b) => b.score - a.score,
-      ),
+      agentInsights: insights.filter(byModel),
+      ruleInsights: insights.filter((item) => !byModel(item)),
+      signals: cited(data.signals, (s) => [
+        s.id,
+        s.type,
+        humanize(s.type),
+        s.method?.name,
+      ]).sort((a, b) => b.score - a.score),
     },
   };
 }
@@ -197,7 +209,11 @@ export function tabCounts(model: InsightsModel): Record<InsightsTab, number> {
       e.sourceGroups.length +
       e.missingPeriods.length +
       e.uncertainTimes.length,
-    inferences: i.explanations.length + i.insights.length + i.signals.length,
+    inferences:
+      i.explanations.length +
+      i.agentInsights.length +
+      i.ruleInsights.length +
+      i.signals.length,
   };
 }
 
