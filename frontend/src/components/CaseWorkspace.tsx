@@ -23,9 +23,9 @@ import "./case-workspace.css";
 
 const views = [
   { id: "board", label: "Mind map", icon: GitBranch },
+  { id: "insights", label: "Insights", icon: Lightbulb },
   { id: "evidence", label: "Raw evidence", icon: ScanText },
   { id: "files", label: "Generalized files", icon: Files },
-  { id: "insights", label: "Insights", icon: Lightbulb },
   { id: "chat", label: "Chat", icon: MessageSquare },
 ] as const;
 
