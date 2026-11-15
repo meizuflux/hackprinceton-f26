@@ -6,20 +6,53 @@
   color-scheme: dark;
   color: var(--text);
   background: var(--surface);
-  --surface: #171a19;
-  --panel: #222821;
-  --text: #e8e8df;
-  --muted: #b0b8a6;
-  --line: #3a4238;
-  --green: #d3dfaf;
-  --amber: #d4ad6a;
+  /* Neutrals: cool ink workspace */
+  --surface: #10151c;
+  --panel: #18202a;
+  --raised: #202a36;
+  --field: #141b23;
+  --line: #2c3946;
+  --chrome-border: #33414f;
+  --text: #e6ecf2;
+  --muted: #a3b2c2;
   --paper: #e8e4d5;
+  /* Brand: glassy blue from the MapleTrace chevrons */
+  --brand-100: #b4e4ff;
+  --brand-200: #9cdcff;
+  --brand-300: #78cbff;
+  --brand-400: #58b2ff;
+  --brand-500: #3d92e3;
+  --brand: var(--brand-300);
+  --brand-text: #9cd6ff;
+  --brand-ink: #04203a;
+  --brand-gradient: linear-gradient(
+    135deg,
+    #a8e0ff 0%,
+    #78cbff 48%,
+    #58b2ff 100%
+  );
+  --brand-gradient-hover: linear-gradient(
+    135deg,
+    #c4ebff 0%,
+    #92d6ff 48%,
+    #70bfff 100%
+  );
+  --brand-selected: #58b2ff1f;
+  --brand-hover: #58b2ff14;
+  --brand-border: #58b2ff80;
+  --focus-ring: #8ed5ff;
+  /* Glass applies to chrome only, never to reading surfaces */
+  --glass-fill: linear-gradient(180deg, #ffffff0b 0%, #ffffff00 70%);
+  --glass-edge: inset 0 1px 0 #ffffff14;
+  --amber: #d4ad6a;
+  /* Legacy alias: older rules read --green for the interactive accent */
+  --green: var(--brand);
   --radius: 6px;
-  --shadow: 0 8px 28px #10140e40;
+  --shadow: 0 8px 28px #03070c66;
 }
 * {
   box-sizing: border-box;
-  scrollbar-color: #59624e var(--surface);
+  scrollbar-color: #3c4c5e var(--surface);
   scrollbar-width: thin;
 }
 body {
@@ -70,12 +103,12 @@ a {
   text-decoration: none;
 }
 :is(button, a, input, textarea, summary):focus-visible {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 3px;
 }
 input,
 textarea {
-  caret-color: var(--green);
+  caret-color: var(--brand);
 }
 input::placeholder {
   color: var(--muted);
@@ -85,8 +118,8 @@ input::placeholder {
   display: none !important;
 }
 ::selection {
-  background: var(--green);
-  color: #252d20;
+  background: var(--brand-400);
+  color: var(--brand-ink);
 }
 .button,
 .text-button,
@@ -105,20 +138,31 @@ input::placeholder {
   white-space: nowrap;
 }
 .button-primary {
-  background: var(--green);
-  color: #252d20;
-  border-color: var(--green);
+  background: var(--brand-gradient);
+  color: var(--brand-ink);
+  border-color: #b4e4ff66;
+  box-shadow:
+    inset 0 1px 0 #ffffff59,
+    0 4px 14px #1d6fc433;
 }
 .button-primary:hover {
-  background: #e1ebc5;
+  background: var(--brand-gradient-hover);
+}
+.button-primary:disabled {
+  background: #233142;
+  border-color: #2f4256;
+  color: #a9bacb;
+  box-shadow: none;
+  opacity: 1;
 }
 .button-secondary {
   background: transparent;
   color: var(--text);
-  border-color: #56614b;
+  border-color: #44566a;
 }
 .button-secondary:hover {
-  background: #30382a;
+  background: var(--brand-hover);
+  border-color: var(--brand-border);
 }
 .text-button,
 .icon-button {

@@ -11,7 +11,9 @@ import {
   Link2,
   ArrowUpRight,
   AlertTriangle,
+  HelpCircle,
 } from "lucide-react";
+import { cardKind } from "./board-colors";
 export type PinData = {
   label: string;
   type: string;
@@ -29,7 +31,7 @@ export type PinData = {
   onInspect: () => void;
   onInspectGap?: () => void;
 };
-const icons = {
+export const cardIcons = {
   person: UserRound,
   location: MapPin,
   device: Smartphone,
@@ -40,14 +42,14 @@ export const EvidenceNode = memo(function EvidenceNode({
   id,
   data,
 }: NodeProps<Node<PinData>>) {
-  const Icon = icons[data.type as keyof typeof icons] || FileText;
+  const Icon = cardIcons[data.type as keyof typeof cardIcons] || FileText;
   const pinStyle = {
     ...(data.width ? { width: `${data.width}px` } : {}),
     ...(data.height ? { height: `${data.height}px` } : {}),
   };
   return (
     <div
-      className={`evidence-pin ${data.type} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""} ${data.isFocused ? "is-focused" : ""}`}
+      className={`evidence-pin ${data.type} kind-${cardKind(data.type)} ${data.certainty === "inferred" ? "is-inferred" : ""} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""} ${data.isFocused ? "is-focused" : ""}`}
       style={pinStyle}
     >
       <svg
@@ -67,11 +69,20 @@ export const EvidenceNode = memo(function EvidenceNode({
         ),
       )}
       <span className="pushpin" aria-hidden="true" />
+      {data.gapId && (
+        <span className="pin-gap-flag" aria-hidden="true">
+          <HelpCircle size={13} strokeWidth={2.25} />
+        </span>
+      )}
       <div className="pin-type">
-        <span>
-          <Icon size={12} />
-          {data.type}
-          {data.certainty === "inferred" && " · inferred"}
+        <span className="pin-kind">
+          <span className="pin-kind-chip">
+            <Icon size={12} strokeWidth={2.25} aria-hidden="true" />
+            {data.type}
+          </span>
+          {data.certainty === "inferred" && (
+            <span className="pin-certainty">Inferred</span>
+          )}
         </span>
         {data.time && (
           <span className="pin-time">

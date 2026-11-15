@@ -3,12 +3,12 @@
   z-index: 12;
   top: var(--topbar-clearance-y, 68px);
   right: 16px;
-  bottom: 118px;
+  bottom: 16px;
   width: min(400px, calc(100% - 32px));
   display: flex;
   flex-direction: column;
   overflow: hidden;
-  border: 1px solid #364232;
+  border: 1px solid var(--chrome-border);
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
@@ -56,13 +56,13 @@
   border-bottom: 2px solid transparent;
 }
 .analysis-tabs button.active {
-  color: var(--green);
-  border-bottom-color: var(--green);
+  color: var(--brand-text);
+  border-bottom-color: var(--brand-400);
 }
 .analysis-tabs button > span {
   font-size: 11px;
-  background: #35402b;
-  color: var(--green);
+  background: var(--brand-selected);
+  color: var(--brand-text);
   padding: 2px 5px;
   border-radius: 3px;
   margin-left: 5px;
@@ -95,8 +95,8 @@
 }
 .analysis-card:hover,
 .analysis-card.selected {
-  background: #2d3527;
-  border-color: #8b966f;
+  background: var(--raised);
+  border-color: #4f6880;
 }
 .card-topline,
 .card-bottomline {
@@ -138,14 +138,14 @@
 .audit-step p {
   font-size: 13px;
   line-height: 1.65;
-  color: #c0c9b5;
+  color: #c3cdd8;
 }
 .card-bottomline {
   margin-top: 14px;
   padding-top: 10px;
   border-top: 1px solid var(--line);
   font-size: 11px;
-  color: #c4ceba;
+  color: #c6d0da;
 }
 .card-bottomline > span {
   display: inline-flex;
@@ -166,7 +166,7 @@
   align-items: center;
   gap: 5px;
   font-size: 12px;
-  color: #d1dcb8;
+  color: #cfdbe7;
   margin-bottom: 10px;
 }
 .inspector-head {
@@ -191,9 +191,9 @@
   gap: 8px;
 }
 .kind-badge {
-  color: #d1ddc0;
-  border: 1px solid #566449;
-  background: #2d3825;
+  color: #d2dce6;
+  border: 1px solid #3f5266;
+  background: #1f2a36;
   border-radius: 3px;
   padding: 4px 7px;
   font-size: 11px;
@@ -204,7 +204,7 @@
   background: #453a25;
 }
 .inspector-body p {
-  color: #c0c9b5;
+  color: #c3cdd8;
   font-size: 13px;
   line-height: 1.7;
   margin: 12px 0;
@@ -220,20 +220,20 @@
   font-size: 13px;
   line-height: 1.7;
   padding-left: 20px;
-  color: #c0c9b5;
+  color: #c3cdd8;
 }
 .linked-suggestions .text-button {
   text-align: left;
   justify-content: flex-start;
   padding: 0;
-  color: var(--green);
+  color: var(--brand-text);
 }
 .source-item {
-  border: 1px solid #45503d;
+  border: 1px solid #334354;
   border-radius: var(--radius);
   margin: 10px 0;
   overflow: hidden;
-  background: #1c2319;
+  background: #151d26;
 }
 .source-item summary {
   display: flex;
@@ -242,7 +242,7 @@
   gap: 8px;
   padding: 12px;
   cursor: pointer;
-  color: #d1ddc0;
+  color: #d2dce6;
   overflow-wrap: anywhere;
 }
 .source-item summary strong {
@@ -278,7 +278,7 @@
     Georgia,
     serif;
   background: var(--paper);
-  color: #353e2c;
+  color: #2a323b;
   margin: 12px 0;
   padding: 16px;
   border-radius: 2px;
@@ -303,14 +303,14 @@
 .query-block {
   white-space: pre-wrap;
   overflow-wrap: anywhere;
-  background: #131a10;
-  border: 1px solid #48583b;
+  background: #0c1117;
+  border: 1px solid #334354;
   padding: 14px;
   margin: 12px 0;
   font:
     12px/1.7 "IBM Plex Mono",
     monospace;
-  color: #d1ddc0;
+  color: #d2dce6;
 }
 .audit-heading > div {
   display: flex;
@@ -327,17 +327,17 @@
 }
 .audit-step {
   position: relative;
-  padding: 0 0 22px 24px;
+  padding: 0 0 16px 24px;
 }
 .audit-step:not(:last-child) {
-  margin-bottom: 20px;
+  margin-bottom: 16px;
   border-bottom: 1px solid var(--line);
 }
 .audit-step > svg {
   position: absolute;
   top: 3px;
   left: 0;
-  color: var(--green);
+  color: var(--brand-text);
 }
 .audit-step time {
   color: var(--muted);
@@ -347,14 +347,14 @@
 .audit-step h3 {
   font-size: 14px;
   font-weight: 550;
-  margin: 8px 0;
+  margin: 2px 0 6px;
 }
 .audit-step button {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  background: #303c26;
-  color: var(--green);
+  background: var(--brand-selected);
+  color: var(--brand-text);
   padding: 7px;
   margin: 10px 5px 0 0;
   font-size: 11px;
@@ -366,9 +366,9 @@
   align-items: center;
   gap: 6px;
   font-size: 11px;
-  color: var(--green);
-  background: #252e20;
-  border: 1px solid #4a5a3e;
+  color: var(--brand-text);
+  background: var(--glass-fill), #172534;
+  border: 1px solid #35587a;
   border-radius: var(--radius);
   padding: 5px 9px;
   cursor: pointer;
@@ -376,8 +376,8 @@
 }
 .focus-board-button:hover,
 .insight-board-btn:hover {
-  background: #33402b;
-  border-color: var(--green);
+  background: var(--glass-fill), #1d3247;
+  border-color: var(--brand-border);
 }
 @media (max-width: 900px) {
   .review-dock {
@@ -396,7 +396,7 @@
 }
 .inspector-structured p {
   margin: 0 0 12px;
-  color: #c0c9b5;
+  color: #c3cdd8;
   font-size: 13px;
   line-height: 1.6;
 }
@@ -409,25 +409,25 @@
 }
 .cite-chip {
   padding: 1px 6px;
-  border: 1px solid #5d6a55;
+  border: 1px solid #46586b;
   border-radius: 3px;
-  background: #2a3127;
-  color: #b9c9a3;
+  background: #1d2631;
+  color: #bccbd9;
   font: 11px/1.5 var(--mono, ui-monospace, monospace);
   cursor: pointer;
 }
 .cite-chip:hover,
 .cite-chip:focus-visible {
-  border-color: var(--green);
-  color: #e3edd2;
+  border-color: var(--brand-400);
+  color: #e6eef6;
 }
 .audit-chain {
-  margin: 0 0 16px;
+  margin: 16px 16px 0;
   padding: 12px;
-  border: 1px solid #566449;
+  border: 1px solid #3f5266;
   border-radius: 5px;
-  background: #2d3825;
-  color: #c0c9b5;
+  background: #1f2a36;
+  color: #c3cdd8;
   font-size: 12px;
   line-height: 1.55;
 }
@@ -437,7 +437,7 @@
 }
 .audit-chain strong {
   display: block;
-  color: #e3edd2;
+  color: #e6eef6;
   font-size: 13px;
 }
 .audit-chain ul {
@@ -454,4 +454,39 @@
 }
 .audit-step p {
   overflow-wrap: anywhere;
+}
+.audit-fields {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  font-size: 12px;
+}
+.audit-fields > div {
+  display: grid;
+  grid-template-columns: minmax(96px, auto) 1fr;
+  gap: 12px;
+}
+.audit-fields dt {
+  color: var(--muted);
+}
+.audit-fields dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+  color: #c3cdd8;
+  font-family: "IBM Plex Mono", monospace;
+  font-size: 11px;
+  line-height: 1.7;
+}
+/* The step from a cited source to its file: a quiet brand action under the excerpt. */
+.source-meta .open-raw-button {
+  margin: -4px 0 10px;
+  padding: 6px 10px;
+  border: 1px solid var(--brand-border);
+  background: var(--brand-hover);
+  color: var(--brand-text);
+}
+.source-meta .open-raw-button:hover {
+  background: var(--brand-selected);
+  color: var(--brand-100);
 }

@@ -1,4 +1,4 @@
-# Mapletrace backend
+# MapleTrace backend
 
 Three packages take an uploaded case `.zip` all the way to a cited investigation board:
 
@@ -9,7 +9,7 @@ upload.zip ──► mapletrace_ingest ──► case.db ──► mapletrace_re
                                                   insights, verification)                 new evidence)
 ```
 
-- **`mapletrace_ingest`:** turns the ZIP into `case.db`. Every row traces back to the exact file and line, row, page or JSON path it came from (stages 1–3 of [`docs/IMPLEMENTATION_PLAN.md`](../docs/IMPLEMENTATION_PLAN.md)).
+- **`mapletrace_ingest`:** turns the ZIP into `case.db`. Every row traces back to the exact file and line, row, page or JSON path it came from.
 - **`mapletrace_reason`:** the logical reasoning pipeline. It uses traditional ML and rules, plus an optional LangChain deep-agent investigator.
 - **`mapletrace_api`:** the HTTP service the frontend calls.
 
@@ -17,12 +17,11 @@ upload.zip ──► mapletrace_ingest ──► case.db ──► mapletrace_re
 
 ## Quick start
 
-Requires Python 3.11+. From `backend/`:
+Requires Python 3.11+. From the repository root, `make backend-install` creates `backend/.venv` with uv (Python 3.12), and `make backend-test`, `make backend-ingest-kestrel`, `make backend-analyze-kestrel` and `make backend-serve` run the steps below. `make dev` also starts the frontend.
+
+By hand, from `backend/` with the virtual environment active:
 
 ```sh
-python -m venv .venv
-.venv/Scripts/pip install -r requirements.txt           # macOS/Linux: .venv/bin/pip
-
 python -m mapletrace_ingest ingest ../cases/kestrel/kestrel_case_upload.zip --out runs/kestrel
 python -m mapletrace_reason analyze runs/kestrel            # writes runs/kestrel/analysis/v1/{board,analysis,graph}.json
 uvicorn mapletrace_api.app:app --port 8000                  # then POST /upload, GET /cases/{id}
@@ -30,20 +29,13 @@ python -m mapletrace_ingest verify runs/kestrel             # re-check evidence 
 python -m pytest -q tests
 ```
 
-Or, from the repository root:
-- `make backend-install`
-- `make backend-test`
-- `make backend-ingest-kestrel`
-- `make backend-analyze-kestrel`
-- `make backend-serve`
-
 Options for `ingest`:
 - `--tz America/Los_Angeles`: time zone for timestamps that don't specify one. Defaults to UTC, or to the time zone named in a submitted manifest.
 - `--dayfirst`: read `03/04/2026` as 3 April.
 - `--country-code`: country code for local phone numbers.
 - `--overwrite`: replace a previous run. It refuses to delete any folder that isn't a previous run.
 
-From Python (for the future `POST /upload` handler):
+From Python (as `POST /upload` does):
 
 ```python
 from mapletrace_ingest.pipeline import ingest_zip
@@ -198,7 +190,7 @@ Set `ANTHROPIC_API_KEY` in your environment; never commit it. With `--llm`:
 
 ### Cached LLM results
 
-One deep analysis of Kestrel costs about $1.30 with `claude-sonnet-5-5`; replays are free. See [LLM_COSTS.md](LLM_COSTS.md) for the breakdown.
+One deep analysis of Kestrel costs about $1.30 with `claude-sonnet-5-5`; replays are free. [LLM_COSTS.md](LLM_COSTS.md) has the breakdown and the chat estimate.
 
 Model calls cost money, so responses are recorded per uploaded archive in `backend/llm_cache/<archive sha256>.jsonl`, keyed by a hash of each request. These files are committed.
 - **Replay:** an upload whose archive matches a cache file replays it automatically, even without the `llm` flag. It needs no API key and never calls the API: a miss raises before any request is sent, the failed call is logged, and the deterministic analysis continues.
@@ -206,12 +198,21 @@ Model calls cost money, so responses are recorded per uploaded archive in `backe
 - **CLI:** `--llm-cache record|replay|off` (default `record`).
 - **Demo snapshot:** `backend/demo/kestrel.tar.gz` holds the finished Kestrel case, including the replayed LLM results. `POST /demo` installs it once as case `kestrel-demo`, which is instant and makes no model calls. The snapshot omits the uploaded ZIP; `POST /demo` restores it from `cases/kestrel/` after checking its hash.
 - **Rebuilding:** `make backend-llm-record` makes one billed run that records responses for the Kestrel ZIP. `make backend-demo-snapshot` rebuilds the snapshot by replaying the cache, and refuses if any response is missing. Both go through the same code path as `POST /upload`, so their requests match later uploads of the same archive.
-- **When to re-record:** changing prompts, tools, model settings or anything in the analysis that the model sees changes the request hashes, so record again and rebuild the snapshot.
+- **When to re-record:** changing prompts, tools, model settings or anything in the analysis that the model sees changes the request hashes, so record again and rebuild the snapshot. The names, docstrings (whitespace included) and outputs of the tools in `llm.read_tools` are part of the request, and chat uses the same tools, so editing them invalidates both caches.
+
+### Case chat
+
+`mapletrace_reason/chat.py` answers an investigator's questions about the latest analysis of a case; `mapletrace_api/chat.py` serves it. [`frontend/CHAT.md`](../frontend/CHAT.md) is the HTTP contract and describes citations, threads, suggested questions and errors; this section covers the implementation.
+- **Model and tools:** `claude-sonnet-5-5` (`MAPLETRACE_CHAT_MODEL`, falling back to `MAPLETRACE_LLM_MODEL`; medium reasoning effort) with the investigator's read-only tools (`llm.read_tools`), plus `list_items` and `get_item` over the finished analysis. It ends with `submit_answer`; at most 10 model calls per answer.
+- **Citations:** come from `case.cite()`; `source_id` is set only when the citation is in the board's `sources`.
+- **Cost control:** responses are cached in `backend/llm_cache/chat-<archive sha256>.jsonl`, keyed by the full request, so the same question in the same thread state replays for free. With `ANTHROPIC_API_KEY` the cache records; without it only recorded answers are served, and a miss returns `503 needs_api_key` before anything is sent. Prompts hold no case name, time or random ID.
+- **Recording:** `make backend-chat-record` installs the demo snapshot in a temporary folder and records the answers to its suggested questions (billed). `python -m mapletrace_api.chat suggestions` lists them and whether each replays, without calling the API.
+- **Audit:** chat reads the finished analysis and is not written to the case's audit log.
 
 ## API (`mapletrace_api`)
 
 ```sh
-uvicorn mapletrace_api.app:app --port 8000      # CORS allows http://localhost:5173 (MAPLETRACE_CORS to change)
+uvicorn mapletrace_api.app:app --port 8000      # CORS allows localhost:5173 and 127.0.0.1:5173 (MAPLETRACE_CORS to change)
 ```
 
 | Method | Path | Purpose |
@@ -222,17 +223,23 @@ uvicorn mapletrace_api.app:app --port 8000      # CORS allows http://localhost:5
 | GET | `/cases`, `/cases/{caseId}` | List cases; one case as `CaseData` |
 | GET | `/cases/{caseId}/{section}` | `graph`, `gaps`, `insights`, `suggestions`, `contradictions`, `explanations`, `timeline`, `audit`, `changes`, `sources`, `uncertainTimes`, `missingPeriods`, `sourceGroups`, `signals` |
 | GET | `/cases/{caseId}/source?id=EV-071:seq=40162` | One cited record in full (source inspector) |
-| GET | `/cases/{caseId}/evidence/{evidenceId}` | The original evidence file (read-only copy) |
+| GET | `/cases/{caseId}/evidence/{evidenceId}` | The original evidence file (read-only copy), as an attachment. `?inline=true` renders images, video, audio and PDF in place; other formats stay attachments (`nosniff`, sandboxed) |
+| GET | `/cases/{caseId}/evidence/{evidenceId}/view?locator=&offset=&limit=` | The stored copy in a viewable form, with a citation resolved to a position. `locator` is the label after `EV-xxx:` in a source ID (`event_id=BDG-000615`, `row=71`, `line=14`). Returns file metadata (`sha256`, `bytes`, `format`, `evidenceType`, `parseStatus`, `manifestMatch`, `recordCount`), `kind` (`table` \| `text` \| `json` \| `document` \| `image` \| `video` \| `audio` \| `pdf` \| `binary`), `mediaType`, `notes`, and one window: `table: {columns, total, offset, limit, items: [{row, line, cells}]}` (row numbers as ingestion counts them: header row 1) or `lines: {unit: line \| paragraph, total, offset, limit, items: [{n, text, label?, truncated?}]}`. `target: {locator, resolved, recordIds, sharedRecordIds, locators, ranges: [{start, end, colStart?, colEnd?}], sharedRanges, page, whole, note?}` gives 0-based item ranges taken from each record's `locator_json`; without `offset` the window opens around the first range. When records share a label, the board source excerpt picks the cited one and the rest are `sharedRanges`. `limit` 1–5000 (default 1000); lines are capped at 4,000 characters. JSON is pretty-printed (`pretty: true`), so its line numbers refer to the rendering |
 | GET | `/cases/{caseId}/files` | Evidence inventory from the latest ingestion: `[{evidenceId, fileId, path, filename, sha256, bytes, format, sniffedFormat, evidenceType, parseStatus, recordCount, manifestMatch (bool or null when the manifest lists no hash), origin, title}]` |
-| GET | `/cases/{caseId}/records?evidenceId=&limit=&offset=` | Normalized ingestion records, read-only: `{total, limit, offset, items: [{id, recordType, fields, citations: [{evidenceId, locator, sourceId?}]}]}`. `fields` holds flat scalars (`ts_utc`, `ts_start_utc`/`ts_end_utc`, `ts_raw`, `ts_precision`, `ts_flags`, `actor`, `target`, `lat`, `lon`, `content`, `reliability`, `duplicate_of`, then scalar attributes; protected attributes are never returned). `sourceId` is present only when the record is cited on the board. `limit` 1–500 (default 100) |
+| GET | `/cases/{caseId}/records?evidenceId=&recordType=&limit=&offset=` | Normalized ingestion records, read-only: `{total, limit, offset, types: {recordType: count}, items: [{id, recordType, fields, citations: [{evidenceId, locator, sourceId?}]}]}`. `fields` holds flat scalars (`ts_utc`, `ts_start_utc`/`ts_end_utc`, `ts_raw`, `ts_precision`, `ts_flags`, `actor`, `target`, `lat`, `lon`, `content`, `reliability`, `duplicate_of`, then scalar attributes; protected attributes are never returned). `sourceId` is present only when the record is cited on the board. `types` counts record types within the file filter (ignoring `recordType`). `limit` 1–500 (default 100) |
 | GET | `/cases/{caseId}/audit-chain` | `{verified, head, checks: [{source, ok, message}], entries: [{seq, time, stage, action, fileId, detail, hash, prevHash, source: ingest \| analysis}]}`. `verified` re-runs `mapletrace_ingest verify` (database hash, chain, evidence hashes), checks the analysis chain continues from the ingestion head, and checks the board/analysis outputs against their logged hashes |
 | POST | `/cases/{caseId}/evidence` | Add a ZIP of new evidence. Re-ingests everything as a new version and reports what changed |
 | POST | `/demo` | Install the committed Kestrel snapshot once and return `{caseId}` (`404 no_demo_snapshot` if it is missing) |
+| GET | `/health` | Liveness check (used by Docker) |
+| GET | `/chat/status?case_id=` | Case chat availability, mode (`live` with a key, `replay` without) and suggested questions with a `recorded` flag. See [`frontend/CHAT.md`](../frontend/CHAT.md) |
+| POST | `/cases/{caseId}/chat` (`{message, thread_id?}`) | Cited answer `{thread_id, message: {role, content, evidence_status, citations, summary, observations, inference, unknowns}, suggested, replayed, model_calls}`. `503 needs_api_key` when the answer is not recorded and no key is set. See [`frontend/CHAT.md`](../frontend/CHAT.md) |
 | GET / POST | `/cases/{caseId}/overrides` | Read or record investigator corrections (`dismiss`, `confirm`, `set_status`, `set_label`, `note`, `reject_link`) |
 
-Errors are always `{"error": {"code", "message"}}`. Case data lives under `$MAPLETRACE_DATA` (default `backend/data/cases/<caseId>/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
+Errors are always `{"error": {"code", "message"}}`. Uploads are capped at `MAPLETRACE_MAX_UPLOAD_MB` (default 100). The LLM model is `MAPLETRACE_LLM_MODEL` (default `claude-sonnet-5-5`). Case data lives under `$MAPLETRACE_DATA/cases/<caseId>/` (default `backend/data/`): uploads, numbered ingestion and analysis versions, and `overrides.jsonl`.
 
-### Board fields beyond the current `CaseData` type
+### Board fields
+
+`board.json` is the frontend's `CaseData` plus these fields. The frontend types most of them; it does not yet use `timeline`, `changes` or `overrides`.
 - **`nodes[].certainty` / `edges[].certainty`** (`observed` | `inferred`), plus `edges[].basis`.
 - **`nodes[].citations`** are never empty: entity and place nodes cite the records behind their threads (or, failing that, records that name them), up to 12.
 - **`edges[].directed`:** `true` for person → statement "stated", statement → event "conflicts with", event → place "occurred at" and person → event "recorded at"; `false` for communication, co-location and identity. `source` → `target` follows the direction.

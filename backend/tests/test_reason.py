@@ -317,6 +317,7 @@ def test_kestrel_reasoning(tmp_path):
     assert all(g["nodeIds"] for g in gaps.values()), "every Kestrel gap resolves to board nodes"
     assert any("gapId" in n for n in nodes.values())
     assert not any("every 0 min" in m["text"] for m in board["missingPeriods"])
+    assert all(g["citations"] for g in board["gaps"]), "every gap must expose its source citations"
 
 
 def test_deep_agent_loop_records_cited_insights(sample):

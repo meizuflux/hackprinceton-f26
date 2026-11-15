@@ -95,15 +95,18 @@ def find_gaps(ctx: Context, episodes, findings, contradictions, hypotheses, verd
                  {"artifact": "follow_up_interview", "params": {"person": case.name(p), "topic": f"whereabouts {when}"}}],
                 0.85, [c for x in confl[:2] for c in x.citations[:2]] or h.citations[:2], [h.key] + [x.key for x in confl],
                 status=status, key_parts=("whereabouts", ep.key, case.name(p))))
-    # Q3: explanations the evidence cannot separate
+    # Q3: explanations the evidence cannot separate. Cites the records behind the leading explanations it asks about.
+    hyp_by_key = {h.key: h for h in hypotheses}
     for v in verdicts:
         if not v["decided"]:
+            leading = [hyp_by_key[k] for k in v["ranked"][:3] if k in hyp_by_key]
+            cites = list({c["id"]: c for h in leading for c in h.citations[:3]}.values())
             gaps.append(_gap(
                 f"Which explanation of the {v['episode_title'][0].lower() + v['episode_title'][1:]} fits the evidence?", "uncertain",
                 "Several explanations remain plausible; acting on the wrong one risks a wrong conclusion.",
                 "no evidence yet distinguishes the leading explanations", v["verdict"],
                 [{"artifact": d["artifact"], "params": d["params"], "why": d["why"]} for d in v["discriminating_evidence"]],
-                0.9, [], v["ranked"][:3], key_parts=("which-explanation", v["episode"])))
+                0.9, cites, v["ranked"][:3], key_parts=("which-explanation", v["episode"])))
     # Q4: unidentified parties
     unidentified = sorted((f for f in findings if f.title.startswith("Unidentified party")), key=lambda f: -f.data["count"])[:3]
     for f in unidentified:

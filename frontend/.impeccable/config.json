@@ -1,3 +1,18 @@
 {
-  "buildPath": "code"
+  "buildPath": "code",
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "border-accent-on-rounded",
+        "value": "*",
+        "files": [
+          "src/components/board-coding.css"
+        ],
+        "createdAt": "2026-11-15T03:22:14.930Z",
+        "reason": "Claude (orchestrator): .legend-thread is a 24x0px legend line swatch drawn with a 3px top border, not a rounded card"
+      }
+    ]
+  }
 }

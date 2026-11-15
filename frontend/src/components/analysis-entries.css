@@ -1,0 +1,86 @@
+/* Case analysis entries in the top bar: one segment per kind of analysis. */
+.analysis-entries {
+  display: flex;
+  align-items: stretch;
+  min-height: 36px;
+  border: 1px solid #385675;
+  border-radius: var(--radius);
+  overflow: hidden;
+  background: #161f28;
+}
+.analysis-entry {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 550;
+  white-space: nowrap;
+  transition: background-color 0.15s ease;
+}
+.analysis-entry + .analysis-entry {
+  border-left: 1px solid #2a3d50;
+}
+.analysis-entry svg {
+  flex-shrink: 0;
+  color: var(--green);
+}
+.analysis-entry strong {
+  min-width: 20px;
+  padding: 1px 6px;
+  border-radius: 3px;
+  background: #223446;
+  color: var(--green);
+  font-size: 12px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+.analysis-entry.entry-gaps svg {
+  color: var(--amber);
+}
+.analysis-entry.entry-gaps strong {
+  background: #50432b;
+  color: #ecd09c;
+}
+.analysis-entry:hover {
+  background: #1e2b39;
+}
+.analysis-entry:focus-visible {
+  outline-offset: -3px;
+}
+.analysis-entry[aria-pressed="true"] {
+  background: var(--green);
+  color: #182532;
+}
+.analysis-entry[aria-pressed="true"] svg {
+  color: #182532;
+}
+.analysis-entry[aria-pressed="true"] strong {
+  background: #1825321f;
+  color: #182532;
+}
+.analysis-entry[aria-pressed="true"]:focus-visible {
+  outline-color: #182532;
+}
+@media (max-width: 1100px) and (min-width: 901px) {
+  .analysis-entry-label {
+    display: none;
+  }
+  .analysis-entry {
+    padding: 0 9px;
+  }
+}
+@media (max-width: 540px) {
+  .analysis-entries {
+    flex: 1 1 100%;
+  }
+  .analysis-entry {
+    flex: 1;
+    justify-content: center;
+    padding: 0 6px;
+  }
+}

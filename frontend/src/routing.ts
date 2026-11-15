@@ -3,11 +3,21 @@ import { useCallback, useEffect, useState } from "react";
 export type WorkspaceView =
   "board" | "evidence" | "files" | "insights" | "chat";
 
+/** Insights subsections: open questions, what records show, what analysis infers. */
+export const insightsTabs = ["questions", "evidence", "inferences"] as const;
+export type InsightsTab = (typeof insightsTabs)[number];
+
 export type AppRoute =
   | { kind: "welcome" }
   | { kind: "projects" }
   | { kind: "new-project" }
-  | { kind: "case"; caseId: string; view?: WorkspaceView; sourceId?: string }
+  | {
+      kind: "case";
+      caseId: string;
+      view?: WorkspaceView;
+      sourceId?: string;
+      insightsTab?: InsightsTab;
+    }
   | { kind: "not-found" };
 
 /** Parse only the routes supported by the prototype. Case existence is checked against CaseApi data. */
@@ -37,6 +47,11 @@ export function parseRoute(pathname: string): AppRoute {
     return { kind: "not-found" };
   }
   const view = match[2] as WorkspaceView | undefined;
+  if (match[3] && view === "insights") {
+    const tab = match[3] as InsightsTab;
+    if (!insightsTabs.includes(tab)) return { kind: "not-found" };
+    return { kind: "case", caseId, view, insightsTab: tab };
+  }
   if (match[3] && view !== "evidence") return { kind: "not-found" };
   let sourceId: string | undefined;
   if (match[3]) {
@@ -81,6 +96,12 @@ export function casePath(
     );
   }
   return `/cases/${encodeURIComponent(caseId)}${view === "board" ? "" : `/${view}`}${sourceId ? `/${encodeURIComponent(sourceId)}` : ""}`;
+}
+
+export function insightsPath(caseId: string, tab: InsightsTab): string {
+  if (!insightsTabs.includes(tab))
+    throw new Error(`Unknown insights tab: ${tab}`);
+  return `${casePath(caseId, "insights")}/${tab}`;
 }
 
 export interface NavigateOptions {

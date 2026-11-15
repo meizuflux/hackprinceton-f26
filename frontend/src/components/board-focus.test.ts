@@ -56,6 +56,7 @@ describe("board-focus helpers", () => {
     expect(desktopOpen.right).toBe("440px");
     expect(desktopOpen.top.endsWith("px")).toBe(true);
     expect(desktopOpen.bottom.endsWith("px")).toBe(true);
+    expect(desktopOpen.bottom).toBe("200px");
     expect(desktopOpen.left.endsWith("px")).toBe(true);
 
     const desktopClosed = getFocusPadding({ isNarrow: false, dockOpen: false });

@@ -163,6 +163,51 @@ export interface ExplanationSet {
   }>;
 }
 
+/** A traditional-ML lead (`ML-xx`). Always inferred; it never changes findings. */
+export interface MlSignal {
+  id: string;
+  title: string;
+  text: string;
+  /** e.g. place_cluster, routine_outlier, message_triage. */
+  type: string;
+  /** Model ranking score, not a probability. */
+  score: number;
+  certainty?: Certainty;
+  /** Model name and parameters as reported by the backend. */
+  method?: { name?: string } & Record<string, unknown>;
+  citations: CitationId[];
+  status?: string;
+  key?: string;
+}
+
+/** The same information repeated across several files; one origin. */
+export interface SourceGroup {
+  id: string;
+  title: string;
+  text: string;
+  citations: CitationId[];
+}
+
+/** A source that is unusually silent; may be inactivity, an outage or missing data. */
+export interface MissingPeriod {
+  id: string;
+  title: string;
+  text: string;
+  kind: string;
+  start?: string;
+  end?: string;
+  citations: CitationId[];
+}
+
+/** Records whose time carries an assumption (for example no time zone). */
+export interface UncertainTime {
+  id: string;
+  title: string;
+  text: string;
+  count?: number;
+  citations: CitationId[];
+}
+
 export interface CaseData {
   id: string;
   title: string;
@@ -178,6 +223,10 @@ export interface CaseData {
   normalizedRecords?: NormalizedEvidenceRecord[];
   contradictions?: Contradiction[];
   explanations?: ExplanationSet[];
+  signals?: MlSignal[];
+  sourceGroups?: SourceGroup[];
+  missingPeriods?: MissingPeriod[];
+  uncertainTimes?: UncertainTime[];
   /** IANA time zone the case is displayed in. Times on the wire are ISO 8601. */
   timezone?: string;
 }
@@ -230,7 +279,77 @@ export interface RecordPage {
   total: number;
   limit: number;
   offset: number;
+  /** Record types and counts within the file filter. */
+  types?: Record<string, number>;
   items: NormalizedEvidenceRecord[];
+}
+
+/** 0-based item range to highlight; a column span applies only to single-item ranges. */
+export interface ViewRange {
+  start: number;
+  end: number;
+  colStart?: number;
+  colEnd?: number;
+}
+
+export type EvidenceViewKind =
+  | "table"
+  | "text"
+  | "json"
+  | "document"
+  | "image"
+  | "video"
+  | "audio"
+  | "pdf"
+  | "binary";
+
+/** A stored evidence file in viewable form, with a citation resolved by the backend. */
+export interface EvidenceView {
+  evidenceId: string;
+  fileId: number;
+  path: string;
+  filename: string;
+  sha256: string;
+  bytes: number;
+  format: string;
+  evidenceType: string;
+  parseStatus: string;
+  manifestMatch: boolean | null;
+  recordCount: number;
+  kind: EvidenceViewKind;
+  mediaType: string | null;
+  notes: string[];
+  pretty?: boolean;
+  target: {
+    locator: string;
+    resolved: boolean;
+    recordIds: number[];
+    sharedRecordIds: number[];
+    ranges: ViewRange[];
+    sharedRanges: ViewRange[];
+    page: number | null;
+    whole: boolean;
+    note?: string;
+  } | null;
+  table?: {
+    columns: string[];
+    total: number;
+    offset: number;
+    limit: number;
+    items: Array<{ row: number; line: number; cells: string[] }>;
+  };
+  lines?: {
+    unit: "line" | "paragraph";
+    total: number;
+    offset: number;
+    limit: number;
+    items: Array<{
+      n: number;
+      text: string;
+      label?: string;
+      truncated?: boolean;
+    }>;
+  };
 }
 
 export interface AuditChainEntry {
@@ -266,10 +385,25 @@ export interface CaseApi {
   listFiles(caseId: string): Promise<EvidenceFile[]>;
   getRecords(
     caseId: string,
-    query?: { evidenceId?: string; limit?: number; offset?: number },
+    query?: {
+      evidenceId?: string;
+      recordType?: string;
+      limit?: number;
+      offset?: number;
+    },
   ): Promise<RecordPage>;
   /** Hash-chained audit log, re-verified; undefined without ingestion output. */
   getAuditChain(caseId: string): Promise<AuditChain | undefined>;
-  /** URL of the original evidence file, when the adapter can serve bytes. */
-  evidenceFileUrl(caseId: string, evidenceId: string): string | undefined;
+  /** A stored file with a citation locator resolved; undefined without ingestion output. */
+  viewEvidence(
+    caseId: string,
+    evidenceId: string,
+    query?: { locator?: string; offset?: number; limit?: number },
+  ): Promise<EvidenceView | undefined>;
+  /** URL of the original evidence file, when the adapter can serve bytes. `inline` renders media in place. */
+  evidenceFileUrl(
+    caseId: string,
+    evidenceId: string,
+    options?: { inline?: boolean },
+  ): string | undefined;
 }

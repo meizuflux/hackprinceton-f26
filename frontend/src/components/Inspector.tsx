@@ -1,4 +1,10 @@
-import { ArrowLeft, ChevronDown, GitBranch, X } from "lucide-react";
+import {
+  ArrowLeft,
+  ArrowUpRight,
+  ChevronDown,
+  GitBranch,
+  X,
+} from "lucide-react";
 import { useEffect, useRef } from "react";
 import { isMock } from "../api/client";
 import type { CaseData } from "../api/types";
@@ -320,11 +326,11 @@ export function Inspector({
                   <blockquote>{source.excerpt}</blockquote>
                   {onOpenSource && (
                     <button
-                      className="text-button"
+                      className="text-button open-raw-button"
                       type="button"
                       onClick={() => onOpenSource(source.id)}
                     >
-                      Open in raw evidence →
+                      Open in raw evidence <ArrowUpRight size={14} />
                     </button>
                   )}
                   <p>
@@ -370,7 +376,8 @@ export function Inspector({
             <h3>Recommended evidence</h3>
             {gap.suggestedEvidence.length ? (
               <ul>
-                {gap.suggestedEvidence.map((evidence) => (
+                {/* A gap can request the same kind of evidence for several people; list each kind once. */}
+                {[...new Set(gap.suggestedEvidence)].map((evidence) => (
                   <li key={evidence}>
                     {data.suggestions.find((s) => s.id === evidence)?.title ??
                       humanize(evidence)}

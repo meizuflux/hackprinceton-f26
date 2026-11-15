@@ -18,7 +18,7 @@
   display: flex;
   flex-direction: column;
   background: var(--surface);
-  border: 1px solid #364232;
+  border: 1px solid var(--chrome-border);
   border-radius: 6px;
   box-shadow: var(--shadow);
   transition:
@@ -89,9 +89,9 @@
   background: #ffffff0c;
 }
 .case-toolbar a[aria-current] {
-  color: var(--green);
-  background: #d3dfaf12;
-  box-shadow: inset 2px 0 var(--green);
+  color: var(--brand-text);
+  background: var(--brand-selected);
+  box-shadow: inset 2px 0 var(--brand-400);
 }
 .case-toolbar-project-actions {
   margin-top: 6px;
@@ -122,7 +122,7 @@
   left: var(--toolbar-clearance);
   right: 16px;
   bottom: 16px;
-  border: 1px solid #364232;
+  border: 1px solid var(--chrome-border);
   border-radius: 8px;
   background: var(--surface);
   box-shadow: var(--shadow);
@@ -140,7 +140,7 @@
   bottom: 16px;
   width: min(400px, calc(100% - 32px));
   max-height: calc(100% - var(--topbar-clearance-y, 68px) - 16px);
-  border: 1px solid #364232;
+  border: 1px solid var(--chrome-border);
   transition:
     top 0.15s ease,
     max-height 0.15s ease;
@@ -182,5 +182,11 @@
     margin: 16px 10px 16px 68px;
     width: auto;
     max-height: none;
+  }
+  /* The stacked review dock scrolls under the fixed toolbar; clear it the way
+     the section panels do. */
+  .case-board-panel .review-dock {
+    margin-left: var(--toolbar-clearance);
+    border-left: 1px solid var(--line);
   }
 }

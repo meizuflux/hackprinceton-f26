@@ -2,6 +2,7 @@ import type {
   AuditChain,
   CaseApi,
   EvidenceFile,
+  EvidenceView,
   RecordPage,
   CaseData,
   CaseSummary,
@@ -118,6 +119,7 @@ export function createHttpApi(baseUrl: string): CaseApi {
     getRecords(caseId, query = {}): Promise<RecordPage> {
       const params = new URLSearchParams();
       if (query.evidenceId) params.set("evidenceId", query.evidenceId);
+      if (query.recordType) params.set("recordType", query.recordType);
       if (query.limit !== undefined) params.set("limit", String(query.limit));
       if (query.offset !== undefined)
         params.set("offset", String(query.offset));
@@ -133,8 +135,20 @@ export function createHttpApi(baseUrl: string): CaseApi {
       );
     },
 
-    evidenceFileUrl(caseId: string, evidenceId: string) {
-      return `${base}/cases/${encodeURIComponent(caseId)}/evidence/${encodeURIComponent(evidenceId)}`;
+    viewEvidence(caseId, evidenceId, query = {}): Promise<EvidenceView> {
+      const params = new URLSearchParams();
+      if (query.locator) params.set("locator", query.locator);
+      if (query.offset !== undefined)
+        params.set("offset", String(query.offset));
+      if (query.limit !== undefined) params.set("limit", String(query.limit));
+      const search = params.size ? `?${params}` : "";
+      return request<EvidenceView>(
+        `/cases/${encodeURIComponent(caseId)}/evidence/${encodeURIComponent(evidenceId)}/view${search}`,
+      );
+    },
+
+    evidenceFileUrl(caseId: string, evidenceId: string, options = {}) {
+      return `${base}/cases/${encodeURIComponent(caseId)}/evidence/${encodeURIComponent(evidenceId)}${options.inline ? "?inline=true" : ""}`;
     },
   };
 }

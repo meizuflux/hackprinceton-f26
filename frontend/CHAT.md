@@ -1,51 +1,68 @@
-# Case chat UI contract
+# Case chat contract
 
-The chat panel is an optional frontend integration. It has no local model, fixture answers, or fallback responses. The existing fictional preview case is not sent to a backend unless an endpoint is configured, and a backend must confirm that it serves the requested case before the panel enables its composer.
+The backend (`backend/mapletrace_api/chat.py`, `backend/mapletrace_reason/chat.py`) answers questions about the latest analysis of an ingested case with `claude-sonnet-5-5` and read-only tools. The frontend never supplies answers, fixtures or fallbacks. Two views share one adapter (`src/api/chat.ts`) and one hook (`src/components/useCaseChat.ts`):
 
-Set `VITE_CHAT_API_BASE_URL` to the backend origin (for example, `http://localhost:8000`). When unset, the adapter tries the same-origin `/api` endpoints. Vite exposes this value in the browser, so it must contain only a public base URL; model credentials belong in the backend environment.
+- **`/cases/:caseId/chat`:** the chat page (`ChatPanel`), with cited excerpts under each answer.
+- **The mind map:** the floating "Ask a question" widget (`AskWidget`), mounted in `Board` in `src/App.tsx`. It sits above the minimap and zoom controls, expands upward, moves left of the review dock when the dock is open, never covers the minimap, zoom controls or legend, and closes with Escape (focus returns to its button).
 
-## Endpoints
+The adapter calls same-origin `/api` (the Vite proxy strips it), or `VITE_CHAT_API_BASE_URL` when set. Model credentials live only on the server.
 
-### `GET /api/chat/status?case_id={caseId}`
-
-Returns `{ "available": true, "authoritative": true, "case_id": "..." }` when the optional chat service is configured for this exact ingested case. Otherwise return `{ "available": false, "case_id": "...", "reason": "..." }`. The frontend requires both an exact case ID match and `authoritative: true`; this keeps the fictional preview from being mistaken for backend data.
-
-### `POST /api/cases/{caseId}/chat`
-
-Request body:
+## `GET /chat/status?case_id={caseId}`
 
 ```json
 {
-  "thread_id": "optional existing conversation id",
-  "message": "What evidence places the vehicle near the station?"
+  "available": true,
+  "authoritative": true,
+  "case_id": "kestrel-demo",
+  "live": false,
+  "mode": "replay",
+  "model": "claude-sonnet-5-5",
+  "suggestions": [{ "question": "Where was … during …?", "recorded": true }],
+  "reason": "Live questions need an Anthropic API key on the server. …"
 }
 ```
 
-Response body:
+- The frontend requires an exact `case_id` match and `authoritative: true`. An unknown or unfinished case returns `{"available": false, "case_id", "reason"}`.
+- `live` is true when the server has `ANTHROPIC_API_KEY`. Without it only recorded answers replay, and the composer is disabled.
+- `suggestions` (3 to 5) are derived deterministically from the analysis: the undecided key event, the strongest contradiction, and the highest-ranked open gaps. `recorded` means the answer replays from the cache without a model call; the server checks this by replaying it.
+
+## `POST /cases/{caseId}/chat`
+
+Request: `{"message": "…", "thread_id": "optional"}` (1 to 1000 characters).
 
 ```json
 {
-  "thread_id": "server-owned conversation id",
+  "thread_id": "server-owned id",
+  "suggested": true,
+  "replayed": true,
+  "model_calls": 4,
   "message": {
     "role": "assistant",
-    "content": "The retrieved evidence records ...",
-    "evidence_status": "supported",
+    "content": "Plain-text rendering of the whole answer",
+    "evidence_status": "partial",
+    "summary": "One or two neutral sentences.",
+    "observations": [{ "text": "…", "citations": [0] }],
+    "inference": "What may follow; not established by the records.",
+    "unknowns": ["What the records do not show."],
     "citations": [
       {
         "evidence_id": "EV-071",
-        "locator": { "seq": 40162 },
-        "excerpt": "Relevant source text",
-        "source_id": "optional CaseData.sources id"
+        "locator": "seq=40162",
+        "excerpt": "Record text",
+        "source_id": "EV-071:seq=40162"
       }
     ]
   }
 }
 ```
 
-`evidence_status` is `supported`, `partial`, or `insufficient`. Citation `evidence_id`, locator, and excerpt must come from authoritative backend records. `source_id` is optional and should only be included when it resolves to a source in the frontend's current `CaseData`; the panel otherwise displays the citation without trying to open a mock source. The backend should distinguish observed evidence from inference, state when evidence is insufficient, and never represent a gap as proof. Keep protected attributes out of retrieval results and model inputs through server-side field allowlists.
+- **Cite or drop:** each observation cites record IDs a tool returned in that conversation; others are dropped by the server. `observations[].citations` index into `citations`, and the adapter drops observations whose indices do not resolve. `source_id` is present only when the citation is on the board (`CaseData.sources`); only those chips open the source inspector.
+- **`evidence_status`:** `supported`, `partial` (some citations were dropped or support is incomplete) or `insufficient` (nothing cited survives, or the records do not answer).
+- **Observed versus inferred:** observations, inference and unknowns render as separate sections; the inference is labelled and dashed, like inferred threads on the board.
+- **`suggested`:** the question matched a suggested question. Those are always answered without thread history, so a recorded answer replays in any thread. `replayed` is true when no model call was made.
+- **Threads:** memory is per `thread_id` in server memory (200 threads, last 4 turns) and is lost on restart; an unknown `thread_id` starts a new thread and returns its new ID.
+- **Errors** are `{"error": {"code", "message"}}`: `needs_api_key` (503) when the answer is not recorded and the server has no key (nothing is sent to the model); `model_error` (502); `empty_message` and `message_too_long` (400). The UI shows `needs_api_key` as a notice, not an error page.
 
-The panel keeps the returned `thread_id` for follow-up turns while it is mounted. Requests use `AbortController`; retries resubmit the last user turn. The JSON response is intentionally simple; a streaming endpoint can be added later without changing citation semantics.
+## Cost
 
-## Deep Agents handoff
-
-For a Python backend, LangChain's self-hosted Deep Agents SDK can provide the tool-calling loop and thread checkpointer. Give the agent only narrow read-only evidence retrieval tools; do not expose host filesystem or shell access. Tool results should contain allowlisted evidence fields and citations assembled from database rows. Configure `MAPLETRACE_CASE_ID`, `MAPLETRACE_CASE_RUN`, `MAPLETRACE_CHAT_MODEL`, and the selected provider's API key on the server. See [Deep Agents overview](https://docs.langchain.com/oss/python/deepagents/overview), [customization](https://docs.langchain.com/oss/python/deepagents/customization), and [tools](https://docs.langchain.com/oss/python/langchain/tools).
+Suggested answers are recorded once (`make backend-chat-record`, billed) into `backend/llm_cache/chat-<archive sha256>.jsonl` and replay for free. Every free-typed question is a live, billed model call, and the UI says so. See `backend/LLM_COSTS.md`.

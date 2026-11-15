@@ -1,7 +1,8 @@
 .DEFAULT_GOAL := help
 .PHONY: help frontend-install frontend-dev frontend-build frontend-test frontend-preview frontend-format \
 	data-install data-generate data-verify data-truth backend-install backend-test backend-ingest-kestrel \
-	backend-analyze-kestrel backend-serve backend-seed-kestrel backend-llm-record backend-demo-snapshot dev
+	backend-analyze-kestrel backend-serve backend-seed-kestrel backend-llm-record backend-demo-snapshot backend-chat-record dev \
+	docker-up docker-down docker-logs
 
 PYTHON ?= python3
 UV ?= uv
@@ -29,7 +30,11 @@ help:
 	@echo "make backend-seed-kestrel  Upload the Kestrel ZIP to the running API and wait for analysis (API=...)"
 	@echo "make backend-llm-record    Record Kestrel LLM responses into backend/llm_cache/ (billed; needs ANTHROPIC_API_KEY)"
 	@echo "make backend-demo-snapshot Rebuild backend/demo/kestrel.tar.gz by replaying the cache (no API calls)"
+	@echo "make backend-chat-record   Record answers to the Kestrel chat's suggested questions (billed; needs ANTHROPIC_API_KEY)"
 	@echo "make dev               Start the API and Vite together (the frontend proxies /api to the API)"
+	@echo "make docker-up         Build and start the backend and frontend containers at http://localhost:5173"
+	@echo "make docker-down       Stop the containers (case data stays in the mapletrace-data volume)"
+	@echo "make docker-logs       Follow the container logs"
 
 frontend-install:
 	cd frontend && bun install --frozen-lockfile
@@ -98,3 +103,17 @@ backend-llm-record:
 
 backend-demo-snapshot:
 	cd backend && $(BACKEND_PY) -m mapletrace_api.demo snapshot
+
+DOCKER_COMPOSE ?= docker compose
+
+docker-up:
+	$(DOCKER_COMPOSE) up --build -d
+
+docker-down:
+	$(DOCKER_COMPOSE) down
+
+docker-logs:
+	$(DOCKER_COMPOSE) logs -f
+
+backend-chat-record:
+	cd backend && $(BACKEND_PY) -m mapletrace_api.chat record

@@ -1,0 +1,55 @@
+{
+  "hash": "184d7d56",
+  "configHash": "64901a98",
+  "lockfileHash": "319eef5a",
+  "browserHash": "43bce376",
+  "optimized": {
+    "react/jsx-dev-runtime": {
+      "src": "../../node_modules/react/jsx-dev-runtime.js",
+      "file": "react_jsx-dev-runtime.js",
+      "fileHash": "323e2bb3",
+      "needsInterop": true
+    },
+    "react": {
+      "src": "../../node_modules/react/index.js",
+      "file": "react.js",
+      "fileHash": "38ca4dc8",
+      "needsInterop": true
+    },
+    "react-dom/client": {
+      "src": "../../node_modules/react-dom/client.js",
+      "file": "react-dom_client.js",
+      "fileHash": "4bbb62fa",
+      "needsInterop": true
+    },
+    "@tanstack/react-query": {
+      "src": "../../node_modules/@tanstack/react-query/build/modern/index.js",
+      "file": "@tanstack_react-query.js",
+      "fileHash": "18473799",
+      "needsInterop": false
+    },
+    "@xyflow/react": {
+      "src": "../../node_modules/@xyflow/react/dist/esm/index.js",
+      "file": "@xyflow_react.js",
+      "fileHash": "0decb22a",
+      "needsInterop": false
+    },
+    "lucide-react": {
+      "src": "../../node_modules/lucide-react/dist/esm/lucide-react.js",
+      "file": "lucide-react.js",
+      "fileHash": "6397d5b9",
+      "needsInterop": false
+    }
+  },
+  "chunks": {
+    "chunk-D3BTAT4P": {
+      "file": "chunk-D3BTAT4P.js"
+    },
+    "chunk-2JR6BNAC": {
+      "file": "chunk-2JR6BNAC.js"
+    },
+    "chunk-ZOUFUB3M": {
+      "file": "chunk-ZOUFUB3M.js"
+    }
+  }
+}

@@ -8,24 +8,26 @@ import {
   MessageSquare,
   PanelLeftClose,
   PanelLeftOpen,
-  PanelRightOpen,
   ScanText,
 } from "lucide-react";
 import type { CaseData } from "../api/types";
-import { casePath, type WorkspaceView } from "../routing";
+import { casePath, type InsightsTab, type WorkspaceView } from "../routing";
 import { isMock } from "../api/client";
+import { formatCaseSubtitle } from "./presentation";
 import { EvidenceBrowser } from "./EvidenceBrowser";
 import { RecordsBrowser } from "./RecordsBrowser";
+import { RawEvidence } from "./RawEvidence";
 import { InsightsPage } from "./InsightsPage";
 import { ChatPanel } from "./ChatPanel";
 import { Inspector, type Selection } from "./Inspector";
+import type { Tab } from "./board-focus";
 import "./case-workspace.css";
 
 const views = [
   { id: "board", label: "Mind map", icon: GitBranch },
+  { id: "insights", label: "Insights", icon: Lightbulb },
   { id: "evidence", label: "Raw evidence", icon: ScanText },
   { id: "files", label: "Generalized files", icon: Files },
-  { id: "insights", label: "Insights", icon: Lightbulb },
   { id: "chat", label: "Chat", icon: MessageSquare },
 ] as const;
 
@@ -34,16 +36,21 @@ export function CaseWorkspace({
   projectName,
   view,
   sourceId,
+  insightsTab,
   navigate,
   onFocusOnBoard,
+  onOpenReview,
   children,
 }: {
   data: CaseData;
   projectName?: string;
   view: WorkspaceView;
   sourceId?: string;
+  insightsTab?: InsightsTab;
   navigate: (path: string) => void;
   onFocusOnBoard?: (selection: Selection) => void;
+  /** Returns to the mind map with the review dock open on this panel. */
+  onOpenReview?: (panel: Tab | "audit") => void;
   children: ReactNode;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -62,7 +69,7 @@ export function CaseWorkspace({
   }, [view]);
   const opener = useRef<HTMLElement | null>(null);
   const inspectorDock = useRef<HTMLElement | null>(null);
-  useEffect(() => setSelection(null), [view, sourceId]);
+  useEffect(() => setSelection(null), [view, sourceId, insightsTab]);
   useEffect(() => {
     if (selection && window.matchMedia("(max-width: 900px)").matches) {
       inspectorDock.current?.scrollIntoView({ block: "start" });
@@ -255,35 +262,21 @@ export function CaseWorkspace({
           <div className="board-title">
             <h1>{projectName || data.title}</h1>
             <span>
-              {data.subtitle} · {views.find((v) => v.id === view)?.label}
+              {formatCaseSubtitle(data.subtitle, data.timezone)} ·{" "}
+              {views.find((v) => v.id === view)?.label}
             </span>
           </div>
           <div className="board-actions">
             <button
               type="button"
               className="text-button"
-              onClick={() => navigate(casePath(data.id))}
-            >
-              <GitBranch size={15} /> Mind map
-            </button>
-            <button
-              type="button"
-              className="text-button"
-              onClick={() => {
-                navigate(casePath(data.id));
-              }}
+              onClick={() =>
+                onOpenReview
+                  ? onOpenReview("audit")
+                  : navigate(casePath(data.id))
+              }
             >
               <History size={15} /> Audit trail
-            </button>
-            <button
-              type="button"
-              className="review-toggle"
-              onClick={() => {
-                navigate(casePath(data.id));
-              }}
-            >
-              <PanelRightOpen size={15} /> Review gaps{" "}
-              <strong>{data.gaps.length}</strong>
             </button>
           </div>
         </header>
@@ -301,12 +294,21 @@ export function CaseWorkspace({
           aria-label="Raw evidence"
           hidden={view !== "evidence"}
         >
-          <EvidenceBrowser
-            data={data}
-            mode="raw"
-            selectedSourceId={sourceId}
-            onInspect={openSource}
-          />
+          {isMock ? (
+            <EvidenceBrowser
+              data={data}
+              mode="raw"
+              selectedSourceId={sourceId}
+              onInspect={openSource}
+            />
+          ) : (
+            <RawEvidence
+              data={data}
+              sourceId={sourceId}
+              onOpen={openSource}
+              onInspectSource={(id) => inspect({ kind: "source", id })}
+            />
+          )}
         </section>
         <section
           className="case-content-panel"
@@ -325,6 +327,7 @@ export function CaseWorkspace({
               <RecordsBrowser
                 data={data}
                 onInspect={(id) => inspect({ kind: "source", id })}
+                onOpenSource={openSource}
               />
             )
           )}
@@ -336,6 +339,8 @@ export function CaseWorkspace({
         >
           <InsightsPage
             data={data}
+            tab={insightsTab}
+            navigate={navigate}
             onInspect={inspect}
             onOpenSource={openSource}
             onFocusOnBoard={onFocusOnBoard}

@@ -1,88 +1,332 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-14T15:00:00Z",
+  "generatedAt": "2026-11-15T04:30:00Z",
   "title": "Design System: MapleTrace",
   "extensions": {
     "colorMeta": {
       "primary": {
         "role": "primary",
-        "displayName": "Soft Sage",
-        "canonical": "#d3dfaf",
-        "tonalRamp": ["#20251c", "#353d2e", "#4c5740", "#667451", "#829264", "#9eae7e", "#b8c99a", "#d3dfaf"]
+        "displayName": "Glassy Sky Blue",
+        "canonical": "#78cbff",
+        "tonalRamp": [
+          "#04203a",
+          "#0e3a63",
+          "#1d5f9a",
+          "#3d92e3",
+          "#58b2ff",
+          "#78cbff",
+          "#9cdcff",
+          "#b4e4ff"
+        ]
       },
       "workspace": {
         "role": "neutral",
-        "displayName": "Moss Workspace",
-        "canonical": "#171a19",
-        "tonalRamp": ["#101211", "#171a19", "#202523", "#2b302d", "#3a403d", "#505853", "#747b76", "#a5aaa5"]
+        "displayName": "Ink Workspace",
+        "canonical": "#10151c",
+        "tonalRamp": [
+          "#0c1117",
+          "#10151c",
+          "#18202a",
+          "#202a36",
+          "#2c3946",
+          "#33414f",
+          "#5b6b7c",
+          "#a3b2c2"
+        ]
       },
       "question": {
         "role": "secondary",
         "displayName": "Question Amber",
         "canonical": "#d4ad6a",
-        "tonalRamp": ["#302517", "#4d3a20", "#6b502a", "#896737", "#a67f47", "#c39757", "#d4ad6a", "#e5d1a5"]
+        "tonalRamp": [
+          "#302517",
+          "#4d3a20",
+          "#6b502a",
+          "#896737",
+          "#a67f47",
+          "#c39757",
+          "#d4ad6a",
+          "#e5d1a5"
+        ]
       },
       "paper": {
         "role": "neutral",
         "displayName": "Evidence Paper",
         "canonical": "#e8e4d5",
-        "tonalRamp": ["#292820", "#454337", "#625f4f", "#807d6a", "#9d9a86", "#bab7a3", "#d1cebc", "#e8e4d5"]
+        "tonalRamp": [
+          "#292820",
+          "#454337",
+          "#625f4f",
+          "#807d6a",
+          "#9d9a86",
+          "#bab7a3",
+          "#d1cebc",
+          "#e8e4d5"
+        ]
       },
       "text": {
         "role": "neutral",
         "displayName": "Warm Text",
-        "canonical": "#e8e8df",
-        "tonalRamp": ["#292925", "#45453f", "#62625b", "#808078", "#9d9d95", "#b9b9b0", "#d1d1c9", "#e8e8df"]
+        "canonical": "#e6ecf2",
+        "tonalRamp": [
+          "#232a31",
+          "#3c454f",
+          "#56616c",
+          "#727e8a",
+          "#8f9ba7",
+          "#adb8c3",
+          "#cad3dc",
+          "#e6ecf2"
+        ]
       },
       "text-muted": {
         "role": "neutral",
-        "displayName": "Muted Sage Gray",
-        "canonical": "#b0b8a6",
-        "tonalRamp": ["#20221e", "#373b32", "#50564a", "#69715f", "#838b78", "#99a28d", "#a5ae9a", "#b0b8a6"]
-      },
-      "thread": {
-        "role": "accent",
-        "displayName": "Thread Red",
-        "canonical": "#a1372f",
-        "tonalRamp": ["#42120e", "#5c1d18", "#7a2822", "#903129", "#a1372f", "#b44a42", "#c9665f", "#de8a84"]
-      },
-      "pushpin": {
-        "role": "accent",
-        "displayName": "Pushpin Rust",
-        "canonical": "#ad604a",
-        "tonalRamp": ["#4a251b", "#633224", "#7d3f2e", "#944e39", "#ad604a", "#bf7560", "#d18d7a", "#e2a999"]
+        "displayName": "Muted Slate",
+        "canonical": "#a3b2c2",
+        "tonalRamp": [
+          "#1e232a",
+          "#333c46",
+          "#4a5664",
+          "#627182",
+          "#7b8b9c",
+          "#909fb0",
+          "#9aa9b9",
+          "#a3b2c2"
+        ]
       },
       "paper-card": {
         "role": "neutral",
         "displayName": "Paper Card Ivory",
         "canonical": "#faf8f1",
-        "tonalRamp": ["#42413a", "#66645b", "#8a887e", "#b0ada2", "#d4d0c5", "#e8e5db", "#f2f0e6", "#faf8f1"]
+        "tonalRamp": [
+          "#42413a",
+          "#66645b",
+          "#8a887e",
+          "#b0ada2",
+          "#d4d0c5",
+          "#e8e5db",
+          "#f2f0e6",
+          "#faf8f1"
+        ]
+      },
+      "contradiction": {
+        "role": "accent",
+        "displayName": "Contradiction Red",
+        "canonical": "#b3262f",
+        "tonalRamp": [
+          "#3d0d10",
+          "#5a1418",
+          "#781b21",
+          "#962129",
+          "#b3262f",
+          "#c84a52",
+          "#dc7a80",
+          "#eeb0b4"
+        ]
+      },
+      "focus": {
+        "role": "primary",
+        "displayName": "Focus Ring Sky",
+        "canonical": "#8ed5ff",
+        "tonalRamp": [
+          "#062238",
+          "#0f3d61",
+          "#1f6497",
+          "#3d92e3",
+          "#5fb3f5",
+          "#8ed5ff",
+          "#b4e4ff",
+          "#dcf2ff"
+        ]
+      },
+      "paper-canvas": {
+        "role": "neutral",
+        "displayName": "Board Canvas Paper",
+        "canonical": "#eee8de",
+        "tonalRamp": [
+          "#2c2a26",
+          "#4a4740",
+          "#69655c",
+          "#8a857b",
+          "#aba59a",
+          "#cbc5b9",
+          "#e0dacf",
+          "#eee8de"
+        ]
+      },
+      "ink-person": {
+        "role": "accent",
+        "displayName": "Person Purple",
+        "canonical": "#7b3f8f"
+      },
+      "ink-device": {
+        "role": "accent",
+        "displayName": "Device Blue",
+        "canonical": "#2b5c99"
+      },
+      "ink-event": {
+        "role": "accent",
+        "displayName": "Event Teal",
+        "canonical": "#17706a"
+      },
+      "ink-location": {
+        "role": "accent",
+        "displayName": "Location Olive",
+        "canonical": "#55721c"
+      },
+      "ink-statement": {
+        "role": "accent",
+        "displayName": "Statement Grey",
+        "canonical": "#4d5157"
+      },
+      "ink-other": {
+        "role": "accent",
+        "displayName": "Other Brown",
+        "canonical": "#6b5d4f"
       }
     },
     "typographyMeta": {
-      "display": { "displayName": "Display", "purpose": "Welcome-page lead." },
-      "headline": { "displayName": "Headline", "purpose": "Case and section headings." },
-      "title": { "displayName": "Title", "purpose": "Component and modal titles." },
-      "section": { "displayName": "Section", "purpose": "Subheadings and major cards." },
-      "body": { "displayName": "Body", "purpose": "Default interface reading text." },
-      "detail": { "displayName": "Detail", "purpose": "Secondary descriptions and inputs." },
-      "compact": { "displayName": "Compact", "purpose": "Badges and metadata." },
-      "micro": { "displayName": "Micro", "purpose": "Small timestamps and counts." },
-      "label": { "displayName": "Label Mono", "purpose": "Compact metadata and labels." },
-      "evidence": { "displayName": "Evidence handwriting", "purpose": "Locally bundled Excalifont for upright evidence-card titles." },
-      "evidence-summary": { "displayName": "Evidence summary", "purpose": "Excalifont handwriting for evidence summaries." },
-      "evidence-thread": { "displayName": "Evidence thread annotation", "purpose": "Excalifont handwriting for thread connection labels." }
+      "display": {
+        "displayName": "Display",
+        "purpose": "Landing hero only (Newsreader)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Projects page heading (Newsreader)."
+      },
+      "excerpt": {
+        "displayName": "Source Excerpt",
+        "purpose": "Original source excerpts on paper in the inspector (Newsreader)."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Inspector item heading."
+      },
+      "section": {
+        "displayName": "Section",
+        "purpose": "Sans h2 case section headings under the case title."
+      },
+      "case-title": {
+        "displayName": "Case Title",
+        "purpose": "The single case h1 in the top bar."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Default interface reading text."
+      },
+      "detail": {
+        "displayName": "Detail",
+        "purpose": "Secondary descriptions, subtitles and inputs."
+      },
+      "compact": {
+        "displayName": "Compact",
+        "purpose": "Chips, badges and metadata."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Small timestamps and counts."
+      },
+      "label": {
+        "displayName": "Label Mono",
+        "purpose": "IDs, locators, hashes and numeric metadata."
+      },
+      "evidence": {
+        "displayName": "Evidence handwriting",
+        "purpose": "Locally bundled Excalifont for upright evidence-card titles."
+      },
+      "evidence-summary": {
+        "displayName": "Evidence summary",
+        "purpose": "Excalifont handwriting for evidence summaries."
+      },
+      "evidence-thread": {
+        "displayName": "Evidence thread annotation",
+        "purpose": "Excalifont handwriting for thread connection labels."
+      }
     },
     "shadows": [
-      { "name": "card-rest", "value": "1px 4px 8px #181b1740", "purpose": "Subtle lift under paper evidence cards." },
-      { "name": "card-selected", "value": "0 0 0 3px #d9b36d, 2px 5px 15px #1b201b66", "purpose": "Selection outline and lift for the active evidence card." }
+      {
+        "name": "chrome",
+        "value": "0 8px 28px #03070c66",
+        "purpose": "--shadow: floating toolbar, zoom controls, review dock, minimap and legend."
+      },
+      {
+        "name": "primary-lift",
+        "value": "inset 0 1px 0 #ffffff59, 0 4px 14px #1d6fc433",
+        "purpose": "Glass highlight and soft blue lift on the primary button."
+      },
+      {
+        "name": "card-rest",
+        "value": "drop-shadow(0 3px 4px #4e443b26)",
+        "purpose": "Filter on the paper silhouette of resting evidence cards."
+      },
+      {
+        "name": "review-focus",
+        "value": "0 0 0 3px #d4ad6a outline (3px offset), drop-shadow(0 8px 24px #d4ad6a73)",
+        "purpose": "Cards in the reviewed cluster; non-targets dim to 16%."
+      },
+      {
+        "name": "review-focus-thread",
+        "value": "drop-shadow(0 2px 5px #c48c3499)",
+        "purpose": "Threads in the reviewed cluster, thickened to 4.5px; non-targets dim to 14%."
+      }
     ],
     "motion": [
-      { "name": "control-transition", "value": "0.18s", "purpose": "Background, text, border, and card-shadow state changes." }
+      {
+        "name": "control-transition",
+        "value": "160ms",
+        "purpose": "Background, text and border changes on buttons and links."
+      },
+      {
+        "name": "dock-shift",
+        "value": "0.2s cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Minimap, zoom controls and Ask widget moving left of the opening review dock."
+      },
+      {
+        "name": "focus-dim",
+        "value": "0.3s cubic-bezier(0.2, 0, 0, 1)",
+        "purpose": "Opacity change when non-target cards and threads dim during review."
+      },
+      {
+        "name": "toolbar-expand",
+        "value": "0.15s ease",
+        "purpose": "Case toolbar width change between 48px and 192px."
+      }
     ],
     "breakpoints": [
-      { "name": "workspace-stack", "value": "900px" },
-      { "name": "mobile", "value": "540px" }
+      {
+        "name": "toolbar-compact",
+        "value": "1100px"
+      },
+      {
+        "name": "workspace-stack",
+        "value": "900px"
+      },
+      {
+        "name": "mobile",
+        "value": "540px"
+      }
+    ],
+    "layoutVars": [
+      {
+        "name": "--dock-offset",
+        "value": "0px; 416px while the review dock is open above 900px",
+        "purpose": "Moves the minimap, zoom controls and legend bound left of the dock."
+      },
+      {
+        "name": "--minimap-height",
+        "value": "published by CanvasMinimap (fallback 176px)",
+        "purpose": "Ask widget bottom = 28px + minimap height."
+      },
+      {
+        "name": "--board-inset",
+        "value": "16px",
+        "purpose": "Distance of board chrome from the canvas edge."
+      },
+      {
+        "name": "--minimap-width",
+        "value": "240px",
+        "purpose": "Minimap width; zoom controls sit 10px to its left."
+      }
     ]
   },
   "components": [
@@ -91,8 +335,8 @@
       "kind": "button",
       "refersTo": "button-primary",
       "description": "Primary demo and upload action.",
-      "html": "<button class=\"ds-button-primary\">Start demo</button>",
-      "css": ".ds-button-primary { display: inline-flex; align-items: center; justify-content: center; gap: 9px; min-height: 44px; padding: 12px 18px; border: 1px solid var(--green); border-radius: 5px; background: var(--green); color: #252d20; font: 550 14px/1.4 \"DM Sans\", sans-serif; cursor: pointer; transition: background 0.18s, color 0.18s, border-color 0.18s; } .ds-button-primary:hover { background: #e1ebc5; } .ds-button-primary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }"
+      "html": "<button class=\"ds-button-primary\">Add a new project</button>",
+      "css": ".ds-button-primary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 11px 18px; border: 1px solid #b4e4ff66; border-radius: 6px; background: linear-gradient(135deg, #a8e0ff 0%, #78cbff 48%, #58b2ff 100%); color: #04203a; box-shadow: inset 0 1px 0 #ffffff59, 0 4px 14px #1d6fc433; font: 600 14px/1.4 \"DM Sans\", sans-serif; cursor: pointer; transition: background 160ms, color 160ms, border-color 160ms; } .ds-button-primary:hover { background: linear-gradient(135deg, #c4ebff 0%, #92d6ff 48%, #70bfff 100%); } .ds-button-primary:active { filter: brightness(0.94); } .ds-button-primary:focus-visible { outline: 2px solid #8ed5ff; outline-offset: 3px; }"
     },
     {
       "name": "Secondary Button",
@@ -100,52 +344,91 @@
       "refersTo": "button-secondary",
       "description": "Secondary workspace action.",
       "html": "<button class=\"ds-button-secondary\">View sources</button>",
-      "css": ".ds-button-secondary { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px 18px; border: 1px solid #444d3e; border-radius: 5px; background: transparent; color: #d9ded1; font: 550 14px/1.4 \"DM Sans\", sans-serif; cursor: pointer; transition: background 0.18s, color 0.18s, border-color 0.18s; } .ds-button-secondary:hover { background: #2a3027; } .ds-button-secondary:focus-visible { outline: 2px solid var(--green); outline-offset: 4px; }"
+      "css": ".ds-button-secondary { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 11px 18px; border: 1px solid #44566a; border-radius: 6px; background: transparent; color: #e6ecf2; font: 600 14px/1.4 \"DM Sans\", sans-serif; cursor: pointer; transition: background 160ms, color 160ms, border-color 160ms; } .ds-button-secondary:hover { background: #58b2ff14; border-color: #58b2ff80; } .ds-button-secondary:focus-visible { outline: 2px solid #8ed5ff; outline-offset: 3px; }"
     },
     {
       "name": "Board Search",
       "kind": "input",
-      "description": "Visible search field for evidence pins.",
-      "html": "<label class=\"ds-search\"><span aria-hidden=\"true\">⌕</span><input placeholder=\"Find a pin…\" aria-label=\"Find evidence\"></label>",
-      "css": ".ds-search { display: flex; align-items: center; gap: 6px; min-height: 34px; padding: 6px 8px; border: 1px solid #3b4233; border-radius: 4px; background: #191e18; color: #858e7e; } .ds-search input { width: 110px; border: 0; outline: 0; background: transparent; color: #d5ddc9; font: 400 12px \"DM Sans\", sans-serif; } .ds-search:focus-within { outline: 2px solid var(--green); outline-offset: 4px; }"
+      "refersTo": "input-search",
+      "description": "Search field always visible in the board toolbar.",
+      "html": "<label class=\"ds-search\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\" aria-hidden=\"true\"><circle cx=\"11\" cy=\"11\" r=\"8\"/><path d=\"m21 21-4.3-4.3\"/></svg><input placeholder=\"Find a pin…\" aria-label=\"Find evidence\"></label>",
+      "css": ".ds-search { display: flex; align-items: center; gap: 8px; min-height: 36px; padding: 0 10px; border: 1px solid #2c3946; border-radius: 6px; background: #141b23; color: #a3b2c2; } .ds-search input { width: 140px; padding: 7px 0; border: 0; outline: 0; background: transparent; color: #e6ecf2; font: 400 13px \"DM Sans\", sans-serif; } .ds-search input::placeholder { color: #a3b2c2; } .ds-search:focus-within { outline: 2px solid #8ed5ff; outline-offset: 1px; }"
+    },
+    {
+      "name": "Case Toolbar",
+      "kind": "nav",
+      "refersTo": "nav-toolbar",
+      "description": "Floating left section toolbar, shown expanded (192px); collapsed it is 48px of icons.",
+      "html": "<nav class=\"ds-toolbar\"><a href=\"#\" aria-current=\"page\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><circle cx=\"6\" cy=\"6\" r=\"3\"/><circle cx=\"18\" cy=\"18\" r=\"3\"/><path d=\"M8.5 8.5l7 7\"/></svg>Mind map</a><a href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M14 3H6v18h12V7z\"/></svg>Raw evidence</a><a href=\"#\"><svg width=\"16\" height=\"16\" viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" aria-hidden=\"true\"><path d=\"M12 3l2.5 6H21l-5 4 2 7-6-4-6 4 2-7-5-4h6.5z\"/></svg>Insights</a></nav>",
+      "css": ".ds-toolbar { display: flex; flex-direction: column; gap: 2px; width: 192px; padding: 5px; background: #10151c; border: 1px solid #33414f; border-radius: 6px; box-shadow: 0 8px 28px #03070c66; } .ds-toolbar a { display: flex; align-items: center; gap: 10px; min-height: 34px; padding: 8px 10px; border-radius: 3px; color: #a3b2c2; font: 400 12px/18px \"DM Sans\", sans-serif; text-decoration: none; transition: background 160ms, color 160ms; } .ds-toolbar a:hover { color: #e6ecf2; background: #ffffff0c; } .ds-toolbar a[aria-current] { color: #9cd6ff; background: #58b2ff1f; box-shadow: inset 2px 0 #58b2ff; } .ds-toolbar a:focus-visible { outline: 2px solid #8ed5ff; outline-offset: 3px; }"
+    },
+    {
+      "name": "Section Header",
+      "kind": "custom",
+      "description": "One sans case h1 in the top bar with a muted subtitle; section content titled by a sans h2.",
+      "html": "<div class=\"ds-section\"><header class=\"ds-topbar\"><h1>Kestrel review</h1><span>Fictional case · Insights</span></header><div class=\"ds-section-heading\"><h2>Open gaps <span>4</span></h2><p>Questions that need verification. A gap is not proof.</p></div></div>",
+      "css": ".ds-section { background: #10151c; color: #e6ecf2; font-family: \"DM Sans\", sans-serif; } .ds-topbar { padding: 10px 20px; border-bottom: 1px solid #33414f; background: linear-gradient(180deg, #ffffff0b 0%, #ffffff00 70%), #10151c; } .ds-topbar h1 { margin: 0; font-size: 15px; font-weight: 550; } .ds-topbar span { display: block; margin-top: 2px; font-size: 12px; color: #a3b2c2; } .ds-section-heading { padding: 20px; } .ds-section-heading h2 { display: flex; align-items: baseline; gap: 10px; margin: 0; font-size: 16px; font-weight: 550; } .ds-section-heading h2 span { color: #a3b2c2; font: 400 12px \"IBM Plex Mono\", monospace; } .ds-section-heading p { margin: 4px 0 0; max-width: 80ch; color: #a3b2c2; font-size: 12px; line-height: 1.5; }"
     },
     {
       "name": "Evidence Pin",
       "kind": "card",
-      "description": "Compact paper record card with locally bundled Excalifont, a single uneven paper silhouette, a centered pushpin 6px inside the top edge, arrow-only source inspection, and a direct linked-question action. 248 × 224px; two-line titles and summaries, full text in source inspection.",
-      "html": "<article class=\"ds-evidence-pin\"><span class=\"ds-pin\"></span><small>EVENT · 14:32</small><h3>Riverside meeting</h3><p>Source-linked evidence summary for review.</p><footer>2 sources <button>Inspect ↗</button></footer></article>",
-      "css": ".ds-evidence-pin { position: relative; width: 248px; height: 224px; padding: 14px 17px 4px; isolation: isolate; color: #383c31; cursor: pointer; } .ds-evidence-pin h3 { font: 400 21px/1.18 Excalifont, \"DM Sans\", sans-serif; } .ds-evidence-pin p { font: 400 15px/1.4 Excalifont, \"DM Sans\", sans-serif; }"
+      "refersTo": "evidence-pin",
+      "description": "Paper record card: Excalifont title and summary, sans metadata, type-ink pushpin just inside the top edge, arrow-only inspect button. 248 × 224px.",
+      "html": "<article class=\"ds-evidence-pin\"><span class=\"ds-pin\"></span><small>Event · 14:32</small><h3>Riverside meeting</h3><p>Source-linked evidence summary for review.</p><footer>2 sources <button aria-label=\"Inspect sources for Riverside meeting\">↗</button></footer></article>",
+      "css": ".ds-evidence-pin { position: relative; display: flex; flex-direction: column; width: 248px; height: 224px; box-sizing: border-box; padding: 14px 17px 4px; background: #ecf3ef; color: #383c31; filter: drop-shadow(0 3px 4px #4e443b26); border-radius: 3px 6px 4px 5px; cursor: pointer; } .ds-pin { position: absolute; top: 5px; left: calc(50% - 4.5px); width: 9px; height: 9px; border-radius: 50%; background: #17706a; box-shadow: 0 1px 2px #3d302840, inset 0 -1px 0 #00000026; } .ds-evidence-pin small { margin-top: 6px; color: #17706a; font: 400 11px \"DM Sans\", sans-serif; } .ds-evidence-pin h3 { margin: 6px 0 4px; font: 400 21px/1.18 Excalifont, \"DM Sans\", sans-serif; } .ds-evidence-pin p { margin: 0; font: 400 15px/1.4 Excalifont, \"DM Sans\", sans-serif; } .ds-evidence-pin footer { margin-top: auto; display: flex; justify-content: space-between; align-items: center; font: 400 11px \"DM Sans\", sans-serif; color: #5b604f; } .ds-evidence-pin button { border: 0; background: transparent; color: #17706a; cursor: pointer; } .ds-evidence-pin button:focus-visible { outline: 2px solid #4e6038; outline-offset: 1px; }"
     },
     {
       "name": "Source Disclosure",
       "kind": "custom",
-      "description": "Expandable original source excerpt in the inspector.",
-      "html": "<details class=\"ds-source-item\" open><summary><span><strong>messages/sample.txt</strong><small>Message excerpt</small></span><span aria-hidden=\"true\">⌄</span></summary><blockquote>Fictional excerpt shown for the demo.</blockquote></details>",
-      "css": ".ds-source-item { border: 1px solid #3b4233; border-radius: 4px; background: #20251f; color: #e8e8df; } .ds-source-item summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px; cursor: pointer; list-style: none; } .ds-source-item summary strong, .ds-source-item summary small { display: block; } .ds-source-item summary strong { font: 500 13px \"DM Sans\", sans-serif; } .ds-source-item summary small { margin-top: 4px; color: #b0b8a6; font: 400 11px \"DM Sans\", sans-serif; } .ds-source-item blockquote { margin: 0; padding: 12px; border-top: 1px solid #303530; color: #b0b8a6; font: 400 13px/1.5 \"Newsreader\", Georgia, serif; } .ds-source-item summary:focus-visible { outline: 2px solid #d3dfaf; outline-offset: 2px; }"
+      "description": "Expandable original source excerpt in the inspector; Newsreader on paper.",
+      "html": "<details class=\"ds-source-item\" open><summary><span><strong>messages/sample.txt</strong><small>Message excerpt</small></span><span aria-hidden=\"true\">⌄</span></summary><blockquote>Fictional excerpt shown for the prototype.</blockquote></details>",
+      "css": ".ds-source-item { border: 1px solid #33414f; border-radius: 4px; background: #18202a; color: #e6ecf2; padding: 0 12px; } .ds-source-item summary { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 0; cursor: pointer; list-style: none; } .ds-source-item summary strong, .ds-source-item summary small { display: block; } .ds-source-item summary strong { font: 500 13px \"DM Sans\", sans-serif; } .ds-source-item summary small { margin-top: 4px; color: #a3b2c2; font: 400 11px \"DM Sans\", sans-serif; } .ds-source-item blockquote { margin: 12px 0; padding: 16px; border-radius: 2px; background: #e8e4d5; color: #2a323b; font: 400 17px/1.55 \"Newsreader\", Georgia, serif; white-space: pre-wrap; } .ds-source-item summary:focus-visible { outline: 2px solid #8ed5ff; outline-offset: 3px; }"
     }
   ],
   "narrative": {
     "northStar": "The Evidence Pinboard",
-    "overview": "MapleTrace pairs a dark moss workspace with a faint warm paper canvas and paper evidence cards. Sage marks the main action and active focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.\n\nTypography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.",
+    "overview": "MapleTrace pairs a cool ink workspace with a faint warm paper canvas and paper evidence cards. Glassy blue, taken from the logo, marks the main action, selection and focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.\n\nControls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Backend scores are computed ranks shown as labels, never percentages; mock scores are labelled illustrative.",
     "keyCharacteristics": [
-      "Dark moss workspace with a faint warm paper evidence surface.",
-      "Paper-toned pinned cards with restrained accent colors.",
+      "Cool ink workspace chrome with glassy blue accents and a faint warm paper evidence surface.",
+      "Paper-toned pinned cards coloured by record type and certainty.",
       "Sources and uncertainty are visible parts of the review flow."
     ],
     "rules": [
-      { "name": "The Evidence-State Rule", "body": "Use sage for interaction and amber for questions; keep observed records legible on paper-toned cards.", "section": "colors" },
-      {"name": "Legible handwriting and threads", "body": "Keep evidence-card text upright, with handwriting on titles, summaries, question links, and thread annotations; use sans-serif metadata. Omit inset frames, footer dividers, and visible Inspect copy. Keep an accessible arrow-only inspection button. Keep at least 40px between settled cards. Smooth 3px red threads attach to facing edges against faint paper. Keep handwritten connection labels quiet and unboxed, wrapping only at spaces. Arrowheads require explicit API direction; unknown or undirected relationships use plain threads. Claims and inferences remain dashed and explicitly labeled. The minimap reuses note silhouettes, inset top pins, facing-side curves, explicit direction, and selection; use a light viewport wash.", "section": "components"}
+      {
+        "name": "The Evidence-State Rule",
+        "body": "Use blue for interaction, selection and focus, and amber for questions; keep observed records legible on paper-toned cards. Semantic status colors (recorded or leading green, asserted or disproven red) stay distinct from the brand blue.",
+        "section": "colors"
+      },
+      {
+        "name": "The One Title Rule",
+        "body": "Each case page has exactly one `h1`, the case (or session project) title in the top bar. Section names are sans `h2`s beneath it, never a second `h1` and never serif.",
+        "section": "typography"
+      },
+      {
+        "name": "The Serif Is For Documents Rule",
+        "body": "Newsreader marks marketing headings on `/` and `/projects` and quoted source text. It never sets workspace headings, controls or metadata.",
+        "section": "typography"
+      },
+      {
+        "name": "The Amber Focus Rule",
+        "body": "Amber outlines and glows mean \"this is what you are reviewing\" or \"this is an open question\"; blue means interaction and selection in the chrome. Never swap them.",
+        "section": "elevation"
+      }
     ],
     "dos": [
       "Do keep the main demo action visually prominent and controls readable.",
       "Do pair graph inspection with a searchable list view.",
       "Do label illustrative scores and keep questions distinct from observed evidence.",
-      "Do keep source inspection near the item being reviewed."
+      "Do keep source inspection near the item being reviewed.",
+      "Do move bottom-right board chrome with `--dock-offset` and stack the Ask widget on `--minimap-height`, so nothing slides under the review dock or the minimap.",
+      "Do use `--focus-ring` for every focus outline on dark chrome."
     ],
     "donts": [
       "Don't use amber question styling as proof that a claim is true.",
       "Don't imply that illustrative scores or placeholder hashes are computed results.",
-      "Don't rely on the remote font request without the declared system fallbacks."
+      "Don't rely on the remote font request without the declared system fallbacks.",
+      "Don't set workspace headings in Newsreader or add a second `h1` to a case page.",
+      "Don't put glass fills or backdrop blur on reading surfaces, source excerpts, evidence cards or the paper canvas."
     ]
   }
 }

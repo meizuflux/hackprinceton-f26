@@ -9,7 +9,6 @@ import {
   Dna,
   FileCheck,
   FileText,
-  Fingerprint,
   Lock,
   Mail,
   MapPin,
@@ -20,6 +19,7 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 import type { CaseData } from "../api/types";
+import { BrandMark } from "../components/BrandMark";
 import "./landing-page.css";
 
 type Navigate = (path: string) => void;
@@ -391,7 +391,7 @@ export function LandingPage({
               window.scrollTo({ top: 0, behavior: "smooth" });
             }}
           >
-            <Fingerprint size={26} aria-hidden="true" />
+            <BrandMark size={20} />
             <span className="landing-brand-text">MapleTrace</span>
           </a>
 
@@ -1260,7 +1260,7 @@ def rank_next_steps(gaps, hypotheses):
         <div className="landing-footer-inner">
           <div className="footer-brand-col">
             <div className="landing-brand">
-              <Fingerprint size={20} aria-hidden="true" />
+              <BrandMark size={16} />
               <span className="landing-brand-text">MapleTrace</span>
             </div>
             <p className="footer-tagline">

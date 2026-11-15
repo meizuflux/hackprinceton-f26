@@ -1,0 +1,149 @@
+/* Floating "Ask a question" on the mind map. It stacks above the minimap and zoom controls (bottom right) and
+   expands upward, so it never covers them or the legend (bottom left). When the review dock is open it moves left
+   of the dock. */
+.case-board-panel:has(> .ask-widget) {
+  position: relative;
+}
+.ask-widget {
+  /* board inset 16 + the minimap's rendered height (published by CanvasMinimap) + gap 12 */
+  --ask-bottom: calc(28px + var(--minimap-height, 176px));
+  position: absolute;
+  z-index: 11;
+  right: 16px;
+  bottom: var(--ask-bottom);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  pointer-events: none;
+  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ask-widget > * {
+  pointer-events: auto;
+}
+.case-board-panel:has(.review-dock.is-open) > .ask-widget {
+  right: 432px; /* dock width 400 + its inset 16 + gap 16 */
+}
+.ask-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 38px;
+  padding: 0 14px 0 12px;
+  border: 1px solid var(--chrome-border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 500;
+  box-shadow: var(--shadow);
+  cursor: pointer;
+  transition:
+    background-color 0.15s ease-out,
+    border-color 0.15s ease-out;
+}
+.ask-toggle svg {
+  color: var(--brand-text);
+}
+.ask-toggle:hover {
+  background: var(--raised);
+}
+.ask-toggle[aria-expanded="true"] {
+  border-color: var(--brand-border);
+  background: #1c2732;
+}
+.ask-toggle-count {
+  padding-left: 8px;
+  border-left: 1px solid var(--chrome-border);
+  color: var(--brand-text);
+  font-size: 11px;
+  font-weight: 400;
+}
+.ask-panel {
+  display: flex;
+  width: min(400px, calc(100vw - 32px));
+  max-height: min(
+    600px,
+    calc(100dvh - var(--topbar-clearance-y, 68px) - var(--ask-bottom) - 64px)
+  );
+  min-height: 220px;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid var(--chrome-border);
+  border-radius: 8px;
+  background: var(--surface);
+  box-shadow: 0 14px 40px #080c1066;
+  transform-origin: bottom right;
+  animation: ask-open 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.ask-panel[hidden] {
+  display: none;
+}
+.ask-panel:focus {
+  outline: none;
+}
+@keyframes ask-open {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+}
+.ask-panel-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 10px 16px;
+  border-bottom: 1px solid var(--line);
+}
+.ask-panel-head h2 {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 550;
+}
+.ask-mode {
+  color: #e3cfa6;
+  font-size: 11px;
+}
+.ask-mode.is-live {
+  color: var(--brand-text);
+}
+.ask-panel .chat-transcript {
+  padding: 14px;
+  gap: 16px;
+}
+.ask-panel .chat-composer-wrap {
+  padding: 0 10px;
+  border-top: 1px solid var(--line);
+  padding-top: 10px;
+}
+.ask-panel .chat-footnote {
+  padding-bottom: 10px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ask-panel {
+    animation: none;
+  }
+  .ask-widget {
+    transition: none;
+  }
+}
+@media (max-width: 900px) {
+  /* the board is one viewport tall and the review dock stacks below it */
+  .case-board-panel:has(.review-dock.is-open) > .ask-widget {
+    right: 16px;
+  }
+  .ask-widget {
+    bottom: calc(100% - 100dvh + var(--ask-bottom));
+  }
+}
+@media (max-width: 540px) {
+  .ask-widget {
+    /* chrome bottom 54 + the minimap's rendered height + gap 10 */
+    --ask-bottom: calc(64px + var(--minimap-height, 116px));
+    right: 12px;
+  }
+  .ask-panel {
+    /* clear of the floating navigation toolbar on the left */
+    width: calc(100vw - 76px);
+  }
+}

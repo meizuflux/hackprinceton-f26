@@ -1,4 +1,4 @@
-/** Optional backend chat contract. This adapter never supplies mock answers. */
+/** Backend case chat contract (see frontend/CHAT.md). This adapter never supplies mock answers. */
 export type ChatCitation = {
   evidence_id: string;
   locator: Record<string, unknown> | string;
@@ -7,24 +7,56 @@ export type ChatCitation = {
   source_id?: string;
 };
 
+export type EvidenceStatus = "supported" | "partial" | "insufficient";
+
+/** A cited observation; `citations` index into the message's `citations`. */
+export type ChatObservation = { text: string; citations: number[] };
+
 export type ChatMessage = {
   role: "user" | "assistant";
   content: string;
   citations?: ChatCitation[];
-  evidence_status?: "supported" | "partial" | "insufficient";
+  evidence_status?: EvidenceStatus;
+  summary?: string;
+  observations?: ChatObservation[];
+  inference?: string;
+  unknowns?: string[];
 };
+
+export type ChatSuggestion = { question: string; recorded: boolean };
 
 export type ChatStatus = {
   available: boolean;
   case_id?: string;
   authoritative?: boolean;
+  /** True when the server holds an API key, so typed questions call the model. */
+  live?: boolean;
+  mode?: "live" | "replay";
+  model?: string;
+  suggestions?: ChatSuggestion[];
   reason?: string;
 };
 
 export type ChatReply = {
   thread_id: string;
   message: ChatMessage;
+  /** The question matched a suggested question and was answered without thread history. */
+  suggested?: boolean;
+  /** Every model response came from the recorded cache: no model call was billed. */
+  replayed?: boolean;
+  model_calls?: number;
 };
+
+export class ChatRequestError extends Error {
+  constructor(
+    message: string,
+    readonly code?: string,
+    readonly status?: number,
+  ) {
+    super(message);
+    this.name = "ChatRequestError";
+  }
+}
 
 const configuredBase = import.meta.env.VITE_CHAT_API_BASE_URL?.trim();
 const apiBase = (configuredBase || "").replace(/\/$/, "");
@@ -36,15 +68,67 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
   });
   if (!response.ok) {
     const detail = await response.json().catch(() => null);
-    throw new Error(
+    throw new ChatRequestError(
       typeof detail?.error?.message === "string"
         ? detail.error.message
         : typeof detail?.detail === "string"
           ? detail.detail
           : `Chat service returned ${response.status}.`,
+      typeof detail?.error?.code === "string" ? detail.error.code : undefined,
+      response.status,
     );
   }
   return response.json() as Promise<T>;
+}
+
+function validCitation(citation: ChatCitation | null | undefined) {
+  return (
+    !!citation &&
+    typeof citation.evidence_id === "string" &&
+    !!citation.evidence_id &&
+    typeof citation.excerpt === "string" &&
+    !!citation.locator &&
+    (typeof citation.locator === "string" ||
+      (typeof citation.locator === "object" &&
+        !Array.isArray(citation.locator))) &&
+    (citation.source_id === undefined || typeof citation.source_id === "string")
+  );
+}
+
+/** Keeps only well-formed structured fields; observation citations must point at a returned citation. */
+function sanitize(message: ChatMessage): ChatMessage {
+  const count = message.citations?.length ?? 0;
+  const observations = Array.isArray(message.observations)
+    ? message.observations.filter(
+        (o) =>
+          o &&
+          typeof o.text === "string" &&
+          Array.isArray(o.citations) &&
+          o.citations.length > 0 &&
+          o.citations.every((i) => Number.isInteger(i) && i >= 0 && i < count),
+      )
+    : undefined;
+  return {
+    role: "assistant",
+    content: message.content,
+    citations: message.citations,
+    evidence_status: message.evidence_status,
+    summary: typeof message.summary === "string" ? message.summary : undefined,
+    observations,
+    inference:
+      typeof message.inference === "string" ? message.inference : undefined,
+    unknowns: Array.isArray(message.unknowns)
+      ? message.unknowns.filter((u) => typeof u === "string")
+      : undefined,
+  };
+}
+
+export function citationLabel(citation: ChatCitation) {
+  return `${citation.evidence_id} ${
+    typeof citation.locator === "string"
+      ? citation.locator
+      : JSON.stringify(citation.locator)
+  }`;
 }
 
 export const chatApi = {
@@ -68,7 +152,16 @@ export const chatApi = {
           reason: "Chat is not connected to an authoritative ingested case.",
         };
       }
-      return { ...result, available: result.available === true };
+      const suggestions = Array.isArray(result.suggestions)
+        ? result.suggestions.filter(
+            (s) => s && typeof s.question === "string" && s.question.trim(),
+          )
+        : undefined;
+      return {
+        ...result,
+        available: result.available === true,
+        ...(suggestions ? { suggestions } : {}),
+      };
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError")
         throw error;
@@ -108,24 +201,12 @@ export const chatApi = {
         )) ||
       (reply.message.citations !== undefined &&
         (!Array.isArray(reply.message.citations) ||
-          reply.message.citations.some(
-            (citation) =>
-              !citation ||
-              typeof citation.evidence_id !== "string" ||
-              !citation.evidence_id ||
-              typeof citation.excerpt !== "string" ||
-              !citation.locator ||
-              (typeof citation.locator !== "string" &&
-                (typeof citation.locator !== "object" ||
-                  Array.isArray(citation.locator))) ||
-              (citation.source_id !== undefined &&
-                typeof citation.source_id !== "string"),
-          )))
+          !reply.message.citations.every(validCitation)))
     ) {
       throw new Error(
         "The chat service returned an invalid response. Try again.",
       );
     }
-    return reply;
+    return { ...reply, message: sanitize(reply.message) };
   },
 };

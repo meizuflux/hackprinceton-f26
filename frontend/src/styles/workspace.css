@@ -20,8 +20,9 @@
 .canvas-wrap {
   --board-inset: 16px;
   --minimap-width: 240px;
-  --minimap-height: 148px;
   --zoom-gap: 10px;
+  /* Width the review dock takes from the right of the canvas (dock 400 + gap 16). */
+  --dock-offset: 0px;
   height: 100%;
   background-color: #eee8de;
   background-image:
@@ -51,9 +52,9 @@
   min-height: 52px;
   padding: 0 20px;
   border: 0;
-  border-bottom: 1px solid #364232;
+  border-bottom: 1px solid var(--chrome-border);
   border-radius: 0;
-  background: var(--surface);
+  background: var(--glass-fill), var(--surface);
   box-shadow: none;
 }
 .board-title {
@@ -93,10 +94,10 @@
   min-height: 36px;
   padding: 0 10px;
   color: var(--muted);
-  background: #20261e;
+  background: var(--field);
 }
 .board-search:focus-within {
-  outline: 2px solid var(--green);
+  outline: 2px solid var(--focus-ring);
   outline-offset: 1px;
 }
 .board-search input {
@@ -113,27 +114,6 @@
   min-width: 24px;
   padding: 3px;
 }
-.review-toggle {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 36px;
-  border-radius: var(--radius);
-  background: var(--green);
-  color: #252d20;
-  padding: 7px 12px;
-  font-size: 13px;
-  font-weight: 600;
-}
-.review-toggle:hover,
-.review-toggle[aria-expanded="true"] {
-  background: #e1ebc5;
-}
-.review-toggle strong {
-  border-left: 1px solid #75806170;
-  padding-left: 8px;
-  font-size: 12px;
-}
 .workspace-navigation {
   position: absolute;
   inset: 0 auto auto 0;
@@ -146,13 +126,13 @@
   width: 48px;
   height: 56px;
   background: var(--surface);
-  border: 1px solid #424b3d;
+  border: 1px solid var(--chrome-border);
   box-shadow: var(--shadow);
-  color: var(--green);
+  color: var(--brand);
   border-radius: 8px;
 }
 .navigation-toggle:hover {
-  background: #293126;
+  background: var(--raised);
 }
 .workspace-sidebar {
   position: absolute;
@@ -163,7 +143,7 @@
   overflow: auto;
   background: var(--surface);
   padding: 20px 12px 12px;
-  border: 1px solid #424b3d;
+  border: 1px solid var(--chrome-border);
   border-radius: 8px;
   box-shadow: var(--shadow);
 }
@@ -176,7 +156,7 @@
   font-size: 22px;
 }
 .sidebar-brand svg {
-  color: var(--green);
+  color: var(--brand);
 }
 .workspace-sidebar > .text-button {
   justify-content: flex-start;
@@ -204,17 +184,19 @@
 }
 .sidebar-projects button[aria-current],
 .sidebar-projects button:hover {
-  color: var(--green);
-  background: #30382a;
+  color: var(--brand-text);
+  background: var(--brand-selected);
 }
 .react-flow__controls {
   left: auto !important;
   right: calc(
-    var(--board-inset) + var(--minimap-width) + var(--zoom-gap)
+    var(--board-inset) + var(--dock-offset) + var(--minimap-width) +
+      var(--zoom-gap)
   ) !important;
   bottom: var(--chrome-bottom, var(--board-inset)) !important;
   margin: 0 !important;
-  border: 1px solid #48513f;
+  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid var(--chrome-border);
   border-radius: var(--radius);
   overflow: hidden;
   box-shadow: var(--shadow) !important;
@@ -227,7 +209,7 @@
   color: var(--text) !important;
 }
 .react-flow__controls-button:hover {
-  background: #30382a !important;
+  background: var(--raised) !important;
 }
 .react-flow__controls-button svg {
   fill: currentColor !important;
@@ -235,13 +217,14 @@
 .board-minimap {
   position: absolute;
   z-index: 5;
-  right: var(--board-inset);
+  right: calc(var(--board-inset) + var(--dock-offset));
+  transition: right 0.2s cubic-bezier(0.16, 1, 0.3, 1);
   bottom: var(--chrome-bottom, var(--board-inset));
   width: var(--minimap-width);
 }
 .board-minimap-map {
   width: 100%;
-  height: var(--minimap-height);
+  height: auto;
   display: block;
   overflow: hidden;
   border: 1px solid #b4ab9a;
@@ -250,109 +233,41 @@
   box-shadow: var(--shadow);
   cursor: grab;
   touch-action: none;
+  user-select: none;
 }
 .board-minimap-map:active {
   cursor: grabbing;
 }
+.board-minimap-map:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
 .board-minimap-thread {
   fill: none;
-  stroke: #a1372f;
   stroke-width: 1.2;
   stroke-linecap: round;
-}
-.board-minimap-thread.is-inferred {
-  stroke-dasharray: 3 2;
-}
-.board-minimap-thread.is-active {
-  stroke: #782a23;
-  stroke-width: 1.8;
 }
 .board-minimap-pin {
   fill: #faf8f1;
   stroke: #9c9584;
   stroke-width: 0.75;
 }
-.board-minimap-pin.is-gap {
-  stroke: #a57838;
-}
-.board-minimap-pin.is-active {
-  stroke: #a57838;
-  stroke-width: 1.8;
-}
-.board-minimap-pushpin {
-  fill: #ad604a;
-}
 .board-minimap-map rect.board-minimap-view {
-  fill: #6978550c;
-  stroke: #697855;
+  fill: none;
+  stroke: var(--brand-500);
   stroke-width: 1.5;
   pointer-events: none;
 }
-.board-minimap-zoom {
-  position: absolute;
-  left: 8px;
-  bottom: 8px;
-  min-height: 26px;
-  padding: 0 8px;
-  display: inline-flex;
-  align-items: center;
-  border-radius: 8px;
-  background: #e8ecdf;
-  color: #3f4b36;
-  font-size: 12px;
+.board-minimap-mask {
+  fill: #2b2a2222;
+  pointer-events: none;
+}
+.react-flow__controls-button.zoom-readout {
+  font:
+    500 11px/1 "DM Sans",
+    sans-serif;
   font-variant-numeric: tabular-nums;
-  pointer-events: none;
-}
-.board-legend {
-  position: absolute;
-  z-index: 5;
-  bottom: var(--board-inset);
-  left: var(--board-inset);
-  max-width: calc(
-    100% - var(--board-inset) - var(--minimap-width) - 40px - var(--zoom-gap) -
-      28px
-  );
-  padding: 9px 12px;
-  background: var(--surface);
-  border: 1px solid #424b3d;
-  border-radius: var(--radius);
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px 16px;
-  color: var(--text);
-  font-size: 12px;
-  box-shadow: var(--shadow);
-  pointer-events: none;
-}
-.board-legend > span {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  white-space: nowrap;
-}
-.legend-line,
-.legend-gap {
-  display: block;
-  flex-shrink: 0;
-}
-.legend-line {
-  width: 22px;
-  height: 2px;
-  background: #a84e40;
-}
-.legend-line.dashed {
-  background: repeating-linear-gradient(
-    90deg,
-    #a84e40 0 5px,
-    transparent 5px 9px
-  );
-}
-.legend-gap {
-  width: 9px;
-  height: 9px;
-  border: 1.5px solid var(--amber);
-  border-radius: 1px;
+  letter-spacing: 0;
 }
 .search-feedback {
   position: absolute;
@@ -362,7 +277,7 @@
   padding: 8px 14px;
   background: var(--surface);
   color: var(--text);
-  border: 1px solid #364232;
+  border: 1px solid var(--chrome-border);
   border-radius: var(--radius);
   font-size: 12px;
   box-shadow: var(--shadow);
@@ -374,7 +289,7 @@
     calc(var(--toolbar-clearance, 48px) + 32px);
   overflow: auto;
   background: var(--surface);
-  border: 1px solid #364232;
+  border: 1px solid var(--chrome-border);
   padding: 28px 32px;
   border-radius: 8px;
   transition: top 0.15s ease;
@@ -405,7 +320,7 @@
   font-size: 13px;
 }
 .evidence-list > button:hover {
-  background: #30382a;
+  background: var(--raised);
 }
 .evidence-list strong {
   font-weight: 500;
@@ -426,6 +341,19 @@
   top: auto;
   bottom: 28px;
   left: 100px;
+}
+/* With the review dock open, the minimap, zoom controls and Ask widget sit left of
+   it, so the board's floating chrome never stacks underneath the dock. */
+@media (min-width: 901px) {
+  .workspace:has(> .review-dock.is-open) .canvas-wrap {
+    --dock-offset: 416px;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .board-minimap,
+  .react-flow__controls {
+    transition: none;
+  }
 }
 @media (max-width: 1100px) {
   .board-toolbar {
@@ -504,24 +432,17 @@
   .board-actions > .text-button {
     flex: 1;
   }
-  .review-toggle {
-    flex: 1;
-    justify-content: center;
-  }
   .canvas-wrap {
     --board-inset: 12px;
     --minimap-width: 188px;
-    --minimap-height: 116px;
     --zoom-gap: 8px;
     --chrome-bottom: 54px;
   }
   .board-legend {
     right: 12px;
+    bottom: var(--board-inset);
     max-width: none;
-    gap: 8px 10px;
-    padding: 8px;
     font-size: 11px;
-    justify-content: center;
   }
   .search-feedback {
     top: calc(var(--topbar-clearance-y, 160px) + 8px);
