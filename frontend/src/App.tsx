@@ -976,6 +976,7 @@ function Board(props: {
   data: CaseData;
   projectName?: string;
   onOpenSource: (sourceId: string) => void;
+  onAskQuestion: () => void;
   active: boolean;
   focusSelection?: Selection | null;
   onClearFocusSelection?: () => void;
@@ -987,11 +988,7 @@ function Board(props: {
       <ReactFlowProvider>
         <BoardCanvas {...props} />
       </ReactFlowProvider>
-      <AskWidget
-        caseId={props.data.id}
-        sourceIds={props.data.sources.map((source) => source.id)}
-        onOpenSource={props.onOpenSource}
-      />
+      <AskWidget caseId={props.data.id} onAsk={props.onAskQuestion} />
     </>
   );
 }
@@ -1296,6 +1293,9 @@ export default function App() {
                     projects.find(
                       (project) => project.caseId === caseQuery.data.id,
                     )?.name
+                  }
+                  onAskQuestion={() =>
+                    navigate(casePath(caseQuery.data.id, "chat"))
                   }
                   onOpenSource={(sourceId) =>
                     navigate(casePath(caseQuery.data.id, "evidence", sourceId))

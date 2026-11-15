@@ -3,7 +3,7 @@
 The backend (`backend/mapletrace_api/chat.py`, `backend/mapletrace_reason/chat.py`) answers questions about the latest analysis of an ingested case with `claude-sonnet-5-5` and read-only tools. The frontend never supplies answers, fixtures or fallbacks. Two views share one adapter (`src/api/chat.ts`) and one hook (`src/components/useCaseChat.ts`):
 
 - **`/cases/:caseId/chat`:** the chat page (`ChatPanel`), with cited excerpts under each answer.
-- **The mind map:** the floating "Ask a question" widget (`AskWidget`), mounted in `Board` in `src/App.tsx`. It sits above the minimap and zoom controls, expands upward, moves left of the review dock when the dock is open, never covers the minimap, zoom controls or legend, and closes with Escape (focus returns to its button).
+- **The mind map:** a small "Ask a question" box (`AskWidget`, mounted in `Board` in `src/App.tsx`) with an input and suggested-question chips. It renders no answers: submitting queues the question (`chat-handoff.ts`) and navigates to `/cases/:caseId/chat`, where `ChatPanel` asks it. It sits above the minimap and zoom controls, moves left of the review dock when the dock is open, and never covers the minimap, zoom controls or legend.
 
 The adapter calls same-origin `/api` (the Vite proxy strips it), or `VITE_CHAT_API_BASE_URL` when set. Model credentials live only on the server.
 
@@ -36,6 +36,10 @@ Request: `{"message": "…", "thread_id": "optional"}` (1 to 1000 characters).
   "suggested": true,
   "replayed": true,
   "model_calls": 4,
+  "steps": [
+    { "type": "model_call", "inputTokens": 1200, "outputTokens": 300, "costUsd": 0.005, "durationMs": 4100, "durationSource": "estimated" },
+    { "type": "tool_call", "tool": "search_records", "args": { "query": "badge" }, "resultChars": 2311 }
+  ],
   "message": {
     "role": "assistant",
     "content": "Plain-text rendering of the whole answer",
@@ -60,6 +64,8 @@ Request: `{"message": "…", "thread_id": "optional"}` (1 to 1000 characters).
 - **`evidence_status`:** `supported`, `partial` (some citations were dropped or support is incomplete) or `insufficient` (nothing cited survives, or the records do not answer).
 - **Observed versus inferred:** observations, inference and unknowns render as separate sections; the inference is labelled and dashed, like inferred threads on the board.
 - **`suggested`:** the question matched a suggested question. Those are always answered without thread history, so a recorded answer replays in any thread. `replayed` is true when no model call was made.
+- **`steps`:** the answer's tool loop in order (model calls with usage, list-price cost estimate and duration; tool calls with args truncated to 120 characters and result size). `durationSource` is `live` (measured), `recorded` (stored `latency_ms`) or `estimated` (800 ms + output tokens / 55 per second). A replayed answer returns the steps of its recorded run.
+- **Playback:** a newly arrived reply is animated by `chat-playback.ts`: a "Thinking…" row while the request is in flight, then the steps one by one (durations sped up 4x, total clamped to 2.5-6 s), then the text typing out (0.7-2 s), then citations. Skip and `prefers-reduced-motion` show everything at once; messages already in the thread render instantly. Afterwards the steps stay in a collapsed "Used N tools · M model calls · $x · replayed" list, and the answer is labelled "Replayed from a recorded run" or "Live". The animation is presentation only; replayed answers are never presented as live.
 - **Threads:** memory is per `thread_id` in server memory (200 threads, last 4 turns) and is lost on restart; an unknown `thread_id` starts a new thread and returns its new ID.
 - **Errors** are `{"error": {"code", "message"}}`: `needs_api_key` (503) when the answer is not recorded and the server has no key (nothing is sent to the model); `model_error` (502); `empty_message` and `message_too_long` (400). The UI shows `needs_api_key` as a notice, not an error page.
 

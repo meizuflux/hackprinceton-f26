@@ -1,111 +1,100 @@
-import { MessageSquareText, X } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { ChatComposer } from "./ChatComposer";
-import { ChatThread } from "./ChatPanel";
+import { ArrowUp, MessageSquareText } from "lucide-react";
+import { useState } from "react";
+import { queueQuestion } from "./chat-handoff";
 import { useCaseChat } from "./useCaseChat";
 import "./chat-panel.css";
 import "./ask-widget.css";
 
-/** Floating "Ask a question" on the mind map. Sits above the minimap and zoom controls, clear of the legend. */
+/** Queues the question for the chat tab and asks the host to open it. Returns whether it was submitted. */
+export function submitToChat(
+  caseId: string,
+  text: string,
+  available: boolean,
+  onAsk: () => void,
+) {
+  const question = text.trim();
+  if (!question || !available) return false;
+  queueQuestion(caseId, question);
+  onAsk();
+  return true;
+}
+
+/**
+ * Small "Ask a question" box on the mind map. It renders no answers: submitting opens the chat tab, which asks the
+ * question and plays the answer there. Sits above the minimap and zoom controls, clear of the legend.
+ */
 export function AskWidget({
   caseId,
-  sourceIds,
-  onOpenSource,
+  onAsk,
 }: {
   caseId: string;
-  sourceIds: readonly string[];
-  onOpenSource: (sourceId: string) => void;
+  /** Called after the question is queued; the host navigates to the chat tab. */
+  onAsk: () => void;
 }) {
   const chat = useCaseChat(caseId);
-  const [open, setOpen] = useState(false);
-  const toggleRef = useRef<HTMLButtonElement>(null);
-  const panelRef = useRef<HTMLElement>(null);
-  const inputRef = useRef<HTMLTextAreaElement>(null);
-  const wasOpen = useRef(false);
+  const [draft, setDraft] = useState("");
+  const available = chat.status?.available === true;
+  const recorded = (chat.status?.suggestions ?? []).filter(
+    (s) => s.recorded || chat.live,
+  );
 
-  useEffect(() => {
-    if (open) {
-      const panel = panelRef.current;
-      const target =
-        panel?.querySelector<HTMLElement>(
-          ".chat-suggestion:not(:disabled), textarea:not(:disabled)",
-        ) ?? panel;
-      target?.focus();
-    } else if (wasOpen.current) {
-      toggleRef.current?.focus();
-    }
-    wasOpen.current = open;
-  }, [open]);
-
-  const recorded = chat.status?.suggestions?.filter((s) => s.recorded).length;
+  const submit = (text: string) => {
+    if (submitToChat(caseId, text, available, onAsk)) setDraft("");
+  };
 
   return (
-    <div
-      className={`ask-widget ${open ? "is-open" : ""}`}
-      onKeyDown={(event) => {
-        // Escape closes the widget only; it must not also close the inspector.
-        if (event.key === "Escape" && open) {
-          event.stopPropagation();
-          setOpen(false);
-        }
+    <form
+      className="ask-widget"
+      aria-label="Ask a question"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (chat.live) submit(draft);
       }}
     >
-      <section
-        ref={panelRef}
-        id="ask-widget-panel"
-        className="ask-panel"
-        role="dialog"
-        aria-modal="false"
-        aria-labelledby="ask-widget-title"
-        tabIndex={-1}
-        hidden={!open}
-      >
-        <header className="ask-panel-head">
-          <h2 id="ask-widget-title">Ask a question</h2>
-          {chat.status?.available && (
-            <span className={`ask-mode ${chat.live ? "is-live" : ""}`}>
-              {chat.live ? "Live" : "Recorded only"}
-            </span>
-          )}
-          <button
-            type="button"
-            className="icon-button"
-            aria-label="Close questions"
-            onClick={() => setOpen(false)}
-          >
-            <X size={16} />
-          </button>
-        </header>
-        <ChatThread
-          chat={chat}
-          sourceIds={sourceIds}
-          onOpenSource={onOpenSource}
-          compact
-        />
-        <ChatComposer
-          inputId="ask-widget-input"
-          inputRef={inputRef}
-          live={chat.live}
-          available={chat.status?.available === true}
-          pending={chat.pending}
-          onAsk={chat.ask}
-          onCancel={chat.cancel}
-        />
-      </section>
-      <button
-        ref={toggleRef}
-        type="button"
-        className="ask-toggle"
-        aria-expanded={open}
-        aria-controls="ask-widget-panel"
-        onClick={() => setOpen((value) => !value)}
-      >
+      {available && recorded.length > 0 && (
+        <ul className="ask-chips" aria-label="Suggested questions">
+          {recorded.slice(0, 3).map((s) => (
+            <li key={s.question}>
+              <button
+                type="button"
+                className="ask-chip"
+                title={s.question}
+                onClick={() => submit(s.question)}
+              >
+                {s.question}
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="ask-box">
         <MessageSquareText size={16} aria-hidden="true" />
-        <span>Ask a question</span>
-        {!open && !!recorded && (
-          <span className="ask-toggle-count">{recorded} recorded</span>
-        )}
-      </button>
-    </div>
+        <label className="sr-only" htmlFor="ask-widget-input">
+          Ask a question
+        </label>
+        <input
+          id="ask-widget-input"
+          value={draft}
+          maxLength={1000}
+          onChange={(event) => setDraft(event.target.value)}
+          disabled={!available || !chat.live}
+          placeholder={
+            !available
+              ? "Chat is unavailable"
+              : chat.live
+                ? "Ask about the evidence…"
+                : "Pick a recorded question"
+          }
+        />
+        <button
+          type="submit"
+          className="ask-send"
+          aria-label="Send question"
+          disabled={!draft.trim() || !available || !chat.live}
+        >
+          <ArrowUp size={15} />
+        </button>
+      </div>
+    </form>
   );
 }

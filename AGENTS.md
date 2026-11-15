@@ -82,7 +82,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 - Colour always travels with an icon, label or pattern, and every ink keeps 4.5:1 contrast against the paper (`board-colors.test.ts` enforces it).
 - A collapsible legend at the bottom left lists only the types present; the minimap mirrors the board colours, direction and selection.
 - Minimap: frames the pins only, so it never rescales while panning, with a clipped viewport rectangle. Pressing grabs the rectangle or centres the view there; minimap navigation clamps the view to the pins; arrow keys pan. The zoom readout sits in the zoom controls.
-- The "Ask a question" widget sits 12px above the minimap (which publishes `--minimap-height`), moves left of an open review dock, opens each new answer at its question, and must not cover the minimap, zoom controls or legend.
+- The "Ask a question" widget is only a small input with suggestion chips: it sits 12px above the minimap (which publishes `--minimap-height`), moves left of an open review dock, and must not cover the minimap, zoom controls or legend. Submitting navigates to the chat tab, which asks the question; the map never shows answers.
 
 ### Insights
 
@@ -100,6 +100,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 ### Chat
 
 - Implemented. Contract: [`frontend/CHAT.md`](frontend/CHAT.md); code: `backend/mapletrace_api/chat.py` and `backend/mapletrace_reason/chat.py`. Keys stay server-side and the frontend never simulates replies.
+- Chat replies carry `steps` (the tool loop); the chat tab replays them as a paced "thinking", tool-call and typing animation, labelled as replayed or live, collapsed afterwards, and instant for reduced motion or history. Step capture must never change what the model sees (cache keys).
 - Suggested questions are deterministic and always answered without thread history, so they replay. Free typing is live and billed and needs a server key; without one the server only replays, and a miss returns `needs_api_key`.
 
 ### Brand and visual design

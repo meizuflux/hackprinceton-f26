@@ -91,8 +91,7 @@ export function ChatThread({
         ))}
         {pending && (
           <div className="chat-pending" role="status">
-            <LoaderCircle size={15} className="chat-spinner" /> Reading the
-            cited records…
+            <LoaderCircle size={15} className="chat-spinner" /> Thinking…
           </div>
         )}
         {failure && (
