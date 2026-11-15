@@ -16,7 +16,7 @@ colors:
   paper-card: "#faf8f1"
   text: "#e6ecf2"
   text-muted: "#a3b2c2"
-  thread: "#a1372f"
+  contradiction: "#b3262f"
   pushpin: "#ad604a"
 typography:
   display:
@@ -104,11 +104,11 @@ components:
 
 MapleTrace pairs a cool ink workspace with a faint warm paper canvas and paper evidence cards. Glassy blue, taken from the logo, marks the main action, selection and focus; amber marks open questions. The visual language keeps the board distinctive while making the review path easy to scan during a short demo.
 
-Typography controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Scores are labeled illustrative wherever shown.
+Controls, search, and the primary demo action should remain easy to find. The inspector puts original sources first, and graph and list views provide two ways to inspect the same evidence. Backend scores are computed ranks shown as labels, never percentages; mock scores are labelled illustrative.
 
 **Key Characteristics:**
 - Cool ink workspace chrome with glassy blue accents and a faint warm paper evidence surface.
-- Paper-toned pinned cards with restrained accent colors.
+- Paper-toned pinned cards coloured by record type and certainty.
 - Sources and uncertainty are visible parts of the review flow.
 
 ## Brand
@@ -146,6 +146,24 @@ The palette moves between cool ink neutrals, glassy blue accents, warm evidence 
 
 **The Evidence-State Rule.** Use blue for interaction, selection and focus, and amber for questions; keep observed records legible on paper-toned cards. Semantic status colors (recorded or leading green, asserted or disproven red) stay distinct from the brand blue.
 
+## Board colours
+
+Colour on the board comes only from the API's type and certainty, through the inks in `src/components/board-colors.ts` (CSS in `board-coding.css`). Every ink keeps at least 4.5:1 against the paper card (`#faf8f1`) and canvas (`#eee8de`); `board-colors.test.ts` enforces it. Colour always travels with an icon, a label or a line pattern.
+
+| Card type | Ink | Thread family sharing the hue |
+| --- | --- | --- |
+| Person | `#7b3f8f` purple | Identity |
+| Device or account | `#2b5c99` blue | Communication |
+| Event | `#17706a` teal | Time |
+| Location | `#55721c` olive | Place |
+| Statement | `#4d5157` grey | Claim |
+| Other | `#6b5d4f` brown | Other link |
+
+- **Contradiction** threads are red (`#b3262f`); red means nothing else.
+- **Certainty:** observed threads are solid, inferences dashed `8 7`, claims dashed `3 6`. Inferred cards have a dashed outline and an "Inferred" chip.
+- **Open questions:** an amber outline and a question flag on the card.
+- **Legend:** collapsible, at the bottom left, listing only the types present in the case. The minimap mirrors the colours.
+
 ## Typography
 
 **Display Font:** Newsreader (with Georgia, serif fallback)
@@ -164,7 +182,7 @@ Excalifont is distributed with its upstream SIL Open Font License in `public/fon
 
 ## Layout
 
-The faint paper background fills the case canvas. A compact toolbar floats at the upper left, using the same dark surface, border, and radius as the board controls. It is 48px wide collapsed and 192px expanded, with 34px rows and 16px icons. Expansion reveals section labels and project actions; omit a large wordmark, project heading, or full-height sidebar. The graph retains its dimensions and viewport while desktop controls and page content clear the expanded toolbar. Collapsed icons retain accessible names and tooltips. Escape collapses the toolbar while focus is inside it, and choosing a section on small screens collapses it. Search, list, audit, and review controls float above the canvas. Analysis, source inspection, and audit share a review dock over the right side of the canvas. At widths up to 900px, the dock stacks below the board. At widths up to 540px, search spans the board toolbar. Returning from an inspector restores review context. The board offers graph and list views, visible search, pan and zoom controls, fit view, and a minimap. The minimap is a fixed overview of the pins. A viewport rectangle shows the visible area and moves and resizes with pan and zoom. Dragging that rectangle keeps the pins in view; panning the canvas itself may still leave the board. A two-finger trackpad swipe pans the canvas; pinch, the zoom controls, and holding the zoom key while scrolling change scale. The shared spacing rhythm uses compact 8–24px steps.
+The faint paper background fills the case canvas. A compact toolbar floats at the upper left, using the same dark surface, border, and radius as the board controls. It is 48px wide collapsed and 192px expanded, with 34px rows and 16px icons. Expansion reveals section labels and project actions; omit a large wordmark, project heading, or full-height sidebar. The graph retains its dimensions and viewport while desktop controls and page content clear the expanded toolbar. Collapsed icons retain accessible names and tooltips. Escape collapses the toolbar while focus is inside it, and choosing a section on small screens collapses it. A flat top bar holds search, the List/Board switch, the audit trail and the Case analysis entries (see AGENTS.md). Analysis, source inspection, and audit share a review dock over the right side of the canvas. At widths up to 900px, the dock stacks below the board. At widths up to 540px, search spans the board toolbar. Returning from an inspector restores review context. The board offers graph and list views, visible search, pan and zoom controls, fit view, and a minimap. The minimap frames the pins alone, so its scale never changes while panning. A clipped viewport rectangle shows the visible area. Pressing the rectangle grabs it; pressing elsewhere centres the view there; arrow keys pan. Minimap navigation clamps the view to the pins; panning the canvas itself may still leave the board. The zoom readout sits in the zoom controls and resets to 100%. A two-finger trackpad swipe pans the canvas; pinch, the zoom controls, and holding the zoom key while scrolling change scale. The shared spacing rhythm uses compact 8–24px steps.
 
 ## Elevation & Depth
 
@@ -189,19 +207,19 @@ Controls and workspace panels use gently rounded corners, while evidence cards a
 
 ### Cards / Containers
 - **Corner Style:** evidence cards use gently varying paper silhouettes; the enclosing workspace uses 7px.
-- **Background:** one ivory paper surface keeps attention on content; icons and text identify record types.
+- **Background:** ivory paper with a faint wash of the card type's hue (see Board colours); the type icon and label always accompany the colour.
 - **Shadow Strategy:** subtle lift at rest, stronger amber outline for the selected card.
 - **Internal Padding:** evidence cards use 14px at the top and 17px at the sides.
 
 ### Signature Component: Evidence Pin
 
-Paper cards sit on the faint paper canvas with a centered pushpin inset 6px inside the paper's top edge, record type, title, brief summary, time where available, citation count, and an inspect action. They measure 248 × 224px, with a single gently uneven paper silhouette and one quiet ivory surface. Each silhouette varies slightly by card without tilting the text. Omit the inset frame and footer divider; use an arrow-only source-inspection button with a full accessible name. The whole card shows a pointer cursor and remains draggable. Titles and summaries show at most two lines; inspection preserves the full text and citations. A separate Open question button opens the card's cited gap directly. A gap signals a question requiring verification; it does not establish proof.
+Paper cards sit on the faint paper canvas with a centered pushpin inset 6px inside the paper's top edge, record type, title, brief summary, time where available, citation count, and an inspect action. Sizes are role-tailored in `board-layout.ts` (default 248 × 224px), with a single gently uneven paper silhouette. Each silhouette varies slightly by card without tilting the text. Omit the inset frame and footer divider; use an arrow-only source-inspection button with a full accessible name. The whole card shows a pointer cursor and remains draggable. Titles and summaries show at most two lines; inspection preserves the full text and citations. A separate Open question button opens the card's cited gap directly. A gap signals a question requiring verification; it does not establish proof.
 
-Initial placement and completed card drops preserve at least 40px between cards. Layout is presentation geometry only and does not create case relationships. Threads use the facing card edges, choosing horizontal or vertical attachment from their positions rather than routing every connection through a top pin. Smooth 3px red curves connect the cards. Small arrowheads appear only when the API adapter explicitly sets `directed: true`; an omitted direction is rendered without an arrowhead. Badge association and time overlap are undirected in the disposable mock. Preserve the supplied source and target order; never reverse a relationship from screen position or guessed meaning. The list and inspector use matching directional or undirected notation. Claims and inferences use dashed red threads with compact explicit labels; hover, focus, or selection reveals their relationship wording. Observed relationship labels use a quiet flat backing without a border. Every relationship label is a keyboard-accessible source-inspection button. The minimap reuses the same paper silhouettes, inset top pushpins, facing-edge Bezier connections, explicit direction, and live selection state. Question cards receive an amber outline rather than a different fill. A lightly shaded sage viewport indicator keeps the preview legible while tracking pan and zoom.
+Initial placement and completed card drops preserve at least 40px between cards. Layout is presentation geometry only and does not create case relationships. Threads use the facing card edges, choosing horizontal or vertical attachment from their positions rather than routing every connection through a top pin. Smooth 3px curves connect the cards, coloured by thread family (see Board colours). Small arrowheads appear only when the API adapter explicitly sets `directed: true`; an omitted direction is rendered without an arrowhead. Preserve the supplied source and target order; never reverse a relationship from screen position or guessed meaning. The list and inspector use matching directional or undirected notation. Claims and inferences use dashed threads with compact explicit labels; hover, focus, or selection reveals their relationship wording. Observed relationship labels use a quiet flat backing without a border. Every relationship label is a keyboard-accessible source-inspection button. The minimap reuses the same paper silhouettes, inset top pushpins, facing-edge Bezier connections, thread colours, explicit direction, and live selection state. Question cards receive an amber outline and flag rather than a different fill.
 
 ### Signature Component: Source Inspector
 
-The inspector docks within the workspace and presents original sources first. Source excerpts expand inline, with metadata and placeholder hashes visibly identified. Selecting a record, relationship, gap, insight, suggestion, or audit item should retain a path to its cited material.
+The inspector docks within the workspace and presents original sources first. Source excerpts expand inline with their metadata; with the mock adapter, hashes are visibly marked as placeholders. Selecting a record, relationship, gap, insight, suggestion, or audit item should retain a path to its cited material.
 
 ## Do's and Don'ts
 
@@ -216,4 +234,8 @@ The inspector docks within the workspace and presents original sources first. So
 - **Don't** imply that illustrative scores or placeholder hashes are computed results.
 - **Don't** rely on the remote font request without the declared system fallbacks.
 
-The board texture is `src/assets/paper.webp`, a generated material asset with its exact prompt in the adjacent JSON sidecar. Show it beneath a flat 50% `#eee8de` overlay: visible paper fibers without competing with the evidence. Preserve the surrounding dark interface.
+## Assets
+
+- **Board texture:** `src/assets/paper.webp`, a generated material asset with its exact prompt in the adjacent JSON sidecar. Show it beneath a flat 50% `#eee8de` overlay: visible paper fibers without competing with the evidence. Preserve the surrounding dark interface.
+- **`design/workspace-concept.webp`:** an exploratory, generated full-screen board concept from an earlier pass. It is not shipped, and its faces, names, claims and text are not evidence or product truth; only its canvas-and-overlay composition informed the layout.
+- **Evidence-card font:** licence and provenance in `public/fonts/README.md`.
