@@ -24,7 +24,7 @@
   padding: 0 8px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  background: #151916;
+  background: #11161b;
   color: var(--text);
   font:
     13px "DM Sans",
@@ -43,11 +43,11 @@
   padding: 0 10px;
   border: 1px solid var(--line);
   border-radius: 4px;
-  background: #151916;
+  background: #11161b;
   color: var(--muted);
 }
 .records-search:focus-within {
-  border-color: #84936a;
+  border-color: #517ba4;
 }
 .records-file {
   padding: 8px 20px;
@@ -62,7 +62,7 @@
 .records-file a,
 .records-citation a {
   color: var(--green);
-  text-decoration-color: #d3dfaf66;
+  text-decoration-color: #95cff966;
   text-underline-offset: 3px;
 }
 .records-file a:hover,
@@ -89,7 +89,7 @@
   z-index: 1;
   padding: 8px 10px;
   border-bottom: 1px solid var(--line);
-  background: #1d221e;
+  background: #181f25;
   color: var(--muted);
   font-size: 11px;
   font-weight: 500;
@@ -98,15 +98,15 @@
 }
 .records-table td {
   padding: 5px 10px;
-  border-bottom: 1px solid #22281f;
+  border-bottom: 1px solid #19222c;
   vertical-align: top;
 }
 .records-table tbody tr:not(.records-detail):hover {
-  background: #1b201c;
+  background: #161d23;
 }
 .records-table tr.is-open,
 .records-detail td {
-  background: #1f261d;
+  background: #17202a;
 }
 .records-table td.records-toggle {
   width: 36px;
@@ -118,17 +118,17 @@
   padding: 6px;
 }
 .records-type {
-  color: #d1ddb9;
+  color: #9cd3fa;
   white-space: nowrap;
 }
 .records-time {
-  color: #cfd3c4;
+  color: #b3c5d7;
   font-size: 12px;
   white-space: nowrap;
 }
 .records-who {
   max-width: 220px;
-  color: #cfd3c4;
+  color: #b3c5d7;
   overflow-wrap: anywhere;
 }
 .records-content {

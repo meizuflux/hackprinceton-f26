@@ -249,7 +249,7 @@
 }
 .board-minimap-map rect.board-minimap-view {
   fill: none;
-  stroke: #4f5f3c;
+  stroke: var(--brand-500);
   stroke-width: 1.5;
   pointer-events: none;
 }

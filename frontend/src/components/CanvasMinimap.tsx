@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, type KeyboardEvent } from "react";
+import { useEffect, useId, useMemo, useRef, type KeyboardEvent } from "react";
 import {
   ControlButton,
   getBezierPath,
@@ -125,8 +125,26 @@ export function CanvasMinimap() {
     );
   }
 
+  // Overlays stacked above the minimap (the Ask widget) position themselves from its rendered height,
+  // which follows the board's aspect ratio. Published on the board panel, which both share.
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const root = rootRef.current;
+    const host = root?.closest<HTMLElement>(".case-board-panel");
+    if (!root || !host || typeof ResizeObserver === "undefined") return;
+    const publish = () =>
+      host.style.setProperty("--minimap-height", `${root.offsetHeight}px`);
+    publish();
+    const observer = new ResizeObserver(publish);
+    observer.observe(root);
+    return () => {
+      observer.disconnect();
+      host.style.removeProperty("--minimap-height");
+    };
+  }, []);
+
   return (
-    <div className="board-minimap nopan nodrag nowheel">
+    <div ref={rootRef} className="board-minimap nopan nodrag nowheel">
       <svg
         className="board-minimap-map"
         viewBox={`0 0 ${frame.width} ${frame.height}`}
