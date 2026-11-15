@@ -22,9 +22,17 @@ export function getPinDimensions(node: {
   type?: string;
   gapId?: string;
   size?: { width: number; height: number };
+  media?: { kind: "photo" | "video" };
 }): PinDimensions {
   if (node.size?.width && node.size?.height) {
     return { width: node.size.width, height: node.size.height };
+  }
+
+  // Photo-on-corkboard cards: a 4:3 photo or 16:9 clip frame above the label.
+  if (node.media) {
+    return node.media.kind === "video"
+      ? { width: 264, height: 304 }
+      : { width: 264, height: 348 };
   }
 
   switch (node.type) {
@@ -159,6 +167,7 @@ export function layoutCaseGraph(
     type: string;
     gapId?: string;
     size?: { width: number; height: number };
+    media?: { kind: "photo" | "video" };
   }>,
   edges: Array<{ source: string; target: string }>,
 ): Map<string, Point> {

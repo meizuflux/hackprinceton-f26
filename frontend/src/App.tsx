@@ -322,6 +322,7 @@ function BoardCanvas({
             data: {
               ...n,
               timeZone: layoutData.timezone,
+              caseId: layoutData.id,
               width: dim.width,
               height: dim.height,
               onInspect: () => inspect("node", n.id),
