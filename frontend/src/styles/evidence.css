@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Excalifont";
+  src: url("/fonts/Excalifont-Regular.woff2") format("woff2");
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+}
+
 .react-flow__node {
   width: 210px;
 }

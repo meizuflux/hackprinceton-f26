@@ -1,7 +1,6 @@
 import {
   ArrowRight,
   ArrowUpRight,
-  FileText,
   Fingerprint,
   FolderOpen,
   Plus,
@@ -11,81 +10,9 @@ import { useState } from "react";
 import type { CaseData } from "../api/types";
 import "./onboarding.css";
 
+export { LandingPage as Landing } from "./LandingPage";
+
 type Navigate = (path: string) => void;
-
-export function Landing({ navigate }: { navigate: Navigate }) {
-  return (
-    <div className="onboarding landing-page">
-      <header className="onboarding-nav">
-        <a
-          className="onboarding-brand"
-          href="/"
-          onClick={(event) => {
-            event.preventDefault();
-            navigate("/");
-          }}
-        >
-          <Fingerprint size={25} aria-hidden="true" />
-          compstat
-        </a>
-        <button
-          className="button button-primary"
-          onClick={() => navigate("/projects")}
-        >
-          Open projects <ArrowRight size={16} aria-hidden="true" />
-        </button>
-      </header>
-
-      <main className="onboarding-main landing-main">
-        <section className="landing-hero">
-          <div className="landing-copy">
-            <h1>Evidence, connected.</h1>
-            <p>
-              Inspect records, trace connections to their original sources, and
-              review what evidence may still be missing.
-            </p>
-            <button
-              className="button button-primary"
-              onClick={() => navigate("/projects")}
-            >
-              Open projects <ArrowRight size={17} aria-hidden="true" />
-            </button>
-          </div>
-
-          <article
-            className="source-preview"
-            aria-label="Source excerpt preview"
-          >
-            <header className="source-preview-header">
-              <span>
-                <FileText size={15} aria-hidden="true" /> Source excerpt
-              </span>
-              <span className="source-preview-ref">S03</span>
-            </header>
-            <div className="source-preview-paper">
-              <div className="source-paper-meta">CAMERA EXPORT NOTES</div>
-              <blockquote>
-                “Export has no frames from 20:31 to 20:50. Recorder health and
-                source footage not included in this packet.”
-              </blockquote>
-              <div className="source-paper-citation">
-                <span>Original source</span>
-                <span>video/CAM-4E-export-notes.txt</span>
-              </div>
-            </div>
-            <div className="source-preview-link">
-              <span className="source-link-point" aria-hidden="true" />
-              <div>
-                <strong>Recording gap</strong>
-                <span>Question to review · linked to S03</span>
-              </div>
-            </div>
-          </article>
-        </section>
-      </main>
-    </div>
-  );
-}
 
 export interface SessionProject {
   caseId: string;
@@ -126,7 +53,7 @@ export function ProjectManager({
           }}
         >
           <Fingerprint size={25} aria-hidden="true" />
-          compstat
+          mapletrace
         </a>
       </header>
 
