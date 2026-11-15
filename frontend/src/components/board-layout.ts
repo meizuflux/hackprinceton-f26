@@ -140,3 +140,98 @@ export function threadHandles(source: Point, target: Point) {
     ? { sourceHandle: "source-bottom", targetHandle: "target-top" }
     : { sourceHandle: "source-top", targetHandle: "target-bottom" };
 }
+
+/** Left-to-right bands: who and what they used, what they said, what happened, where. */
+const BAND_ORDER = ["device", "person", "statement", "event", "location"];
+const BAND_GAP_X = 96;
+const ROW_GAP_Y = 56;
+
+/**
+ * Presentation-only layout for backend graphs, whose nodes arrive with column
+ * placeholders. Groups nodes into bands by type, wraps tall bands into
+ * sub-columns, orders each band by the average row of its neighbours to
+ * shorten threads, and centres every column vertically. Never adds, removes or
+ * reorders evidence: it only returns positions.
+ */
+export function layoutCaseGraph(
+  nodes: Array<{
+    id: string;
+    type: string;
+    gapId?: string;
+    size?: { width: number; height: number };
+  }>,
+  edges: Array<{ source: string; target: string }>,
+): Map<string, Point> {
+  const neighbours = new Map<string, string[]>();
+  for (const node of nodes) neighbours.set(node.id, []);
+  for (const edge of edges) {
+    neighbours.get(edge.source)?.push(edge.target);
+    neighbours.get(edge.target)?.push(edge.source);
+  }
+  const maxRows = Math.max(5, Math.ceil(Math.sqrt(nodes.length) * 1.1));
+  const bands = BAND_ORDER.map((type) =>
+    nodes.filter((node) => node.type === type),
+  );
+  const others = nodes.filter((node) => !BAND_ORDER.includes(node.type));
+  if (others.length) bands.push(others);
+
+  // Initial order: most connected first, so hubs sit in the middle rows.
+  const rank = new Map<string, number>();
+  for (const band of bands) {
+    band.sort(
+      (a, b) =>
+        (neighbours.get(b.id)?.length ?? 0) -
+          (neighbours.get(a.id)?.length ?? 0) || a.id.localeCompare(b.id),
+    );
+    band.forEach((node, index) => rank.set(node.id, index / band.length));
+  }
+  for (let sweep = 0; sweep < 4; sweep++) {
+    for (const band of bands) {
+      const centre = new Map<string, number>();
+      for (const node of band) {
+        const around = (neighbours.get(node.id) ?? [])
+          .map((id) => rank.get(id))
+          .filter((value): value is number => value !== undefined);
+        centre.set(
+          node.id,
+          around.length
+            ? around.reduce((sum, value) => sum + value, 0) / around.length
+            : (rank.get(node.id) ?? 0.5),
+        );
+      }
+      band.sort(
+        (a, b) =>
+          centre.get(a.id)! - centre.get(b.id)! || a.id.localeCompare(b.id),
+      );
+      band.forEach((node, index) =>
+        rank.set(node.id, (index + 0.5) / band.length),
+      );
+    }
+  }
+
+  const rowHeight =
+    Math.max(...nodes.map((node) => getPinDimensions(node).height), 0) +
+    ROW_GAP_Y;
+  const positions = new Map<string, Point>();
+  let x = 0;
+  for (const band of bands) {
+    if (!band.length) continue;
+    const columns = Math.ceil(band.length / maxRows);
+    const perColumn = Math.ceil(band.length / columns);
+    for (let column = 0; column < columns; column++) {
+      // Interleave so each sub-column spans the band's full vertical order.
+      const members = band.filter((_, index) => index % columns === column);
+      const width = Math.max(
+        ...members.map((node) => getPinDimensions(node).width),
+      );
+      const top = ((maxRows - perColumn) * rowHeight) / 2;
+      const stagger = column % 2 ? rowHeight / 2 : 0;
+      members.forEach((node, row) =>
+        positions.set(node.id, { x, y: top + stagger + row * rowHeight }),
+      );
+      x += width + BAND_GAP_X;
+    }
+    x += BAND_GAP_X;
+  }
+  return positions;
+}

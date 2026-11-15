@@ -30,9 +30,17 @@ export function getNodesForSelection(
         for (const n of data.nodes) {
           if (n.gapId === gap.id) ids.add(n.id);
         }
-        for (const n of data.nodes) {
-          if (n.citations.some((c) => gap.citations.includes(c))) {
-            ids.add(n.id);
+        if (gap.nodeIds) {
+          // The backend names the nodes a gap concerns; shared citations would
+          // be too broad once entity nodes cite every record behind them.
+          for (const id of gap.nodeIds) {
+            if (data.nodes.some((n) => n.id === id)) ids.add(id);
+          }
+        } else {
+          for (const n of data.nodes) {
+            if (n.citations.some((c) => gap.citations.includes(c))) {
+              ids.add(n.id);
+            }
           }
         }
         for (const claim of gap.affectedClaims) {

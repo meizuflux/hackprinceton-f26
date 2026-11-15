@@ -40,6 +40,7 @@ import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
   arrangePins,
+  layoutCaseGraph,
   getPinDimensions,
   settlePinMoves,
   threadHandles,
@@ -204,16 +205,24 @@ function BoardCanvas({
       onClearFocusSelection?.();
     }
   }, [focusSelection, active, inspect, onClearFocusSelection]);
+  // Fixture positions are hand-placed; backend positions are column placeholders.
+  const layout = useMemo(
+    () => (isMock ? undefined : layoutCaseGraph(data.nodes, data.edges)),
+    [data],
+  );
   const initialNodes: Node<PinData>[] = useMemo(
     () =>
       arrangePins(
         data.nodes.map((n) => {
           const dim = getPinDimensions(n);
+          const laidOut = layout?.get(n.id);
           return {
             id: n.id,
             type: "evidence",
             ariaLabel: `${n.label}. ${n.type}. Inspect evidence and sources`,
-            position: { x: 100 + n.position.x, y: n.position.y * 1.2 },
+            position: laidOut
+              ? { x: 100 + laidOut.x, y: laidOut.y }
+              : { x: 100 + n.position.x, y: n.position.y * 1.2 },
             width: dim.width,
             height: dim.height,
             data: {
@@ -229,7 +238,7 @@ function BoardCanvas({
           };
         }),
       ),
-    [data, inspect],
+    [data, inspect, layout],
   );
   const initialEdges: Edge<ThreadData>[] = useMemo(
     () =>
