@@ -13,7 +13,9 @@ import {
   AlertTriangle,
   HelpCircle,
 } from "lucide-react";
-import { cardKind } from "./board-colors";
+import { cardKind, markedOrigin } from "./board-colors";
+import { OriginBadge } from "./OriginBadge";
+import type { Origin } from "../api/types";
 export type PinData = {
   label: string;
   type: string;
@@ -23,6 +25,8 @@ export type PinData = {
   time?: string;
   timeZone?: string;
   certainty?: string;
+  origin?: Origin;
+  stage?: string;
   gapId?: string;
   active?: boolean;
   isFocused?: boolean;
@@ -49,7 +53,7 @@ export const EvidenceNode = memo(function EvidenceNode({
   };
   return (
     <div
-      className={`evidence-pin ${data.type} kind-${cardKind(data.type)} ${data.certainty === "inferred" ? "is-inferred" : ""} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""} ${data.isFocused ? "is-focused" : ""}`}
+      className={`evidence-pin ${data.type} kind-${cardKind(data.type)} ${data.certainty === "inferred" ? "is-inferred" : ""} ${markedOrigin(data.origin) ? `has-origin origin-${data.origin}` : ""} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""} ${data.isFocused ? "is-focused" : ""}`}
       style={pinStyle}
     >
       <svg
@@ -83,6 +87,7 @@ export const EvidenceNode = memo(function EvidenceNode({
           {data.certainty === "inferred" && (
             <span className="pin-certainty">Inferred</span>
           )}
+          <OriginBadge origin={data.origin} stage={data.stage} />
         </span>
         {data.time && (
           <span className="pin-time">

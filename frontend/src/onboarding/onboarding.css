@@ -463,3 +463,58 @@
     flex-direction: column;
   }
 }
+
+/* Upload confirmation: stacks above the upload modal. */
+.confirm-backdrop {
+  z-index: 110;
+}
+.confirm-modal h2 {
+  font-size: 20px;
+  overflow-wrap: anywhere;
+}
+.confirm-steps {
+  margin: 16px 0;
+  padding-left: 20px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+.confirm-modes {
+  display: grid;
+  gap: 10px;
+  margin: 0 0 16px;
+  padding: 0;
+  border: 0;
+}
+.confirm-modes legend {
+  margin-bottom: 8px;
+  padding: 0;
+  font-size: 13px;
+  font-weight: 600;
+}
+.confirm-modes label {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  font-size: 13px;
+  cursor: pointer;
+}
+.confirm-modes label:has(input:checked) {
+  border-color: var(--brand-border);
+  background: var(--brand-selected);
+}
+.confirm-modes small {
+  display: block;
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}

@@ -78,6 +78,7 @@ class IngestOptions:
     case_name: str | None = None
     limits: Limits = field(default_factory=Limits)
     overwrite: bool = False
+    trace: object | None = None   # optional trace.TraceWriter: presentation telemetry, never part of the evidence
 
 
 class Ingestor:
@@ -99,6 +100,9 @@ class Ingestor:
         self.manifest: dict = {}
         self.case_tz = self.tz
         self._file_tz: dict[int, ZoneInfo] = {}
+        self.trace = options.trace
+        self._manifest_match: dict[int, bool] = {}
+        self._hash_traced = False
 
     # ------------------------------------------------------------------ run
     def run(self, zip_path: Path) -> dict:
@@ -119,6 +123,11 @@ class Ingestor:
                 "pipeline_version": __version__, "assumed_timezone": self.opts.timezone,
                 "dayfirst_dates": str(self.dayfirst), "default_country_code": self.default_cc}
         self.conn.executemany("INSERT OR REPLACE INTO case_info(key, value) VALUES (?,?)", list(info.items()))
+        if self.trace:
+            self.trace.emit("ingest", "run_started", **{"mode": "replay", "llm": False, "model": None,
+                            "archive": {"filename": zip_path.name, "sha256": zip_sha, "bytes": info["source_archive_bytes"]},
+                            **self.trace.context})
+            self.trace.phase("ingest", "Hashing evidence")
         self.audit.write("intake", "archive_received", {k: info[k] for k in ("source_archive", "source_archive_sha256", "source_archive_bytes")})
 
         members = extract_zip(zip_path, self.out / "evidence", self.opts.limits, lambda a, d: self.audit.write("intake", a, d))
@@ -127,15 +136,30 @@ class Ingestor:
         self.audit.write("intake", "archive_extracted", {"files": len(members)})
         self.conn.commit()
         self._load_manifest()
+        if self.trace:
+            for fid in list(self._file_cache):
+                self._trace_hashed(fid)
+            self._hash_traced = True
+            self.trace.phase("ingest", "Parsing evidence")
 
         while self.queue:
-            self._process(self.queue.popleft())
+            fid = self.queue.popleft()
+            self._process(fid)
             self.conn.commit()
+            if self.trace:
+                self._trace_parsed(fid)
 
+        if self.trace:
+            self.trace.phase("ingest", "Linking entities")
         self._resolve_entities()
         self._link_mentions()
         self._flag_cross_source_duplicates()
         self.conn.commit()
+        if self.trace:
+            self.trace.emit("ingest", "entities_linked",
+                            entities=self.conn.execute("SELECT COUNT(DISTINCT canonical_id) FROM entities").fetchone()[0],
+                            links=self.conn.execute("SELECT COUNT(*) FROM entity_links").fetchone()[0])
+            self.trace.phase("ingest", "Writing the coverage report")
 
         from .report import build_report, write_summary_markdown
         report = build_report(self.conn)
@@ -164,7 +188,27 @@ class Ingestor:
         self.audit.write("intake", "file_registered", {"original_path": original_path, "sha256": sha, "size": size,
                                                        "origin": origin, "parent_file_id": parent}, fid)
         self.queue.append(fid)
+        if self.trace and self._hash_traced:
+            self._trace_hashed(fid)
         return fid
+
+    # ------------------------------------------------------------ trace (telemetry only)
+    def _evidence_id(self, fid: int) -> str:
+        row = self.conn.execute("SELECT external_id FROM evidence_files WHERE file_id=?", (fid,)).fetchone()
+        return (row[0] if row else None) or f"FILE-{fid}"
+
+    def _trace_hashed(self, fid: int) -> None:
+        row = self.conn.execute("SELECT original_path, sha256, size_bytes FROM evidence_files WHERE file_id=?", (fid,)).fetchone()
+        self.trace.emit("ingest", "file_hashed", evidenceId=self._evidence_id(fid), filename=row[0], sha256=row[1],
+                        bytes=row[2], manifestMatch=self._manifest_match.get(fid))
+
+    def _trace_parsed(self, fid: int) -> None:
+        row = self.conn.execute("SELECT original_path, sniffed_format, parse_status, record_count FROM evidence_files "
+                                "WHERE file_id=?", (fid,)).fetchone()
+        types = {t: n for t, n in self.conn.execute("SELECT record_type, COUNT(*) FROM records WHERE file_id=? "
+                                                     "GROUP BY record_type ORDER BY 2 DESC", (fid,))}
+        self.trace.emit("ingest", "file_parsed", evidenceId=self._evidence_id(fid), filename=row[0], format=row[1],
+                        parseStatus=row[2], records=row[3] or 0, recordTypes=types)
 
     def add_derived_file(self, parent_id: int, name: str, data: bytes, origin: str) -> int | None:
         depth = self._file_cache[parent_id]["depth"] + 1
@@ -234,8 +278,10 @@ class Ingestor:
             sha = self.conn.execute("SELECT sha256 FROM evidence_files WHERE file_id=?", (f,)).fetchone()[0]
             if sha == row["sha256"].lower():
                 matched += 1
+                self._manifest_match[f] = True
             else:
                 mismatched.append(row["path"])
+                self._manifest_match[f] = False
             self._set_file(f, external_id=row.get("evidence_id") or row.get("id"), manifest_json=json.dumps(row))
             zone = _zone_from_basis(row.get("time_basis", ""))
             if zone == "UTC":

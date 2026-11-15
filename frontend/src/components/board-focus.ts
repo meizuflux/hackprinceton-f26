@@ -159,13 +159,16 @@ const TOOLBAR_CLEARANCE: PaddingPx = "80px";
 export function getStoryPadding(options: {
   isNarrow?: boolean;
   dockOpen?: boolean;
+  /** A replay's run panel (340px, beside the toolbar) is open on the left. */
+  runPanelOpen?: boolean;
 }): { top: PaddingPx; bottom: PaddingPx; left: PaddingPx; right: PaddingPx } {
-  const besideDock =
-    !(options.isNarrow ?? false) && (options.dockOpen ?? false);
+  const isNarrow = options.isNarrow ?? false;
+  const besideDock = !isNarrow && (options.dockOpen ?? false);
   return {
     top: "108px",
     bottom: "56px",
-    left: TOOLBAR_CLEARANCE,
+    // inset 16 + toolbar 48 + gap 12 + run panel 340 + gap 16
+    left: !isNarrow && options.runPanelOpen ? "432px" : TOOLBAR_CLEARANCE,
     right: besideDock ? "470px" : "72px",
   };
 }

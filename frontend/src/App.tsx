@@ -1,4 +1,11 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+} from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow,
@@ -36,7 +43,12 @@ import {
 import { api, isMock } from "./api/client";
 import { isApiError } from "./api/http";
 import type { CaseData, EvidenceEdge } from "./api/types";
-import { CanvasMinimap, ZoomReadout } from "./components/CanvasMinimap";
+import {
+  CanvasMinimap,
+  ZoomReadout,
+  nodeSize,
+} from "./components/CanvasMinimap";
+import { boundsOf } from "./components/minimap-geometry";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
@@ -102,6 +114,9 @@ import { AskWidget } from "./components/AskWidget";
 import { AnalysisEntries } from "./components/AnalysisEntries";
 import { HeadlinePanel } from "./components/HeadlinePanel";
 import { resolveHeadline } from "./components/headline";
+import { ReplayedCase } from "./replay/ReplayedCase";
+import { requestReplay } from "./replay/intent";
+import { UploadConfirm, type AnalysisMode } from "./onboarding/UploadConfirm";
 
 /** A request from another section to open the board's review dock. */
 export type ReviewRequest = { panel: Tab | "audit"; id: number };
@@ -120,6 +135,9 @@ const edgeTypes = { thread: ThreadEdge };
 const isNarrowViewport = () =>
   typeof window !== "undefined" &&
   window.matchMedia("(max-width: 900px)").matches;
+// A replay's expanded run panel covers the left of the board; story fits make room for it.
+const isRunPanelOpen = () =>
+  typeof document !== "undefined" && !!document.querySelector(".replay-hud");
 
 /** Story-view node state; card content is read from the case at render. */
 type StoryNodeState = { arriveFrom?: Point };
@@ -148,6 +166,7 @@ function threadEdge(e: EvidenceEdge): Edge<ThreadData> {
       badge: threadBadge(e.type, e.certainty),
       label: e.label,
       directed: e.directed === true,
+      origin: e.origin,
       onInspect: () => {},
     },
     ariaLabel: `${threadColors[category].label}: ${e.label}. Inspect relationship and sources`,
@@ -190,6 +209,8 @@ function labelOffsets(
 }
 function BoardCanvas({
   data,
+  layoutData = data,
+  growing = false,
   projectName,
   onOpenSource,
   active,
@@ -199,6 +220,10 @@ function BoardCanvas({
   onClearReviewRequest,
 }: {
   data: CaseData;
+  /** The full case, laid out once so cards revealed by a replay keep their final positions. */
+  layoutData?: CaseData;
+  /** A replay is revealing the board: animate arrivals and gently refit. */
+  growing?: boolean;
   projectName?: string;
   onOpenSource: (sourceId: string) => void;
   active: boolean;
@@ -207,7 +232,7 @@ function BoardCanvas({
   reviewRequest?: ReviewRequest | null;
   onClearReviewRequest?: () => void;
 }) {
-  const { fitView, getViewport, setViewport } = useReactFlow();
+  const { fitView, fitBounds, getViewport, setViewport } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
 
   // Story view: the backend's opening selection, with the rest of the board
@@ -233,12 +258,14 @@ function BoardCanvas({
   const [viewMode, setViewMode] = useState<"story" | "full">(
     story ? "story" : "full",
   );
-  const storyMode = viewMode === "story" && story !== null;
+  // A running replay grows the full layout; the story view takes over once the run has finished.
+  const storyMode = viewMode === "story" && story !== null && !growing;
   // The dock state is declared below; story fits read it when they run.
   const dockOpenRef = useRef(false);
   const storyPadding = useCallback(
     () =>
       getStoryPadding({
+        runPanelOpen: isRunPanelOpen(),
         isNarrow: isNarrowViewport(),
         dockOpen: dockOpenRef.current,
       }),
@@ -525,6 +552,7 @@ function BoardCanvas({
       });
       if (storyModeRef.current)
         fitOptions.padding = getStoryPadding({
+          runPanelOpen: isRunPanelOpen(),
           isNarrow,
           dockOpen: isDockOpen,
         });
@@ -701,13 +729,14 @@ function BoardCanvas({
   }, [focusSelection, active, inspect, onClearFocusSelection]);
   // Fixture positions are hand-placed; backend positions are column placeholders.
   const layout = useMemo(
-    () => (isMock ? undefined : layoutCaseGraph(data.nodes, data.edges)),
-    [data],
+    () =>
+      isMock ? undefined : layoutCaseGraph(layoutData.nodes, layoutData.edges),
+    [layoutData],
   );
   const initialNodes: Node<PinData>[] = useMemo(
     () =>
       arrangePins(
-        data.nodes.map((n) => {
+        layoutData.nodes.map((n) => {
           const dim = getPinDimensions(n);
           const laidOut = layout?.get(n.id);
           return {
@@ -721,7 +750,7 @@ function BoardCanvas({
             height: dim.height,
             data: {
               ...n,
-              timeZone: data.timezone,
+              timeZone: layoutData.timezone,
               width: dim.width,
               height: dim.height,
               onInspect: () => inspect("node", n.id),
@@ -732,11 +761,11 @@ function BoardCanvas({
           };
         }),
       ),
-    [data, inspect, layout],
+    [layoutData, inspect, layout],
   );
   const initialEdges: Edge<ThreadData>[] = useMemo(
-    () => data.edges.map(threadEdge),
-    [data],
+    () => layoutData.edges.map(threadEdge),
+    [layoutData],
   );
   const [nodes, setNodes] = useNodesState(initialNodes);
   const onNodesChange = useCallback(
@@ -751,11 +780,28 @@ function BoardCanvas({
     },
     [setNodes],
   );
-  const [edges, , onEdgesChange] = useEdgesState(initialEdges);
+  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  // The full board arrives after the run when a live import started on an empty map.
+  const laidOutFor = useRef(layoutData);
+  useEffect(() => {
+    if (laidOutFor.current === layoutData) return;
+    laidOutFor.current = layoutData;
+    setNodes(initialNodes);
+    setEdges(initialEdges);
+  }, [layoutData, initialNodes, initialEdges, setNodes, setEdges]);
+  const revealedNodeIds = useMemo(
+    () => new Set(data.nodes.map((n) => n.id)),
+    [data.nodes],
+  );
+  const revealedEdgeIds = useMemo(
+    () => new Set(data.edges.map((e) => e.id)),
+    [data.edges],
+  );
   // Fit the board beside the dock when it is open, including the headline on load.
   dockOpenRef.current = dockMode !== "closed";
   const fitPadding = storyMode
     ? getStoryPadding({
+        runPanelOpen: isRunPanelOpen(),
         isNarrow: isNarrowViewport(),
         dockOpen: dockMode !== "closed",
       })
@@ -779,6 +825,7 @@ function BoardCanvas({
       const box = card.getBoundingClientRect();
       const area = wrap.getBoundingClientRect();
       const pad = getStoryPadding({
+        runPanelOpen: isRunPanelOpen(),
         isNarrow: isNarrowViewport(),
         dockOpen: dockOpenRef.current,
       });
@@ -808,16 +855,20 @@ function BoardCanvas({
     ? { minZoom: 0.3, maxZoom: 1 }
     : { minZoom: 0.5, maxZoom: 1.1 };
   const normalizedSearch = search.trim().toLowerCase();
+  const revealedNodes = useMemo(
+    () => nodes.filter((n) => revealedNodeIds.has(n.id)),
+    [nodes, revealedNodeIds],
+  );
   const matchingNodes = useMemo(
     () =>
       normalizedSearch
-        ? nodes.filter((n) =>
+        ? revealedNodes.filter((n) =>
             `${n.data.label} ${n.data.summary}`
               .toLowerCase()
               .includes(normalizedSearch),
           )
-        : nodes,
-    [nodes, normalizedSearch],
+        : revealedNodes,
+    [revealedNodes, normalizedSearch],
   );
   const matchingNodeIds = useMemo(
     () => (normalizedSearch ? new Set(matchingNodes.map((n) => n.id)) : null),
@@ -1025,34 +1076,51 @@ function BoardCanvas({
     openAggregate,
   ]);
 
-  const visibleNodes = useMemo(
-    () =>
-      nodes.map((n) => {
-        const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
-        const isDimmed =
-          (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
-          (focusedNodeIds && !isFocused);
-        return {
-          ...n,
-          className:
-            `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
-          data: {
-            ...n.data,
-            active:
-              selection?.kind === "node" ? selection.id === n.id : isFocused,
-            isFocused,
-            onInspect: () => inspect("node", n.id),
-            onInspectGap: n.data.gapId
-              ? () => inspect("gap", n.data.gapId!)
-              : undefined,
-          },
-        };
-      }),
-    [nodes, matchingNodeIds, focusedNodeIds, selection, inspect],
-  );
+  // Items revealed in the same tick fade in a few tens of ms apart.
+  const revealDelays = useRef(new Map<string, number>());
+  const visibleNodes = useMemo(() => {
+    let fresh = 0;
+    return revealedNodes.map((n) => {
+      const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
+      const isDimmed =
+        (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
+        (focusedNodeIds && !isFocused);
+      if (growing && !revealDelays.current.has(n.id))
+        revealDelays.current.set(n.id, Math.min(fresh++, 6) * 50);
+      const delay = revealDelays.current.get(n.id);
+      return {
+        ...n,
+        ...(delay
+          ? { style: { ...n.style, "--reveal-delay": `${delay}ms` } }
+          : {}),
+        className:
+          `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+        data: {
+          ...n.data,
+          active:
+            selection?.kind === "node" ? selection.id === n.id : isFocused,
+          isFocused,
+          onInspect: () => inspect("node", n.id),
+          onInspectGap: n.data.gapId
+            ? () => inspect("gap", n.data.gapId!)
+            : undefined,
+        },
+      };
+    });
+  }, [
+    revealedNodes,
+    matchingNodeIds,
+    focusedNodeIds,
+    selection,
+    inspect,
+    growing,
+  ]);
 
   const visibleEdges = useMemo(() => {
-    const list = storyMode ? storyEdges : edges;
+    // In the full graph a running replay shows only the threads revealed so far.
+    const list = storyMode
+      ? storyEdges
+      : edges.filter((edge) => revealedEdgeIds.has(edge.id));
     const positioned: Array<{
       id: string;
       position: Point;
@@ -1101,6 +1169,7 @@ function BoardCanvas({
     storyEdges,
     storyNodes,
     edges,
+    revealedEdgeIds,
     nodes,
     focusedNodeIds,
     selection,
@@ -1126,6 +1195,15 @@ function BoardCanvas({
     },
     [viewMode, selection, data, focusTarget, resetBoardView],
   );
+  // When a replay finishes, the board opens on its story once (it had no story while it grew).
+  const wasGrowing = useRef(growing);
+  useEffect(() => {
+    const finished = wasGrowing.current && !growing;
+    wasGrowing.current = growing;
+    if (!finished || !story) return;
+    if (viewMode === "story") window.setTimeout(resetBoardView, 40);
+    else switchView("story");
+  }, [growing, story, viewMode, switchView, resetBoardView]);
   const onStoryNodesChange = useCallback(
     (changes: NodeChange<Node<StoryNodeState>>[]) => {
       setStoryNodes((current) => {
@@ -1138,6 +1216,27 @@ function BoardCanvas({
     },
     [setStoryNodes],
   );
+  // A replay frames the finished layout once, so cards appear in place while the camera holds still.
+  const framedReplay = useRef(false);
+  const [flowReady, setFlowReady] = useState(false);
+  useEffect(() => {
+    if (!growing) {
+      framedReplay.current = false;
+      return;
+    }
+    if (framedReplay.current || !flowReady || !active || dockMode !== "closed")
+      return;
+    framedReplay.current = true;
+    const bounds = boundsOf(
+      nodes.map((node) => ({ ...node.position, ...nodeSize(node) })),
+    );
+    // Leave room on the left for the run panel.
+    const panel = bounds.width * 0.3;
+    void fitBounds(
+      { ...bounds, x: bounds.x - panel, width: bounds.width + panel },
+      { padding: 0.08, duration: 400 },
+    );
+  }, [growing, flowReady, active, dockMode, fitBounds, nodes]);
   return (
     <>
       <div className="workspace">
@@ -1210,7 +1309,7 @@ function BoardCanvas({
             </div>
           </div>
           <div
-            className={`canvas-wrap ${storyMode && boardView === "graph" ? "is-story" : ""}`}
+            className={`canvas-wrap ${storyMode && boardView === "graph" ? "is-story" : ""}${growing ? " replay-growing" : ""}`}
             style={boardColorVars()}
           >
             {boardView === "list" ? (
@@ -1316,7 +1415,8 @@ function BoardCanvas({
                   if (expandedId) setExpandedId(null);
                   else if (dockMode === "inspector") closeInspector();
                 }}
-                fitView
+                onInit={() => setFlowReady(true)}
+                fitView={!growing}
                 fitViewOptions={{ padding: fitPadding, ...fitZoom }}
                 panOnScroll
                 panOnScrollSpeed={1}
@@ -1340,7 +1440,7 @@ function BoardCanvas({
                 >
                   <ZoomReadout />
                 </Controls>
-                {!storyMode && <CanvasMinimap />}
+                {!storyMode && <CanvasMinimap frameNodes={nodes} />}
               </ReactFlow>
             )}
             {story && boardView === "graph" && (
@@ -1742,8 +1842,13 @@ function AuditDescription({ text }: { text: string }) {
 
 function Board(props: {
   data: CaseData;
+  layoutData?: CaseData;
+  growing?: boolean;
+  /** Run panel from the replay, mounted beside the Ask widget. */
+  hud?: ReactNode;
   projectName?: string;
   onOpenSource: (sourceId: string) => void;
+  onAskQuestion: () => void;
   active: boolean;
   focusSelection?: Selection | null;
   onClearFocusSelection?: () => void;
@@ -1755,11 +1860,8 @@ function Board(props: {
       <ReactFlowProvider>
         <BoardCanvas {...props} />
       </ReactFlowProvider>
-      <AskWidget
-        caseId={props.data.id}
-        sourceIds={props.data.sources.map((source) => source.id)}
-        onOpenSource={props.onOpenSource}
-      />
+      {props.hud}
+      <AskWidget caseId={props.data.id} onAsk={props.onAskQuestion} />
     </>
   );
 }
@@ -1779,6 +1881,7 @@ export default function App() {
   const [jobId, setJobId] = useState<string | null>(null);
   const [error, setError] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [uploadedCaseId, setUploadedCaseId] = useState<string | null>(null);
   const [dragging, setDragging] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -1792,6 +1895,16 @@ export default function App() {
       route.kind === "new-project",
     retry: (count, error) =>
       count < 2 && (!isApiError(error) || error.status >= 500),
+    // A case opened while its import still runs becomes loadable when it finishes.
+    refetchInterval: (query) =>
+      isApiError(query.state.error, "not_ready") ? 1500 : false,
+  });
+  const healthQuery = useQuery({
+    queryKey: ["health"],
+    queryFn: () => api.getHealth?.() ?? Promise.resolve({ llmLive: false }),
+    enabled: uploadOpen && api.mode === "live",
+    staleTime: 30_000,
+    retry: false,
   });
   const casesQuery = useQuery({
     queryKey: ["cases"],
@@ -1810,6 +1923,7 @@ export default function App() {
   const ready = statusQuery.data?.status === "ready";
   const uploadFailed =
     statusQuery.isError || statusQuery.data?.status === "failed";
+  const caseNotReady = isApiError(caseQuery.error, "not_ready");
   const caseNotFound =
     route.kind === "case" &&
     ((caseQuery.data !== undefined && caseQuery.data.id !== route.caseId) ||
@@ -1860,6 +1974,8 @@ export default function App() {
       );
     (focusable()[0] ?? dialog)?.focus();
     const handleKey = (event: KeyboardEvent) => {
+      // The confirmation dialog handles its own Escape and Tab.
+      if (document.querySelector(".confirm-modal")) return;
       const guard = uploadGuard.current;
       if (
         event.key === "Escape" &&
@@ -1894,16 +2010,42 @@ export default function App() {
     };
   }, [uploadOpen]);
 
-  async function upload() {
+  async function upload(analysisMode?: AnalysisMode) {
     if (!file) return;
     setError("");
     setUploading(true);
     try {
-      const result = await api.createUpload(file, { caseName: projectName });
+      const result = await api.createUpload(file, {
+        caseName: projectName,
+        analysisMode,
+      });
+      setConfirmOpen(false);
+      if (api.mode === "live" && result.caseId) {
+        // Go straight to the empty map; the run is shown as it happens.
+        const caseId = result.caseId;
+        const name = projectName.trim() || file.name.replace(/\.zip$/i, "");
+        requestReplay(caseId);
+        setProjects((current) => [
+          { caseId, name },
+          ...current.filter((p) => p.caseId !== caseId),
+        ]);
+        void queryClient.invalidateQueries({ queryKey: ["cases"] });
+        setProjectName("");
+        setFile(null);
+        setUploading(false);
+        navigate(casePath(caseId));
+        return;
+      }
       setJobId(result.jobId);
       setUploadedCaseId(result.caseId ?? null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Upload failed. Try again.");
+      setError(
+        isApiError(e, "needs_api_key")
+          ? "Live analysis needs an Anthropic API key on the server. Choose the free replay instead, or ask the server owner to configure a key."
+          : e instanceof Error
+            ? e.message
+            : "Upload failed. Try again.",
+      );
       setUploading(false);
     }
   }
@@ -1915,6 +2057,7 @@ export default function App() {
     setUploading(false);
     setFile(null);
     setError("");
+    setConfirmOpen(false);
   }
   closeUploadRef.current = closeUpload;
   /** Opens a case by ID, or the demo case when no ID is given. */
@@ -1923,6 +2066,8 @@ export default function App() {
     setOpeningCase(true);
     try {
       const caseId = requestedId ?? (await api.openDemo());
+      // The demo opens on an empty map and replays its recorded run.
+      if (!requestedId && api.mode === "live") requestReplay(caseId);
       const data = await queryClient.fetchQuery({
         queryKey: ["case", caseId],
         queryFn: () => api.getCase(caseId),
@@ -1973,7 +2118,9 @@ export default function App() {
         />
       ) : (
         <div className="app-shell">
-          {(route.kind !== "case" || !caseQuery.data || caseNotFound) && (
+          {(route.kind !== "case" ||
+            (!caseQuery.data && !caseNotReady) ||
+            caseNotFound) && (
             <WorkspaceNavigation
               navigate={navigate}
               projects={listedProjects}
@@ -2006,17 +2153,8 @@ export default function App() {
                 <LoaderCircle className="spin" />
                 <h2>Opening evidence workspace…</h2>
               </div>
-            ) : isApiError(caseQuery.error, "not_ready") ? (
-              <div className="center-state">
-                <h2>This case is still being analysed</h2>
-                <button
-                  className="button button-primary"
-                  onClick={() => caseQuery.refetch()}
-                >
-                  Check again
-                </button>
-              </div>
-            ) : caseQuery.isError ? (
+            ) : caseQuery.isError &&
+              !isApiError(caseQuery.error, "not_ready") ? (
               <div className="center-state">
                 <h2>Couldn’t load the case</h2>
                 <p>{caseQuery.error.message}</p>
@@ -2027,50 +2165,82 @@ export default function App() {
                   Try again
                 </button>
               </div>
-            ) : (
-              <CaseWorkspace
-                key={caseQuery.data.id}
+            ) : route.kind === "case" ? (
+              <ReplayedCase
+                caseId={route.caseId}
                 data={caseQuery.data}
-                view={route.kind === "case" ? (route.view ?? "board") : "board"}
-                sourceId={route.kind === "case" ? route.sourceId : undefined}
-                insightsTab={
-                  route.kind === "case" ? route.insightsTab : undefined
+                title={
+                  projects.find((project) => project.caseId === route.caseId)
+                    ?.name ?? route.caseId
                 }
-                navigate={navigate}
-                onOpenReview={(panel) => {
-                  setReviewRequest({ panel, id: Date.now() });
-                  navigate(casePath(caseQuery.data.id));
-                }}
-                onFocusOnBoard={(sel) => {
-                  setFocusSelection(sel);
-                  if (route.kind !== "case" || route.view) {
-                    navigate(casePath(caseQuery.data.id));
-                  }
-                }}
-                projectName={
-                  projects.find(
-                    (project) => project.caseId === caseQuery.data.id,
-                  )?.name
+                fallback={
+                  <div className="center-state">
+                    <h2>This case is still being analysed</h2>
+                    <button
+                      className="button button-primary"
+                      onClick={() => caseQuery.refetch()}
+                    >
+                      Check again
+                    </button>
+                  </div>
                 }
               >
-                <Board
-                  data={caseQuery.data}
-                  active={route.kind === "case" && !route.view}
-                  focusSelection={focusSelection}
-                  onClearFocusSelection={() => setFocusSelection(null)}
-                  reviewRequest={reviewRequest}
-                  onClearReviewRequest={() => setReviewRequest(null)}
-                  projectName={
-                    projects.find(
-                      (project) => project.caseId === caseQuery.data.id,
-                    )?.name
-                  }
-                  onOpenSource={(sourceId) =>
-                    navigate(casePath(caseQuery.data.id, "evidence", sourceId))
-                  }
-                />
-              </CaseWorkspace>
-            )}
+                {(shown, context) => (
+                  <CaseWorkspace
+                    key={route.caseId}
+                    data={shown}
+                    view={
+                      route.kind === "case" ? (route.view ?? "board") : "board"
+                    }
+                    sourceId={
+                      route.kind === "case" ? route.sourceId : undefined
+                    }
+                    insightsTab={
+                      route.kind === "case" ? route.insightsTab : undefined
+                    }
+                    navigate={navigate}
+                    onOpenReview={(panel) => {
+                      setReviewRequest({ panel, id: Date.now() });
+                      navigate(casePath(route.caseId));
+                    }}
+                    onFocusOnBoard={(sel) => {
+                      setFocusSelection(sel);
+                      if (route.kind !== "case" || route.view) {
+                        navigate(casePath(route.caseId));
+                      }
+                    }}
+                    projectName={
+                      projects.find(
+                        (project) => project.caseId === route.caseId,
+                      )?.name
+                    }
+                  >
+                    <Board
+                      layoutData={context.layoutData}
+                      growing={context.growing}
+                      hud={context.hud}
+                      data={shown}
+                      active={route.kind === "case" && !route.view}
+                      focusSelection={focusSelection}
+                      onClearFocusSelection={() => setFocusSelection(null)}
+                      reviewRequest={reviewRequest}
+                      onClearReviewRequest={() => setReviewRequest(null)}
+                      projectName={
+                        projects.find(
+                          (project) => project.caseId === route.caseId,
+                        )?.name
+                      }
+                      onAskQuestion={() =>
+                        navigate(casePath(route.caseId, "chat"))
+                      }
+                      onOpenSource={(sourceId) =>
+                        navigate(casePath(route.caseId, "evidence", sourceId))
+                      }
+                    />
+                  </CaseWorkspace>
+                )}
+              </ReplayedCase>
+            ) : null}
           </main>
         </div>
       )}
@@ -2205,7 +2375,12 @@ export default function App() {
                       void openCase(
                         statusQuery.data?.caseId ?? uploadedCaseId ?? undefined,
                       )
-                  : upload
+                  : api.mode === "live"
+                    ? () => {
+                        setError("");
+                        setConfirmOpen(true);
+                      }
+                    : () => void upload()
               }
             >
               {openingCase ? (
@@ -2245,6 +2420,19 @@ export default function App() {
               </p>
             )}
           </section>
+          {confirmOpen && file && (
+            <UploadConfirm
+              fileName={file.name}
+              llmLive={healthQuery.data?.llmLive === true}
+              busy={uploading}
+              error={error}
+              onCancel={() => {
+                setConfirmOpen(false);
+                setError("");
+              }}
+              onConfirm={(mode) => void upload(mode)}
+            />
+          )}
         </div>
       )}
     </>

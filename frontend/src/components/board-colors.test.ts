@@ -5,7 +5,10 @@ import {
   THREAD_CATEGORIES,
   cardColors,
   cardKind,
+  ORIGIN_INK,
   contrastRatio,
+  markedOrigin,
+  originLabel,
   threadBadge,
   threadCategory,
   threadColors,
@@ -65,5 +68,18 @@ describe("board color coding", () => {
     expect(threadBadge("contradicts", "inferred")).toBe(
       "Contradiction · inferred",
     );
+  });
+
+  it("marks only ML, agent and LLM origins, in a neutral readable ink", () => {
+    expect(markedOrigin("ml")).toBe("ml");
+    expect(markedOrigin("agent")).toBe("agent");
+    expect(markedOrigin("rules")).toBeUndefined();
+    expect(markedOrigin(undefined)).toBeUndefined();
+    expect(contrastRatio(ORIGIN_INK, PAPER.card)).toBeGreaterThanOrEqual(4.5);
+    expect(contrastRatio(ORIGIN_INK, PAPER.canvas)).toBeGreaterThanOrEqual(4.5);
+    expect(originLabel("ml", "ml_signals", "KMeans")).toBe(
+      "Traditional ML (KMeans) · stage ml_signals",
+    );
+    expect(originLabel("agent")).toContain("Deepagents investigator");
   });
 });

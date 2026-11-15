@@ -213,6 +213,10 @@ Colour on the board comes only from the API's type and certainty, through the in
 - **Key:** a 32px pill at the bottom left opening a popover (Cards, Threads) that lists only the types present in the case. The minimap mirrors the colours.
 - **Story view:** compact story cards (196×96) frame a 300×140 hero card; group cards show an exact count and fan out their members; the opening fit aims for about 90% zoom beside the open dock.
 
+### Origin marks
+
+Provenance (traditional ML, agent, LLM) is encoded without hue: a graphite `#33373d` stamp chip with icon and word, a faint dotted (ML), hatched (agent) or ruled (LLM) strip along the card bottom, the icon on thread labels, a minimap tab and an Origin legend row. Rules and record items stay unmarked.
+
 ## Typography
 
 **Display / Document Font:** Newsreader (with Georgia, serif fallback)

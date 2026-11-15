@@ -14,6 +14,7 @@ Run:  uvicorn mapletrace_api.app:app --reload --port 8000      (from backend/)
     GET  /cases/{caseId}/evidence/{evidenceId}/view?locator=&offset=&limit=   viewable file + cited position
     GET  /cases/{caseId}/files           evidence inventory from the latest ingestion (hash, format, parse status, ...)
     GET  /cases/{caseId}/records?evidenceId=&limit=&offset=   normalized ingestion records, read-only, with citations
+    GET  /cases/{caseId}/trace?after=N   run trace events (ingestion + analysis, replay clock), readable while processing
     GET  /cases/{caseId}/audit-chain     ingestion + analysis audit entries with hashes, re-verified
     POST /cases/{caseId}/evidence        add a ZIP of new evidence -> new version, compared with the previous one
     POST /demo                           install the committed Kestrel demo snapshot (instant, no model calls) -> {caseId}
@@ -52,6 +53,7 @@ from mapletrace_api.chat import ChatError, ChatService
 from mapletrace_ingest.verify import verify_run
 from mapletrace_ingest.db import GENESIS_HASH, verify_audit_chain
 from mapletrace_ingest.pipeline import ingest_zip
+from mapletrace_ingest.trace import TraceWriter
 from mapletrace_reason import history
 from mapletrace_reason.llm_cache import cache_path
 from mapletrace_reason.pipeline import analyze
@@ -171,9 +173,14 @@ def _combined_zip(case_dir: Path, meta: dict, version: int) -> Path:
     return out
 
 
-def _llm_config(meta: dict) -> Optional[dict]:
+def _llm_config(meta: dict, case_dir: Optional[Path] = None) -> Optional[dict]:
     """LLM settings for a case. An upload whose archive has recorded responses (`backend/llm_cache/`) replays them for
-    free, without calling the API; an explicit LLM request records responses it does not have yet (billed)."""
+    free, without calling the API; an explicit LLM request records responses it does not have yet (billed).
+    `analysis_mode: live` makes real calls and neither reads nor writes the committed cache: its responses go to a
+    case-local cache (`<case>/llm_cache/`), which only a re-analysis of that same case replays."""
+    if meta.get("analysis_mode") == "live" and case_dir is not None:
+        return {"model": LLM_MODEL, "verifier_model": LLM_MODEL, "cache_mode": "record",
+                "cache_dir": str(case_dir / "llm_cache")}
     sha = meta["uploads"][0]["sha256"] if len(meta.get("uploads", [])) == 1 else None
     cached = bool(sha) and cache_path(sha).exists()
     if meta.get("llm"):
@@ -188,18 +195,23 @@ def _llm_config(meta: dict) -> Optional[dict]:
 def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str], reingest: bool = True) -> None:
     case_dir = _cases() / case_id
     meta = _read_json(case_dir / "case.json")
+    trace = None
     try:
         ingest_dir = case_dir / "ingest" / f"v{version}"
+        llm = _llm_config(meta, case_dir)
+        trace = TraceWriter(ingest_dir / "trace.jsonl",
+                            {"mode": "live" if meta.get("analysis_mode") == "live" else "replay", "llm": bool(llm),
+                             "model": LLM_MODEL if llm else None})
         if reingest:
             _job(job_id, status="processing", progress=5, stage="ingest", message="Hashing and reading evidence")
             src = _combined_zip(case_dir, meta, version)
-            ingest_zip(src, ingest_dir, timezone=meta.get("timezone") or "UTC", case_name=meta.get("title"), overwrite=True)
+            ingest_zip(src, ingest_dir, timezone=meta.get("timezone") or "UTC", case_name=meta.get("title"), overwrite=True,
+                       trace=trace)
         _job(job_id, status="processing", progress=40, stage="analysis", message="Analysing evidence")
-        llm = _llm_config(meta)
 
         def progress(stage, pct):
             _job(job_id, status="processing", progress=40 + int(pct * 0.58), stage=stage, message=stage.replace("_", " "))
-        summary = analyze(ingest_dir, None, previous, case_dir / "overrides.jsonl", llm, progress)
+        summary = analyze(ingest_dir, None, previous, case_dir / "overrides.jsonl", llm, progress, trace)
         with _lock:
             meta = _read_json(case_dir / "case.json")
             meta.setdefault("versions", []).append({"version": version, "ingest_dir": str(ingest_dir.relative_to(case_dir)),
@@ -207,8 +219,11 @@ def _run_version(job_id: str, case_id: str, version: int, previous: Optional[str
                                                     "created": _now(), "changes": summary["changes"]})
             meta["latest"] = len(meta["versions"]) - 1
             _write_json(case_dir / "case.json", meta)
+        trace.finish("ready")  # after case.json lists the version, so a client that sees "ready" can load the case
         _job(job_id, status="ready", progress=100, stage="done", message="Analysis ready", summary=summary)
     except Exception as exc:  # noqa: BLE001 - report the failure to the client
+        if trace is not None:
+            trace.finish("failed")
         _job(job_id, status="failed", progress=100, stage="failed", message=f"{type(exc).__name__}: {exc}",
              trace=traceback.format_exc(limit=4))
 
@@ -254,15 +269,23 @@ def _scalar(v) -> bool:
 # --------------------------------------------------------------------------- routes
 @app.get("/health")
 def health():
-    return {"ok": True, "time": _now()}
+    # llmLive: a server API key is configured, so an upload may ask for analysis_mode=live (billed)
+    return {"ok": True, "time": _now(), "llmLive": bool(os.environ.get("ANTHROPIC_API_KEY"))}
 
 
 @app.post("/upload")
 async def upload(background: BackgroundTasks, file: UploadFile = File(...), case_name: Optional[str] = Form(None),
-                 timezone_name: Optional[str] = Form(None, alias="timezone"), llm: bool = Form(False)):
+                 timezone_name: Optional[str] = Form(None, alias="timezone"), llm: bool = Form(False),
+                 analysis_mode: str = Form("replay")):
     # the /docs form pre-fills optional fields with the placeholder "string"; treat that as empty
     case_name = None if (case_name or "").strip() in ("", "string") else case_name
     timezone_name = None if (timezone_name or "").strip() in ("", "string") else timezone_name.strip()
+    analysis_mode = (analysis_mode or "").strip().lower() or "replay"
+    if analysis_mode not in ("replay", "live"):
+        raise ApiError(400, "bad_analysis_mode", "analysis_mode must be 'replay' or 'live'")
+    if analysis_mode == "live" and not os.environ.get("ANTHROPIC_API_KEY"):
+        raise ApiError(400, "needs_api_key", "live analysis makes billed model calls and needs ANTHROPIC_API_KEY on the "
+                                             "server; use analysis_mode=replay")
     if timezone_name:
         from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
         try:
@@ -279,10 +302,12 @@ async def upload(background: BackgroundTasks, file: UploadFile = File(...), case
         shutil.rmtree(case_dir, ignore_errors=True)  # a rejected upload leaves no empty case behind
         raise
     meta = {"caseId": case_id, "title": case_name or Path(file.filename or "case").stem, "created": _now(),
-            "timezone": timezone_name, "llm": bool(llm), "uploads": [{**info, "stored": "upload_1.zip"}], "versions": [],
+            "timezone": timezone_name, "llm": bool(llm), "analysis_mode": analysis_mode, "uploads": [{**info, "stored": "upload_1.zip"}], "versions": [],
             "latest": None}
     _write_json(case_dir / "case.json", meta)
     job_id = uuid.uuid4().hex
+    meta["jobId"] = job_id
+    _write_json(case_dir / "case.json", meta)
     _job(job_id, status="processing", progress=0, stage="queued", message="Queued", caseId=case_id)
     background.add_task(_run_version, job_id, case_id, 1, None)
     return {"jobId": job_id, "caseId": case_id}
@@ -601,7 +626,7 @@ def _reanalyse(job_id: str, case_id: str, v: dict) -> None:
     ingest_dir = case_dir / v["ingest_dir"]
     try:
         meta = _read_json(case_dir / "case.json")
-        summary = analyze(ingest_dir, None, case_dir / v["analysis_dir"], case_dir / "overrides.jsonl", _llm_config(meta))
+        summary = analyze(ingest_dir, None, case_dir / v["analysis_dir"], case_dir / "overrides.jsonl", _llm_config(meta, case_dir))
         with _lock:
             meta = _read_json(case_dir / "case.json")
             meta["versions"].append({**v, "analysis_dir": str(Path(summary["out_dir"]).resolve().relative_to(case_dir.resolve())),
@@ -631,6 +656,49 @@ async def add_evidence(case_id: str, background: BackgroundTasks, file: UploadFi
     _job(job_id, status="processing", progress=0, stage="queued", message="Queued", caseId=case_id)
     background.add_task(_run_version, job_id, case_id, version, previous)
     return {"jobId": job_id, "caseId": case_id, "version": version}
+
+
+def _trace_events(path: Path) -> list[dict]:
+    events = []
+    for line in path.read_text(encoding="utf-8").splitlines():
+        try:
+            events.append(json.loads(line))
+        except ValueError:
+            break  # a line still being written
+    return events
+
+
+@app.get("/cases/{case_id}/trace")
+def get_trace(case_id: str, after: str = "0"):
+    """Run trace events with seq > `after` (backend/TRACE.md). Works while the job is still processing."""
+    case_dir = _case_dir(case_id)
+    try:
+        after_n = int(after)
+        if after_n < 0:
+            raise ValueError
+    except ValueError:
+        raise ApiError(400, "bad_after", "after must be a non-negative integer")
+    versions = sorted((d for d in (case_dir / "ingest").glob("v*") if d.name[1:].isdigit()),
+                      key=lambda d: int(d.name[1:]), reverse=True) if (case_dir / "ingest").exists() else []
+    path = next((d / "trace.jsonl" for d in versions if (d / "trace.jsonl").exists()), None)
+    meta = _read_json(case_dir / "case.json")
+    events = _trace_events(path) if path else []
+    if not events:
+        if meta.get("latest") is not None:
+            raise ApiError(404, "not_found", "this case has no run trace")
+        job = _jobs() / f"{meta['jobId']}.json" if meta.get("jobId") else None
+        failed = bool(job and job.exists() and _read_json(job).get("status") == "failed")
+        return {"status": "failed" if failed else "processing", "timing": "recorded", "events": [], "next": after_n}
+    finished = next((e for e in reversed(events) if e["type"] == "run_finished"), None)
+    started = next((e for e in events if e["type"] == "run_started"), {})
+    if started.get("mode") == "live":
+        timing = "live"
+    else:
+        timing = "estimated" if any(e["type"] == "llm_call" and e.get("replayed") and e.get("durationSource") == "estimated"
+                                    for e in events) else "recorded"
+    fresh = [e for e in events if e["seq"] > after_n]
+    return {"status": finished["status"] if finished else "processing", "timing": timing, "events": fresh,
+            "next": fresh[-1]["seq"] if fresh else after_n}
 
 
 @app.get("/cases/{case_id}/{section}")

@@ -45,7 +45,25 @@ export type ChatReply = {
   /** Every model response came from the recorded cache: no model call was billed. */
   replayed?: boolean;
   model_calls?: number;
+  /** The answer's tool loop in order (backend/TRACE.md). */
+  steps?: ChatStep[];
 };
+
+export type ChatStep =
+  | {
+      type: "model_call";
+      inputTokens: number;
+      outputTokens: number;
+      costUsd: number;
+      durationMs: number;
+      durationSource: "recorded" | "estimated" | "live";
+    }
+  | {
+      type: "tool_call";
+      tool: string;
+      args: Record<string, unknown>;
+      resultChars: number;
+    };
 
 export class ChatRequestError extends Error {
   constructor(

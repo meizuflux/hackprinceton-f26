@@ -55,6 +55,11 @@ export const mockApi: CaseApi = {
     return [];
   },
 
+  /** The mock runs no pipeline, so it has no trace to replay. */
+  async getTrace() {
+    return undefined;
+  },
+
   async openDemo() {
     return demoCase.id;
   },
