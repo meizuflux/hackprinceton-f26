@@ -4,6 +4,7 @@ import argparse
 import ipaddress
 import json
 import os
+import re
 from pathlib import Path
 import shlex
 import subprocess
@@ -31,8 +32,8 @@ def api(method, path, payload=None):
         raise RuntimeError(f"Vultr API returned HTTP {exc.code}: {exc.read(4096).decode(errors='replace')}") from exc
 
 
-def env_content():
-    lines = []
+def env_content(domain):
+    lines = [f"MAPLETRACE_DOMAIN='{domain}'"]
     for name in ("ANTHROPIC_API_KEY", "MAPLETRACE_LLM_MODEL", "MAPLETRACE_CORS"):
         value = os.environ.get(name, "")
         if "\n" in value or "\r" in value:
@@ -73,7 +74,7 @@ def deploy(args):
     if subprocess.check_output(["git", "status", "--porcelain", "--untracked-files=no"], cwd=ROOT).strip():
         raise ValueError("Commit tracked changes before deploying; only HEAD is deployed")
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
-    config = env_content()
+    config = env_content(args.domain)
     if args.instance_id:
         instance_id = args.instance_id
     else:
@@ -87,7 +88,7 @@ def deploy(args):
         instance_id = api("POST", "/instances", payload)["instance"]["id"]
         print(f"Created billable Vultr instance {instance_id}. Save this ID for retries.", flush=True)
     host = wait_instance(instance_id, args.timeout)
-    print(f"Instance {instance_id} is active at {host}; connecting over SSH.", flush=True)
+    print(f"Instance {instance_id} is active at {host}; point {args.domain} to this IP and connect over SSH.", flush=True)
     ssh = ssh_base(args, host)
     deadline = time.monotonic() + args.timeout
     while True:
@@ -119,12 +120,21 @@ fi
 docker compose version >/dev/null
 cd {shlex.quote(release)}
 docker compose --project-name mapletrace --env-file {REMOTE}/.env -f scripts/compose.vultr.yaml up -d --build --wait --wait-timeout 300
-curl -fsS --max-time 10 http://127.0.0.1/health >/dev/null
-curl -fsS --max-time 10 http://127.0.0.1/api/health >/dev/null
+# Caddy obtains a certificate asynchronously after the public DNS record resolves.
+i=0
+until curl -fsS --max-time 10 --resolve {args.domain}:443:127.0.0.1 https://{args.domain}/health >/dev/null && \
+      curl -fsS --max-time 10 --resolve {args.domain}:443:127.0.0.1 https://{args.domain}/api/health >/dev/null; do
+  i=$((i+1))
+  if [ "$i" -ge 60 ]; then
+    echo "HTTPS health checks failed; check DNS, firewall and Caddy logs, then retry this instance." >&2
+    exit 1
+  fi
+  sleep 5
+done
 ln -sfn {shlex.quote(release)} {REMOTE}/current
 '''
     run(ssh + ["sh -s"], input=remote_command.encode())
-    print(f"Deployed {revision} to http://{host}/ (instance {instance_id}).", flush=True)
+    print(f"Deployed {revision} to https://{args.domain}/ (instance {instance_id}).", flush=True)
 
 
 def parser():
@@ -139,14 +149,24 @@ def parser():
     p.add_argument("--hostname", default="mapletrace")
     p.add_argument("--identity-file", help="local SSH private key")
     p.add_argument("--timeout", type=int, default=600, help="seconds to wait separately for instance and SSH (default: 600)")
-    p.add_argument("--allow-public-http", action="store_true", help="acknowledge unauthenticated, unencrypted public HTTP")
+    p.add_argument("--domain", required=True, help="public DNS hostname pointing to the instance")
     return p
+
+
+def valid_domain(domain):
+    if len(domain) > 253 or domain.endswith("."):
+        return False
+    labels = domain.split(".")
+    return len(labels) >= 2 and labels[-1].isalpha() and all(
+        re.fullmatch(r"[a-zA-Z0-9](?:[a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?", label)
+        for label in labels
+    ) and labels[-1].lower() not in {"localhost", "local", "internal"}
 
 
 def main():
     args = parser().parse_args()
-    if not args.allow_public_http:
-        parser().error("deployment exposes unauthenticated HTTP; pass --allow-public-http to acknowledge")
+    if not valid_domain(args.domain):
+        parser().error("--domain must be a public DNS hostname (no URL, wildcard, IP address, or localhost)")
     if args.timeout <= 0:
         parser().error("--timeout must be positive")
     try:
