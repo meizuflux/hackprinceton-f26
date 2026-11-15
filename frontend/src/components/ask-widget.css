@@ -24,6 +24,16 @@
 .case-board-panel:has(.review-dock.is-open) > .ask-widget {
   right: 432px; /* dock width 400 + its inset 16 + gap 16 */
 }
+/* Story view has no minimap, so the box sits in the bottom strip beside the zoom controls (inset 16 + controls 38 +
+   gap 10) instead of stacking above them over the story's bottom row; its suggestions still rise on hover. */
+.case-board-panel:has(.canvas-wrap.is-story) > .ask-widget {
+  --ask-bottom: 16px;
+  right: 64px;
+}
+.case-board-panel:has(.canvas-wrap.is-story):has(.review-dock.is-open)
+  > .ask-widget {
+  right: 480px; /* dock offset 416 + controls 38 + gap 10 + inset 16 */
+}
 /* Suggestions are hidden until the box is hovered or focused, then rise above it one by one. They sit in their own
    layer above the box, so revealing them never moves the box. The bottom padding bridges the gap to the box, so the
    pointer can travel up to a chip without the list closing. */
@@ -139,11 +149,22 @@
   .ask-widget {
     bottom: calc(100% - 100dvh + var(--ask-bottom));
   }
+  .case-board-panel:has(.canvas-wrap.is-story):has(.review-dock.is-open)
+    > .ask-widget {
+    right: 64px;
+  }
 }
 @media (max-width: 540px) {
   .ask-widget {
     /* chrome bottom 54 + the minimap's rendered height + gap 10 */
     --ask-bottom: calc(64px + var(--minimap-height, 116px));
     right: 12px;
+  }
+  /* story view: chrome bottom 54, beside the zoom controls (inset 12 + controls 38 + gap 8) */
+  .case-board-panel:has(.canvas-wrap.is-story) > .ask-widget,
+  .case-board-panel:has(.canvas-wrap.is-story):has(.review-dock.is-open)
+    > .ask-widget {
+    --ask-bottom: 54px;
+    right: 58px;
   }
 }
