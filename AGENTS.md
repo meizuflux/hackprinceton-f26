@@ -42,7 +42,7 @@ Rules and durable decisions for agents working in this repository. How-to materi
 - The LLM layer (`--llm`, deepagents + Anthropic) only adds claims and agent insights, and both must cite resolvable record IDs. The default model is `claude-sonnet-5-5`.
 - Never put upload-form values (such as the case name) into model prompts: replay keys must match across uploads of the same archive.
 - Recorded responses are committed on purpose: `backend/llm_cache/<archive sha256>.jsonl` (analysis), `backend/llm_cache/chat-<archive sha256>.jsonl` (chat), and `backend/demo/kestrel.tar.gz` (the finished Kestrel case served by `POST /demo`). After changing anything the model sees, rebuild with `make backend-llm-record` (billed), `make backend-demo-snapshot` (free) and `make backend-chat-record` (billed).
-- Tool names, docstrings (whitespace included) and outputs in `llm.read_tools` are part of the cache keys of both the investigator and chat caches. Editing them invalidates both.
+- Tool names, docstrings (whitespace included) and outputs in `llm.read_tools` are part of the cache keys of both the investigator and chat caches. Editing them invalidates both. So do installed packages that change deepagents' built-in tool schemas: never add PyAV (`av`) to the backend, because it rewrites the `read_file` description.
 
 ## Case data and generator
 

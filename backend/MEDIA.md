@@ -45,7 +45,7 @@ identification of real people, no protected attributes, no guesses about identit
   `llm.vision`; the run never fails. `make backend-vision-record` records only this cache.
 - Cache: a separate file `backend/llm_cache/vision-<archive sha256>.jsonl` keyed explicitly on (evidence sha256,
   frame time, prompt text, model), not on decoded image bytes, so a replay never needs to decode video. Recording
-  needs frame extraction (`av`/PyAV or an `ffmpeg` binary); replay needs neither.
+  needs an `ffmpeg` binary for video frames; replay needs neither. Do not install PyAV (`av`) in the backend venv: it changes deepagents' `read_file` tool description and so the investigator cache key.
 - Trace: one `llm_call` per request with `purpose: "media_vision"` (TRACE.md fields), and `stage_finished` for
   `media_vision`.
 

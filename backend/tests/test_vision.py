@@ -115,5 +115,4 @@ def test_media_cards_do_not_change_what_the_llm_cache_sees(run_dir, tmp_path, mo
     assert with_media["llm"]["cache"]["hits"] == without["llm"]["cache"]["hits"]
     assert with_media["llm"]["cache"]["misses"] == without["llm"]["cache"]["misses"]
     assert with_media["counts"] == without["counts"]
-    if without["llm"]["cache"]["misses"]:
-        pytest.xfail("the committed cache already misses in this environment without media (library drift)")
+    assert without["llm"]["cache"]["misses"] == 0, "the committed analysis cache must replay fully (is PyAV installed?)"

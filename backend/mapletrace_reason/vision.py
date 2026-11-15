@@ -6,7 +6,7 @@ investigator, so the recorded investigator and chat caches stay valid (backend/t
 
 Cache: `llm_cache/vision-<archive sha256>.jsonl`, one JSON object per request, keyed on
 (evidence sha256, frame time, prompt text, model). The key does not involve decoded pixels, so a replay never opens
-an image or decodes video. Recording needs Pillow and, for video, PyAV (`av`) or an `ffmpeg` binary.
+an image or decodes video. Recording needs Pillow and, for video, an `ffmpeg` binary.
 
 Modes follow the LLM layer: `record` answers from the cache and otherwise calls the model (billed); `replay`, or
 `record` without ANTHROPIC_API_KEY, only reads the cache. A miss skips that image and is counted in the summary; it
@@ -95,26 +95,11 @@ def to_jpeg(raw: bytes) -> bytes:
 
 
 def video_frame(path: Path, t: float) -> bytes:
-    """The first frame at or after `t` seconds, as JPEG: PyAV, else an ffmpeg binary."""
-    try:
-        import av
-        with av.open(str(path)) as c:
-            stream = c.streams.video[0]
-            c.seek(int(t * 1_000_000))
-            last = None
-            for frame in c.decode(stream):
-                last = frame
-                if frame.time is None or frame.time >= t - 1e-3:
-                    break
-            if last is not None:
-                buf = io.BytesIO()
-                last.to_image().save(buf, "PNG")
-                return to_jpeg(buf.getvalue())
-    except Exception:  # noqa: BLE001 - fall through to ffmpeg
-        pass
+    """The first frame at or after `t` seconds, as JPEG, from an `ffmpeg` binary. Not PyAV: installing `av` changes
+    the description of deepagents' built-in `read_file` tool, which is part of the investigator's cache key."""
     ff = shutil.which("ffmpeg")
     if not ff:
-        raise RuntimeError("frame extraction needs PyAV (av) or an ffmpeg binary")
+        raise RuntimeError("recording video frames needs an ffmpeg binary")
     with tempfile.TemporaryDirectory() as d:
         out = Path(d) / "f.png"
         subprocess.run([ff, "-v", "error", "-ss", f"{t:.3f}", "-i", str(path), "-frames:v", "1", str(out)], check=True,
