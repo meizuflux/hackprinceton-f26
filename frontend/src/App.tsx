@@ -111,6 +111,7 @@ import { resolveHeadline } from "./components/headline";
 import { ReplayedCase } from "./replay/ReplayedCase";
 import { replayRequested, requestReplay } from "./replay/intent";
 import { RUN_PANEL_EVENT } from "./replay/ReplayHud";
+import { useStoryMorph } from "./replay/useStoryMorph";
 import { UploadConfirm, type AnalysisMode } from "./onboarding/UploadConfirm";
 import { UPLOADS_ENABLED, UPLOADS_OFF_REASON } from "./config";
 import {
@@ -585,7 +586,8 @@ function BoardCanvas({
   // The story fit leaves room for an open run panel; refit when it opens or collapses so the story uses the space.
   useEffect(() => {
     const refit = () => {
-      if (storyModeRef.current) resetBoardView();
+      // A morph is already easing the camera to the story.
+      if (storyModeRef.current && !morph.morphingRef.current) resetBoardView();
     };
     window.addEventListener(RUN_PANEL_EVENT, refit);
     return () => window.removeEventListener(RUN_PANEL_EVENT, refit);
@@ -761,6 +763,20 @@ function BoardCanvas({
     () => new Set(data.edges.map((e) => e.id)),
     [data.edges],
   );
+  // Full graph <-> story animation, also when a replay hands over to the story.
+  const morph = useStoryMorph({
+    caseId: data.id,
+    growing,
+    active,
+    opensOnStory: storyMode,
+    fullNodes: nodes,
+    storyNodes,
+    groups,
+    shownIds: revealedNodeIds,
+    getViewport,
+    fitView,
+    storyPadding,
+  });
   // Fit the board beside the dock when it is open, including the headline on load.
   dockOpenRef.current = dockMode !== "closed";
   const fitPadding = storyMode
@@ -1080,6 +1096,12 @@ function BoardCanvas({
     growing,
   ]);
 
+  const { decorate: decorateMorph } = morph;
+  const flowNodes = useMemo(
+    () => decorateMorph((storyMode ? storyFlowNodes : visibleNodes) as Node[]),
+    [decorateMorph, storyMode, storyFlowNodes, visibleNodes],
+  );
+
   const visibleEdges = useMemo(() => {
     // In the full graph a running replay shows only the threads revealed so far.
     const list = storyMode
@@ -1147,6 +1169,7 @@ function BoardCanvas({
     (mode: "story" | "full") => {
       if (mode === viewMode) return;
       setExpandedId(null);
+      const morphing = morph.start(mode);
       setViewMode(mode);
       window.setTimeout(() => {
         const targets = selection
@@ -1154,10 +1177,11 @@ function BoardCanvas({
           : null;
         if (targets && targets.size && mode === "full")
           focusTarget(targets, { reveal: false });
+        else if (morphing && mode === "story") morph.fitStory();
         else resetBoardView();
       }, 40);
     },
-    [viewMode, selection, data, focusTarget, resetBoardView],
+    [viewMode, selection, data, focusTarget, resetBoardView, morph],
   );
   const onStoryNodesChange = useCallback(
     (changes: NodeChange<Node<StoryNodeState>>[]) => {
@@ -1176,6 +1200,17 @@ function BoardCanvas({
   // when it has cards; otherwise the camera would stay fixed on an empty frame.
   const framedReplay = useRef<CaseData | null>(null);
   const [flowReady, setFlowReady] = useState(false);
+  // Opening on the story as a replay ends: ease from the growing board's camera.
+  const morphFit = useRef(false);
+  const { handoff: morphHandoff, begin: beginMorph, fitStory } = morph;
+  useEffect(() => {
+    if (!morphHandoff || !flowReady || morphFit.current) return;
+    morphFit.current = true;
+    window.setTimeout(() => {
+      beginMorph();
+      fitStory();
+    }, 30);
+  }, [morphHandoff, flowReady, beginMorph, fitStory]);
   useEffect(() => {
     if (!growing) {
       framedReplay.current = null;
@@ -1247,11 +1282,11 @@ function BoardCanvas({
             </div>
           </div>
           <div
-            className={`canvas-wrap ${storyMode ? "is-story" : ""}${growing ? " replay-growing" : ""}`}
-            style={boardColorVars()}
+            className={`canvas-wrap ${storyMode ? "is-story" : ""}${growing ? " replay-growing" : ""}${morph.className}`}
+            style={{ ...boardColorVars(), ...morph.style }}
           >
             <ReactFlow
-              nodes={(storyMode ? storyFlowNodes : visibleNodes) as Node[]}
+              nodes={flowNodes}
               edges={visibleEdges}
               onNodesChange={
                 (storyMode ? onStoryNodesChange : onNodesChange) as (
@@ -1286,7 +1321,8 @@ function BoardCanvas({
                 else if (dockMode === "inspector") closeInspector();
               }}
               onInit={() => setFlowReady(true)}
-              fitView={!growing}
+              fitView={!growing && !morph.handoff}
+              defaultViewport={morph.handoff?.viewport}
               fitViewOptions={{ padding: fitPadding, ...fitZoom }}
               panOnScroll
               panOnScrollSpeed={1}

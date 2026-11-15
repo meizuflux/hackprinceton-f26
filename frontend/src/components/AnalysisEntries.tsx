@@ -1,6 +1,7 @@
 import { CircleHelp, Lightbulb, Target, type LucideIcon } from "lucide-react";
 import type { CaseData } from "../api/types";
 import type { Tab } from "./board-focus";
+import { CountUp } from "../replay/CountUp";
 import "./analysis-entries.css";
 
 export const analysisEntries: ReadonlyArray<{
@@ -69,7 +70,10 @@ export function AnalysisEntries({
           >
             <Icon size={15} aria-hidden="true" />
             <span className="analysis-entry-label">{label}</span>
-            <strong>{count}</strong>
+            <strong>
+              {/* Counts up as a replay reveals items. */}
+              <CountUp value={count} />
+            </strong>
           </button>
         );
       })}
