@@ -23,7 +23,7 @@ def confidence(independent: int, observed: bool, contested: bool) -> str:
 
 def _obs(case, rid, text=None) -> dict:
     r = case.records[rid]
-    return {"text": text or f"{r.content[:140]}" + (f" @ {r.place}" if r.place else ""), "citations": [case.cite(rid)]}
+    return {"text": text or f"{r.content[:140]}" + (f" @ {case.place_name(r.place)}" if r.place else ""), "citations": [case.cite(rid)]}
 
 
 def _compose(ins: dict) -> str:
