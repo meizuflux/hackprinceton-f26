@@ -35,7 +35,7 @@ import {
 import { api, isMock } from "./api/client";
 import { isApiError } from "./api/http";
 import type { CaseData } from "./api/types";
-import { CanvasMinimap } from "./components/CanvasMinimap";
+import { CanvasMinimap, ZoomReadout } from "./components/CanvasMinimap";
 import { EvidenceNode, type PinData } from "./components/EvidenceNode";
 import { ThreadEdge, type ThreadData } from "./components/ThreadEdge";
 import {
@@ -583,7 +583,9 @@ function BoardCanvas({
                     minZoom: 0.5,
                     maxZoom: 1.1,
                   }}
-                />
+                >
+                  <ZoomReadout />
+                </Controls>
                 <CanvasMinimap />
               </ReactFlow>
             )}
