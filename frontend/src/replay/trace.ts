@@ -292,7 +292,7 @@ export function describeEvent(e: TraceEvent): string {
     case "ml_signal":
       return `ML ${str(e.id)} ${str(e.title)}`;
     case "llm_call":
-      return `${e.phase} → ${str(e.purpose)} call · ${formatTokens(num(e.inputTokens) + num(e.outputTokens))} tokens · ${formatCost(num(e.costUsd))}`;
+      return `${e.purpose === "media_vision" ? "vision → image description" : `${e.phase} → ${str(e.purpose)} call`} · ${formatTokens(num(e.inputTokens) + num(e.outputTokens))} tokens · ${formatCost(num(e.costUsd))}`;
     case "agent_tool": {
       const args = e.args && typeof e.args === "object" ? e.args : {};
       const body = Object.entries(args as Record<string, unknown>)

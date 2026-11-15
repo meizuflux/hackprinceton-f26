@@ -10,6 +10,7 @@ import {
 import { useEffect, useRef } from "react";
 import { isMock } from "../api/client";
 import type { CaseData } from "../api/types";
+import { MediaInspector, mediaNodeFor } from "./MediaInspector";
 import { relationshipLabel } from "./relationships";
 import { plainCounts } from "./headline";
 import {
@@ -110,6 +111,7 @@ export function Inspector({
   })();
   if (!item) return null;
 
+  const mediaNode = mediaNodeFor(data.nodes, selection);
   const citations = item.citations;
   const sources = citations
     .map((id) => data.sources.find((source) => source.id === id))
@@ -277,6 +279,13 @@ export function Inspector({
               <strong>Produced by</strong> {producedBy}
             </span>
           </p>
+        )}
+        {mediaNode && (
+          <MediaInspector
+            node={mediaNode}
+            caseId={data.id}
+            timeZone={data.timezone}
+          />
         )}
         {gap?.whyItMatters ? (
           <p className="inspector-description">{gap.whyItMatters}</p>

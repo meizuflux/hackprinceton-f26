@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { FileText, HelpCircle, Shapes } from "lucide-react";
+import { Camera, FileText, HelpCircle, Shapes } from "lucide-react";
 import type { EvidenceEdge, EvidenceNode } from "../api/types";
 import {
   CARD_KINDS,
@@ -54,6 +54,7 @@ export function BoardLegend({
   const origins = new Set(
     [...nodes, ...edges].map((item) => markedOrigin(item.origin)),
   );
+  const hasMedia = nodes.some((node) => node.media);
   const hasQuestion = nodes.some((node) => node.gapId);
   return (
     <section
@@ -94,6 +95,14 @@ export function BoardLegend({
                   </li>
                 );
               })}
+            {hasMedia && (
+              <li className="kind-event">
+                <i className="legend-media-mark" aria-hidden="true">
+                  <Camera size={11} strokeWidth={2.4} />
+                </i>
+                Photo / CCTV
+              </li>
+            )}
             {hasInferredCard && (
               <li className="legend-divider kind-other">
                 <i className="legend-card is-inferred" aria-hidden="true" />
