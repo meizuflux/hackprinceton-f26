@@ -1,4 +1,4 @@
-import { ArrowLeft, ChevronDown, X } from "lucide-react";
+import { ArrowLeft, ChevronDown, GitBranch, X } from "lucide-react";
 import { useEffect, useRef } from "react";
 import type { CaseData } from "../api/types";
 import { relationshipLabel } from "./relationships";
@@ -16,6 +16,7 @@ type InspectorProps = {
   onSelect: (selection: Selection) => void;
   backLabel?: string;
   onOpenSource?: (sourceId: string) => void;
+  onFocusOnBoard?: (selection: Selection) => void;
 };
 
 export function Inspector({
@@ -25,6 +26,7 @@ export function Inspector({
   onSelect,
   backLabel = "Back to review",
   onOpenSource,
+  onFocusOnBoard,
 }: InspectorProps) {
   const panelRef = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -165,6 +167,16 @@ export function Inspector({
             <span className="detail-score">
               Illustrative score · {Math.round(score * 100)}%
             </span>
+          )}
+          {onFocusOnBoard && (
+            <button
+              type="button"
+              className="focus-board-button"
+              onClick={() => onFocusOnBoard(selection)}
+              aria-label={`Locate ${title} on mind map`}
+            >
+              <GitBranch size={13} aria-hidden="true" /> Locate on mind map
+            </button>
           )}
         </div>
         <p className="inspector-description">{description}</p>

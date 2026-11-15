@@ -197,13 +197,39 @@
   font-size: 13px;
   line-height: 1.65;
 }
+.insight-card-footer-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 13px;
+  flex-wrap: wrap;
+}
 .insight-card-action {
   display: inline-flex;
   align-items: center;
   gap: 5px;
-  margin-top: 13px;
   color: var(--green);
   font-size: 11px;
+}
+.insight-board-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  color: var(--green);
+  background: #252e20;
+  border: 1px solid #4a5a3e;
+  border-radius: var(--radius);
+  padding: 4px 8px;
+  cursor: pointer;
+  transition:
+    background 0.16s,
+    border-color 0.16s;
+}
+.insight-board-btn:hover {
+  background: #33402b;
+  border-color: var(--green);
 }
 .insight-citations {
   display: flex;

@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import {
   ArrowUpRight,
   FileText,
+  GitBranch,
   Lightbulb,
   Search,
   ShieldCheck,
@@ -15,10 +16,12 @@ export function InsightsPage({
   data,
   onInspect,
   onOpenSource,
+  onFocusOnBoard,
 }: {
   data: CaseData;
   onInspect: (selection: Selection) => void;
   onOpenSource: (sourceId: string) => void;
+  onFocusOnBoard?: (selection: Selection) => void;
 }) {
   const [search, setSearch] = useState("");
   const query = search.trim().toLocaleLowerCase();
@@ -118,9 +121,32 @@ export function InsightsPage({
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.text}</p>
-                  <span className="insight-card-action">
-                    Inspect inference <ArrowUpRight size={14} />
-                  </span>
+                  <div className="insight-card-footer-actions">
+                    <span className="insight-card-action">
+                      Inspect inference <ArrowUpRight size={14} />
+                    </span>
+                    {onFocusOnBoard && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="insight-board-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onFocusOnBoard({ kind: "insight", id: item.id });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onFocusOnBoard({ kind: "insight", id: item.id });
+                          }
+                        }}
+                      >
+                        <GitBranch size={13} aria-hidden="true" /> View on mind
+                        map
+                      </span>
+                    )}
+                  </div>
                 </button>
                 <CitationLinks
                   ids={item.citations}
@@ -167,9 +193,32 @@ export function InsightsPage({
                   </div>
                   <h3>{item.title}</h3>
                   <p>{item.description}</p>
-                  <span className="insight-card-action">
-                    Inspect gap <ArrowUpRight size={14} />
-                  </span>
+                  <div className="insight-card-footer-actions">
+                    <span className="insight-card-action">
+                      Inspect gap <ArrowUpRight size={14} />
+                    </span>
+                    {onFocusOnBoard && (
+                      <span
+                        role="button"
+                        tabIndex={0}
+                        className="insight-board-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onFocusOnBoard({ kind: "gap", id: item.id });
+                        }}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter" || e.key === " ") {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            onFocusOnBoard({ kind: "gap", id: item.id });
+                          }
+                        }}
+                      >
+                        <GitBranch size={13} aria-hidden="true" /> View on mind
+                        map
+                      </span>
+                    )}
+                  </div>
                 </button>
                 <CitationLinks
                   ids={item.citations}

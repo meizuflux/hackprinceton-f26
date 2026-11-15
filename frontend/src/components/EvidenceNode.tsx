@@ -20,6 +20,7 @@ export type PinData = {
   time?: string;
   gapId?: string;
   active?: boolean;
+  isFocused?: boolean;
   onInspect: () => void;
   onInspectGap?: () => void;
 };
@@ -37,7 +38,7 @@ export const EvidenceNode = memo(function EvidenceNode({
   const Icon = icons[data.type as keyof typeof icons] || FileText;
   return (
     <div
-      className={`evidence-pin ${data.type} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""}`}
+      className={`evidence-pin ${data.type} ${data.gapId ? "has-gap" : ""} ${data.active ? "active" : ""} ${data.isFocused ? "is-focused" : ""}`}
     >
       <svg
         className="pin-outline"

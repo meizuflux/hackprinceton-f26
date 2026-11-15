@@ -12,6 +12,7 @@ export type ThreadData = {
   kind: "observed" | "claim" | "inference";
   label: string;
   directed: boolean;
+  isFocused?: boolean;
   onInspect: () => void;
 };
 
@@ -39,7 +40,7 @@ export const ThreadEdge = memo(function ThreadEdge(
       <EdgeLabelRenderer>
         <button
           type="button"
-          className={`thread-label nodrag nopan ${data.kind} ${props.selected ? "is-selected" : ""}`}
+          className={`thread-label nodrag nopan ${data.kind} ${props.selected || data.isFocused ? "is-selected" : ""}`}
           style={{
             transform: `translate(-50%, -50%) translate(${x}px, ${y}px)`,
             maxWidth: labelWidth,

@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   ReactFlow,
+  ReactFlowProvider,
+  useReactFlow,
   Controls,
   MarkerType,
   applyNodeChanges,
@@ -44,6 +46,11 @@ import {
 } from "./components/board-layout";
 import { Inspector, type Selection } from "./components/Inspector";
 import { relationshipKind } from "./components/relationships";
+import {
+  getNodesForSelection,
+  getNodesForTab,
+  type Tab,
+} from "./components/board-focus";
 import { casePath, useRouter } from "./routing";
 import { WorkspaceNavigation } from "./components/WorkspaceNavigation";
 import { CaseWorkspace } from "./components/CaseWorkspace";
@@ -54,18 +61,22 @@ import {
 } from "./onboarding/Onboarding";
 const nodeTypes = { evidence: EvidenceNode };
 const edgeTypes = { thread: ThreadEdge };
-type Tab = "gaps" | "insights" | "suggestions";
-function Board({
+function BoardCanvas({
   data,
   projectName,
   onOpenSource,
   active,
+  focusSelection,
+  onClearFocusSelection,
 }: {
   data: CaseData;
   projectName?: string;
   onOpenSource: (sourceId: string) => void;
   active: boolean;
+  focusSelection?: Selection | null;
+  onClearFocusSelection?: () => void;
 }) {
+  const { fitView } = useReactFlow();
   const [selection, setSelection] = useState<Selection | null>(null);
   const [tab, setTab] = useState<Tab>("gaps");
   const [dockMode, setDockMode] = useState<
@@ -92,6 +103,58 @@ function Board({
   const searchRef = useRef<HTMLInputElement>(null);
   const openerRef = useRef<HTMLElement | null>(null);
   const reviewButtonRef = useRef<HTMLButtonElement>(null);
+
+  const focusTarget = useCallback(
+    (targetNodeIds: Set<string> | string[]) => {
+      const ids = Array.from(targetNodeIds);
+      if (ids.length === 0) return;
+      const isNarrow =
+        typeof window !== "undefined" &&
+        window.matchMedia("(max-width: 900px)").matches;
+      const rightPad = !isNarrow && dockMode !== "closed" ? 440 : 80;
+
+      requestAnimationFrame(() => {
+        try {
+          fitView({
+            nodes: ids.map((id) => ({ id })),
+            padding: {
+              top: 130,
+              bottom: 140,
+              left: 100,
+              right: rightPad,
+            },
+            duration: 700,
+            maxZoom: ids.length === 1 ? 1.25 : 1.1,
+            minZoom: 0.35,
+          });
+        } catch {
+          // Graceful fallback
+        }
+      });
+    },
+    [fitView, dockMode],
+  );
+
+  const resetBoardView = useCallback(() => {
+    requestAnimationFrame(() => {
+      try {
+        fitView({
+          padding: {
+            top: 120,
+            bottom: 150,
+            left: 90,
+            right: 45,
+          },
+          duration: 650,
+          minZoom: 0.15,
+          maxZoom: 1.2,
+        });
+      } catch {
+        // Graceful fallback
+      }
+    });
+  }, [fitView]);
+
   const inspect = useCallback(
     (kind: Selection["kind"], id: string, sourceId?: string) => {
       openerRef.current =
@@ -100,20 +163,40 @@ function Board({
           ? document.activeElement
           : null;
       setReturnMode(dockMode === "inspector" ? returnMode : dockMode);
-      setSelection({ kind, id, sourceId });
+      const nextSelection: Selection = { kind, id, sourceId };
+      setSelection(nextSelection);
       setDockMode("inspector");
+
+      const targetNodes = getNodesForSelection(nextSelection, data);
+      if (targetNodes.size > 0) {
+        focusTarget(targetNodes);
+      }
     },
-    [dockMode, returnMode],
+    [dockMode, returnMode, data, focusTarget],
   );
+
   const closeInspector = useCallback(() => {
     setSelection(null);
     setDockMode(returnMode);
+    if (returnMode === "closed") {
+      resetBoardView();
+    } else if (returnMode === "analysis") {
+      const targetNodes = getNodesForTab(tab, data);
+      if (targetNodes.size > 0) focusTarget(targetNodes);
+    }
     requestAnimationFrame(() => {
       if (openerRef.current?.isConnected) openerRef.current.focus();
       else if (returnMode === "analysis") analysisRef.current?.focus();
       else reviewButtonRef.current?.focus();
     });
-  }, [returnMode]);
+  }, [returnMode, resetBoardView, tab, data, focusTarget]);
+
+  useEffect(() => {
+    if (focusSelection && active) {
+      inspect(focusSelection.kind, focusSelection.id, focusSelection.sourceId);
+      onClearFocusSelection?.();
+    }
+  }, [focusSelection, active, inspect, onClearFocusSelection]);
   const initialNodes: Node<PinData>[] = useMemo(
     () =>
       arrangePins(
@@ -196,40 +279,70 @@ function Board({
     () => (normalizedSearch ? new Set(matchingNodes.map((n) => n.id)) : null),
     [matchingNodes, normalizedSearch],
   );
+  const focusedNodeIds = useMemo(() => {
+    if (selection) {
+      return getNodesForSelection(selection, data);
+    }
+    if (dockMode === "analysis") {
+      return getNodesForTab(tab, data);
+    }
+    return null;
+  }, [selection, dockMode, tab, data]);
+
   const visibleNodes = useMemo(
     () =>
-      nodes.map((n) => ({
-        ...n,
-        className:
-          matchingNodeIds && !matchingNodeIds.has(n.id) ? "dimmed-node" : "",
-        data: {
-          ...n.data,
-          active: selection?.kind === "node" && selection.id === n.id,
-          onInspect: () => inspect("node", n.id),
-          onInspectGap: n.data.gapId
-            ? () => inspect("gap", n.data.gapId!)
-            : undefined,
-        },
-      })),
-    [nodes, matchingNodeIds, selection, inspect],
+      nodes.map((n) => {
+        const isFocused = focusedNodeIds ? focusedNodeIds.has(n.id) : false;
+        const isDimmed =
+          (matchingNodeIds && !matchingNodeIds.has(n.id)) ||
+          (focusedNodeIds && !isFocused);
+        return {
+          ...n,
+          className:
+            `${isDimmed ? "dimmed-node" : ""} ${isFocused ? "focused-node" : ""}`.trim(),
+          data: {
+            ...n.data,
+            active:
+              selection?.kind === "node" ? selection.id === n.id : isFocused,
+            isFocused,
+            onInspect: () => inspect("node", n.id),
+            onInspectGap: n.data.gapId
+              ? () => inspect("gap", n.data.gapId!)
+              : undefined,
+          },
+        };
+      }),
+    [nodes, matchingNodeIds, focusedNodeIds, selection, inspect],
   );
+
   const visibleEdges = useMemo(() => {
     const nodesById = new Map(nodes.map((node) => [node.id, node]));
     return edges.map((edge) => {
       const source = nodesById.get(edge.source);
       const target = nodesById.get(edge.target);
+      const isFocused = focusedNodeIds
+        ? focusedNodeIds.has(edge.source) && focusedNodeIds.has(edge.target)
+        : false;
+      const isDimmed = focusedNodeIds && !isFocused;
       return {
         ...edge,
+        className:
+          `${isDimmed ? "dimmed-edge" : ""} ${isFocused ? "focused-edge" : ""}`.trim(),
         ...(source && target
           ? threadHandles(source.position, target.position)
           : {}),
-        selected: selection?.kind === "edge" && selection.id === edge.id,
+        selected:
+          selection?.kind === "edge" ? selection.id === edge.id : isFocused,
         data: edge.data
-          ? { ...edge.data, onInspect: () => inspect("edge", edge.id) }
+          ? {
+              ...edge.data,
+              isFocused,
+              onInspect: () => inspect("edge", edge.id),
+            }
           : undefined,
       };
     });
-  }, [edges, nodes, selection, inspect]);
+  }, [edges, nodes, focusedNodeIds, selection, inspect]);
   return (
     <>
       <div className="workspace">
@@ -313,10 +426,15 @@ function Board({
                 }
                 aria-controls="review-dock"
                 onClick={() => {
-                  if (dockMode === "analysis") setDockMode("closed");
-                  else {
+                  if (dockMode === "analysis") {
+                    setDockMode("closed");
+                    resetBoardView();
+                  } else {
                     setDockMode("analysis");
                     setSelection(null);
+                    setTab("gaps");
+                    const targetNodes = getNodesForTab("gaps", data);
+                    focusTarget(targetNodes);
                   }
                 }}
               >
@@ -331,7 +449,15 @@ function Board({
                 <h2>Evidence & connections</h2>
                 <p>Inspect any record to review its original sources.</p>
                 {matchingNodes.map((n) => (
-                  <button key={n.id} onClick={() => inspect("node", n.id)}>
+                  <button
+                    key={n.id}
+                    className={
+                      focusedNodeIds && focusedNodeIds.has(n.id)
+                        ? "is-focused"
+                        : ""
+                    }
+                    onClick={() => inspect("node", n.id)}
+                  >
                     <span className="list-record-type">{n.data.type}</span>
                     <strong>{n.data.label}</strong>
                     <span>
@@ -477,6 +603,7 @@ function Board({
                   }
                   setSelection(null);
                   setDockMode("closed");
+                  resetBoardView();
                   reviewButtonRef.current?.focus();
                 }}
               >
@@ -530,11 +657,19 @@ function Board({
                                   tabs.length
                               ];
                       setTab(next);
+                      setSelection(null);
+                      const targetNodes = getNodesForTab(next, data);
+                      focusTarget(targetNodes);
                       document.getElementById(`tab-${next}`)?.focus();
                     }
                   }}
                   className={tab === id ? "active" : ""}
-                  onClick={() => setTab(id)}
+                  onClick={() => {
+                    setTab(id);
+                    setSelection(null);
+                    const targetNodes = getNodesForTab(id, data);
+                    focusTarget(targetNodes);
+                  }}
                 >
                   {label}
                   {count !== null && <span>{count}</span>}
@@ -638,6 +773,10 @@ function Board({
             onSelect={setSelection}
             onClose={closeInspector}
             onOpenSource={onOpenSource}
+            onFocusOnBoard={(sel) => {
+              const targetNodes = getNodesForSelection(sel, data);
+              if (targetNodes.size > 0) focusTarget(targetNodes);
+            }}
             backLabel={
               returnMode === "audit"
                 ? "Back to audit"
@@ -681,10 +820,27 @@ function Board({
     </>
   );
 }
+
+function Board(props: {
+  data: CaseData;
+  projectName?: string;
+  onOpenSource: (sourceId: string) => void;
+  active: boolean;
+  focusSelection?: Selection | null;
+  onClearFocusSelection?: () => void;
+}) {
+  return (
+    <ReactFlowProvider>
+      <BoardCanvas {...props} />
+    </ReactFlowProvider>
+  );
+}
+
 export default function App() {
   const { route, navigate } = useRouter();
   const queryClient = useQueryClient();
   const [openingCase, setOpeningCase] = useState(false);
+  const [focusSelection, setFocusSelection] = useState<Selection | null>(null);
   const uploadOpen = route.kind === "new-project";
   const [projectName, setProjectName] = useState("");
   const [projects, setProjects] = useState<SessionProject[]>([]);
@@ -892,6 +1048,12 @@ export default function App() {
                 view={route.kind === "case" ? (route.view ?? "board") : "board"}
                 sourceId={route.kind === "case" ? route.sourceId : undefined}
                 navigate={navigate}
+                onFocusOnBoard={(sel) => {
+                  setFocusSelection(sel);
+                  if (route.kind !== "case" || route.view) {
+                    navigate(casePath(caseQuery.data.id));
+                  }
+                }}
                 projectName={
                   projects.find(
                     (project) => project.caseId === caseQuery.data.id,
@@ -901,6 +1063,8 @@ export default function App() {
                 <Board
                   data={caseQuery.data}
                   active={route.kind === "case" && !route.view}
+                  focusSelection={focusSelection}
+                  onClearFocusSelection={() => setFocusSelection(null)}
                   projectName={
                     projects.find(
                       (project) => project.caseId === caseQuery.data.id,

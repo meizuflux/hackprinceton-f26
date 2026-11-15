@@ -226,12 +226,13 @@ export function CanvasMinimap() {
           const { width, height } = nodeSize(node);
           const x = offsetX + (node.position.x - bounds.x) * scale;
           const y = offsetY + (node.position.y - bounds.y) * scale;
+          const isFocused = Boolean(node.data?.active || node.data?.isFocused);
           return (
             <g key={node.id}>
               <path
                 d={paperOutline(node.id)}
                 transform={`translate(${x} ${y}) scale(${(width * scale) / PIN_WIDTH} ${(height * scale) / PIN_HEIGHT})`}
-                className={`board-minimap-pin ${node.data.gapId ? "is-gap" : ""} ${node.data.active ? "is-active" : ""}`}
+                className={`board-minimap-pin ${node.data.gapId ? "is-gap" : ""} ${isFocused ? "is-active" : ""}`}
                 vectorEffect="non-scaling-stroke"
               />
               <circle
@@ -316,10 +317,11 @@ function MinimapEdge({
   const inferred = edge.data?.kind
     ? edge.data.kind !== "observed"
     : relationshipKind(edge.type ?? "") !== "observed";
+  const isEdgeActive = Boolean(edge.selected || edge.data?.isFocused);
   return (
     <path
       d={path}
-      className={`board-minimap-thread ${inferred ? "is-inferred" : ""} ${edge.selected ? "is-active" : ""}`}
+      className={`board-minimap-thread ${inferred ? "is-inferred" : ""} ${isEdgeActive ? "is-active" : ""}`}
       markerEnd={edge.data?.directed === true ? `url(#${markerId})` : undefined}
     />
   );

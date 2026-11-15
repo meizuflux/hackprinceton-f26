@@ -359,6 +359,25 @@
   font-size: 11px;
   border-radius: 3px;
 }
+.focus-board-button,
+.insight-board-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--green);
+  background: #252e20;
+  border: 1px solid #4a5a3e;
+  border-radius: var(--radius);
+  padding: 5px 9px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.focus-board-button:hover,
+.insight-board-btn:hover {
+  background: #33402b;
+  border-color: var(--green);
+}
 @media (max-width: 900px) {
   .review-dock {
     position: relative;

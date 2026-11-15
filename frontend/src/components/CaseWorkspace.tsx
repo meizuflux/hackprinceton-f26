@@ -32,6 +32,7 @@ export function CaseWorkspace({
   view,
   sourceId,
   navigate,
+  onFocusOnBoard,
   children,
 }: {
   data: CaseData;
@@ -39,6 +40,7 @@ export function CaseWorkspace({
   view: WorkspaceView;
   sourceId?: string;
   navigate: (path: string) => void;
+  onFocusOnBoard?: (selection: Selection) => void;
   children: ReactNode;
 }) {
   const [selection, setSelection] = useState<Selection | null>(null);
@@ -217,6 +219,7 @@ export function CaseWorkspace({
             data={data}
             onInspect={inspect}
             onOpenSource={openSource}
+            onFocusOnBoard={onFocusOnBoard}
           />
         </section>
         <section
@@ -242,6 +245,7 @@ export function CaseWorkspace({
               onSelect={setSelection}
               onClose={closeInspector}
               onOpenSource={openSource}
+              onFocusOnBoard={onFocusOnBoard}
               backLabel={`Back to ${views.find((item) => item.id === view)?.label.toLowerCase()}`}
             />
           </aside>
