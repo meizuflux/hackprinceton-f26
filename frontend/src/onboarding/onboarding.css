@@ -518,3 +518,51 @@
   justify-content: flex-end;
   gap: 10px;
 }
+
+/* Upload entries stay visible while uploads are off (src/config.ts), but read and behave as unavailable. */
+.button.is-off,
+.button.is-off:hover {
+  background: transparent;
+  border-color: #33414f;
+  border-style: dashed;
+  color: #8796a6;
+  box-shadow: none;
+  cursor: not-allowed;
+  filter: none;
+}
+
+.project-new-off {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+  text-align: right;
+}
+
+.project-new-off span {
+  max-width: 24ch;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.dropzone.is-off {
+  border-color: #33414f;
+  background: transparent;
+  cursor: not-allowed;
+}
+
+.dropzone.is-off > svg,
+.dropzone.is-off strong {
+  color: #8796a6;
+}
+
+@media (max-width: 640px) {
+  .project-new-off {
+    align-items: flex-start;
+    text-align: left;
+  }
+}
+
+.upload-modal .dropzone.is-off {
+  margin-top: 18px;
+}

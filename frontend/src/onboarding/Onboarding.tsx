@@ -9,6 +9,7 @@ import {
 import { useState } from "react";
 import type { CaseData } from "../api/types";
 import { BrandMark } from "../components/BrandMark";
+import { UPLOADS_ENABLED, UPLOADS_OFF_REASON } from "../config";
 import "./onboarding.css";
 
 export { LandingPage as Landing } from "./LandingPage";
@@ -71,12 +72,26 @@ export function ProjectManager({
                 : "Projects are kept for this session."}
             </p>
           </div>
-          <button
-            className="button button-primary"
-            onClick={() => navigate("/projects/new")}
-          >
-            <Plus size={17} aria-hidden="true" /> New project
-          </button>
+          {UPLOADS_ENABLED ? (
+            <button
+              className="button button-primary"
+              onClick={() => navigate("/projects/new")}
+            >
+              <Plus size={17} aria-hidden="true" /> New project
+            </button>
+          ) : (
+            <div className="project-new-off">
+              <button
+                type="button"
+                className="button button-secondary is-off"
+                aria-disabled="true"
+                aria-describedby="project-upload-note"
+              >
+                <Plus size={17} aria-hidden="true" /> New project
+              </button>
+              <span id="project-upload-note">{UPLOADS_OFF_REASON}</span>
+            </div>
+          )}
         </div>
 
         <div className="project-toolbar">
@@ -144,10 +159,22 @@ export function ProjectManager({
           <section className="project-empty">
             <h2>No projects yet</h2>
             <p>
-              {persistent
-                ? "Select New project to upload a ZIP of case evidence."
-                : "Select New project to choose a ZIP, or open the fictional case below."}
+              {!UPLOADS_ENABLED
+                ? "Open the fictional Kestrel case to explore a finished analysis."
+                : persistent
+                  ? "Select New project to upload a ZIP of case evidence."
+                  : "Select New project to choose a ZIP, or open the fictional case below."}
             </p>
+            {!UPLOADS_ENABLED && persistent && (
+              <button
+                className="button button-primary"
+                disabled={opening}
+                onClick={onDemo}
+              >
+                {opening ? "Opening case…" : "Explore the demo case"}
+                {!opening && <ArrowRight size={16} aria-hidden="true" />}
+              </button>
+            )}
           </section>
         )}
 
@@ -161,7 +188,7 @@ export function ProjectManager({
               </p>
             </div>
             <button
-              className="button button-secondary"
+              className={`button ${UPLOADS_ENABLED ? "button-secondary" : "button-primary"}`}
               disabled={opening}
               onClick={onDemo}
             >
