@@ -13,7 +13,7 @@
   width: 100%;
   height: 100%;
   box-sizing: border-box;
-  padding: 15px 15px 10px;
+  padding: 12px 13px 8px;
   color: #383c31;
   isolation: isolate;
   cursor: pointer;
@@ -71,7 +71,7 @@
 /* Collapsed face: icon, title, one line. */
 .story-card-toggle {
   display: grid;
-  gap: 5px;
+  gap: 4px;
   width: 100%;
   padding: 0;
   border: 0;
@@ -100,7 +100,7 @@
 }
 .story-card-title {
   font:
-    400 18px/1.16 "Excalifont",
+    400 17.5px/1.15 "Excalifont",
     "DM Sans",
     sans-serif;
   color: #2f332a;
@@ -111,7 +111,7 @@
   overflow-wrap: anywhere;
 }
 .story-card-meta {
-  font-size: 11.5px;
+  font-size: 12px;
   line-height: 1.35;
   color: #595e4e;
   overflow: hidden;
@@ -119,10 +119,10 @@
   white-space: nowrap;
 }
 .story-card.is-hero {
-  padding: 18px 20px 12px;
+  padding: 15px 17px 10px;
 }
 .story-card.is-hero .story-card-title {
-  font-size: 24px;
+  font-size: 22px;
   line-height: 1.12;
 }
 .story-card.is-hero .story-card-meta {
@@ -192,6 +192,10 @@
     sans-serif;
   color: #3f4338;
   overflow-wrap: anywhere;
+  display: -webkit-box;
+  -webkit-line-clamp: 6;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 .story-card-excerpts {
   display: grid;
@@ -325,8 +329,8 @@
 .story-group-face {
   display: grid;
   align-content: start;
-  gap: 5px;
-  padding: 12px 14px 10px;
+  gap: 3px;
+  padding: 9px 13px 7px;
   background: var(--pin-tint, #faf8f1);
   box-shadow: 0 3px 5px #4e443b26;
 }

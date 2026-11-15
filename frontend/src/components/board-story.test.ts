@@ -258,6 +258,17 @@ describe("story layout", () => {
       }
     }
   });
+  it("stays compact enough to open at about 90% beside the open dock", () => {
+    const boxes = [...positions].map(([id, p]) => ({ ...p, ...size(id) }));
+    const width =
+      Math.max(...boxes.map((b) => b.x + b.width)) -
+      Math.min(...boxes.map((b) => b.x));
+    const height =
+      Math.max(...boxes.map((b) => b.y + b.height)) -
+      Math.min(...boxes.map((b) => b.y));
+    expect(width).toBeLessThanOrEqual(890 / 0.9);
+    expect(height).toBeLessThanOrEqual(736 / 0.9);
+  });
   it("orders the ring so linked story cards sit next to each other", () => {
     const ring = storyRingOrder(story, edges);
     expect(ring).toHaveLength(story.nodeIds.length - 1);

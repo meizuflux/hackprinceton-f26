@@ -23,9 +23,9 @@ import { relationshipKind, type RelationshipKind } from "./relationships";
 export type Size = { width: number; height: number };
 
 /** Compact story card, the hero (story centre) and a group card. */
-export const STORY_CARD: Size = { width: 220, height: 108 };
-export const STORY_HERO: Size = { width: 312, height: 164 };
-export const STORY_GROUP: Size = { width: 228, height: 112 };
+export const STORY_CARD: Size = { width: 196, height: 96 };
+export const STORY_HERO: Size = { width: 300, height: 140 };
+export const STORY_GROUP: Size = { width: 196, height: 96 };
 /** An expanded card overlays its neighbours at this width, growing downward. */
 export const STORY_EXPANDED: Size = { width: 336, height: 420 };
 /** Above this many hidden targets, a focus flow highlights groups instead of revealing every card. */
@@ -351,126 +351,212 @@ function overlaps(a: Pin, b: Pin, gap = PIN_GAP) {
   );
 }
 
+/** Column gap in the story frame: room for a short thread label between cards. */
+export const STORY_COLUMN_GAP = 64;
 /**
- * Lays out the story: the centre as the hero at the origin, the other story
- * cards on an ellipse around it, and the group cards on an outer ring, each
- * turned toward the story cards it has threads with. Returns top-left
- * positions keyed by node or group ID.
+ * The visible canvas a 1440×900 screen leaves beside the open review dock
+ * (see getStoryPadding); the frame is sized to fill it at about 90% zoom.
+ */
+const TARGET_VIEW = { width: 890, height: 736 };
+/** A thread drawn under another card reads as a link to it; avoid that strongly. */
+const CROSSING_PENALTY = 600;
+
+/** Perimeter cells of a columns × rows grid, clockwise from the top-left. */
+function perimeter(columns: number, rows: number) {
+  const cells: Array<{ column: number; row: number }> = [];
+  for (let column = 0; column < columns; column++)
+    cells.push({ column, row: 0 });
+  for (let row = 1; row < rows; row++) cells.push({ column: columns - 1, row });
+  for (let column = columns - 2; column >= 0; column--)
+    cells.push({ column, row: rows - 1 });
+  for (let row = rows - 2; row > 0; row--) cells.push({ column: 0, row });
+  return cells;
+}
+
+/**
+ * Lays out the story as a frame around the hero: the centre sits in the
+ * middle, and the other story cards and the group cards fill the cells of a
+ * compact grid's perimeter. The grid is the smallest that holds them and best
+ * fills the canvas beside the open dock. Cards then swap cells while that
+ * shortens their threads (to each other, to the hero and into groups), so
+ * linked cards sit side by side. Returns top-left positions keyed by node or
+ * group ID; every card keeps PIN_GAP clearance.
  */
 export function layoutStory(
   story: BoardStory,
   edges: EvidenceEdge[],
   groups: StoryGroup[],
 ): Map<string, Point> {
+  const satellites = storyRingOrder(story, edges);
+  const { aggregates } = storyThreads(edges, new Set(story.nodeIds), groups);
+  // Each group starts beside the story card with the most threads into it.
+  const sequence = [...satellites];
+  for (const group of groups) {
+    const strongest = aggregates
+      .filter((thread) => thread.target === group.id)
+      .sort((a, b) => b.count - a.count)[0];
+    const at = strongest ? sequence.indexOf(strongest.source) : -1;
+    if (at >= 0) sequence.splice(at + 1, 0, group.id);
+    else sequence.push(group.id);
+  }
+
+  const cellWidth = STORY_CARD.width + STORY_COLUMN_GAP;
+  const cellHeight = STORY_CARD.height + PIN_GAP;
+  let grid = { columns: 4, rows: 4, score: Infinity };
+  for (let columns = 4; columns <= 9; columns++) {
+    for (let rows = 4; rows <= 12; rows++) {
+      if (2 * columns + 2 * (rows - 2) < sequence.length) continue;
+      const width = columns * cellWidth - STORY_COLUMN_GAP;
+      const height = rows * cellHeight - PIN_GAP;
+      const score = Math.max(
+        width / TARGET_VIEW.width,
+        height / TARGET_VIEW.height,
+      );
+      if (score < grid.score - 1e-9) grid = { columns, rows, score };
+    }
+  }
+  const cells = perimeter(grid.columns, grid.rows);
+  // Start the clockwise fill at the middle of the left side.
+  const leftMiddle = cells.findIndex(
+    (cell) => cell.column === 0 && cell.row === Math.floor(grid.rows / 2),
+  );
+  const slots = [...cells.slice(leftMiddle), ...cells.slice(0, leftMiddle)];
+  const offsetX = -(grid.columns * cellWidth - STORY_COLUMN_GAP) / 2;
+  const offsetY = -(grid.rows * cellHeight - PIN_GAP) / 2;
+  const slotPoint = (index: number): Point => ({
+    x: offsetX + slots[index].column * cellWidth,
+    y: offsetY + slots[index].row * cellHeight,
+  });
+  const centre = (index: number): Point => {
+    const point = slotPoint(index);
+    return {
+      x: point.x + STORY_CARD.width / 2,
+      y: point.y + STORY_CARD.height / 2,
+    };
+  };
+
+  // Static geometry: distance between any two cells (the hero is cell S) and
+  // the cells a straight thread between them would run underneath.
+  const S = slots.length;
+  const HERO = S;
+  const at = (k: number) => (k === HERO ? { x: 0, y: 0 } : centre(k));
+  const sizeOf = (k: number) => (k === HERO ? STORY_HERO : STORY_CARD);
+  const span = S + 1;
+  const distance: number[] = new Array(span * span).fill(0);
+  const under: number[][] = Array.from({ length: span * span }, () => []);
+  for (let a = 0; a < span; a++) {
+    for (let b = a + 1; b < span; b++) {
+      const pa = at(a);
+      const pb = at(b);
+      distance[a * span + b] = distance[b * span + a] = Math.hypot(
+        pa.x - pb.x,
+        pa.y - pb.y,
+      );
+      const crossed: number[] = [];
+      for (let k = 0; k < span; k++) {
+        if (k === a || k === b) continue;
+        const box = at(k);
+        const size = sizeOf(k);
+        for (let step = 1; step < 16; step++) {
+          const t = step / 16;
+          if (
+            Math.abs(pa.x + (pb.x - pa.x) * t - box.x) < size.width / 2 &&
+            Math.abs(pa.y + (pb.y - pa.y) * t - box.y) < size.height / 2
+          ) {
+            crossed.push(k);
+            break;
+          }
+        }
+      }
+      under[a * span + b] = under[b * span + a] = crossed;
+    }
+  }
+
+  // Threads the arrangement should keep short, by item index (-1 is the hero).
+  const itemIndex = new Map(sequence.map((id, index) => [id, index]));
+  const indexOf = (id: string) =>
+    id === story.centerId ? -1 : (itemIndex.get(id) ?? null);
+  const pairs: Array<[number, number, number]> = [];
+  const inStory = new Set(story.nodeIds);
+  for (const edge of edges) {
+    if (!inStory.has(edge.source) || !inStory.has(edge.target)) continue;
+    const a = indexOf(edge.source);
+    const b = indexOf(edge.target);
+    if (a !== null && b !== null) pairs.push([a, b, 1]);
+  }
+  for (const thread of aggregates) {
+    const a = indexOf(thread.source);
+    const b = indexOf(thread.target);
+    if (a !== null && b !== null) pairs.push([a, b, Math.sqrt(thread.count)]);
+  }
+
+  const cost = (slotOf: number[], occupant: number[]) => {
+    let sum = 0;
+    for (const [a, b, weight] of pairs) {
+      const sa = a < 0 ? HERO : slotOf[a];
+      const sb = b < 0 ? HERO : slotOf[b];
+      let length = distance[sa * span + sb];
+      for (const k of under[sa * span + sb])
+        if (k === HERO || occupant[k] >= 0) length += CROSSING_PENALTY;
+      sum += weight * length;
+    }
+    return sum;
+  };
+  /** Swaps cells (empty ones included) while that lowers the cost. */
+  const settle = (start: number, order: number[]) => {
+    const slotOf: number[] = new Array(sequence.length);
+    const occupant: number[] = new Array(S).fill(-1);
+    order.forEach((item, i) => {
+      const slot = (start + i) % S;
+      slotOf[item] = slot;
+      occupant[slot] = item;
+    });
+    let best = cost(slotOf, occupant);
+    for (let improved = true, round = 0; improved && round < 40; round++) {
+      improved = false;
+      for (let i = 0; i < S; i++) {
+        for (let j = i + 1; j < S; j++) {
+          const a = occupant[i];
+          const b = occupant[j];
+          if (a < 0 && b < 0) continue;
+          occupant[i] = b;
+          occupant[j] = a;
+          if (a >= 0) slotOf[a] = j;
+          if (b >= 0) slotOf[b] = i;
+          const next = cost(slotOf, occupant);
+          if (next < best - 1e-6) {
+            best = next;
+            improved = true;
+          } else {
+            occupant[i] = a;
+            occupant[j] = b;
+            if (a >= 0) slotOf[a] = i;
+            if (b >= 0) slotOf[b] = j;
+          }
+        }
+      }
+    }
+    return { slotOf, best };
+  };
+  // Deterministic restarts from every starting cell, in both directions.
+  const forward = sequence.map((_, index) => index);
+  const backward = [...forward].reverse();
+  let chosen = settle(0, forward);
+  for (let start = 0; start < S; start++) {
+    for (const order of [forward, backward]) {
+      const attempt = settle(start, order);
+      if (attempt.best < chosen.best - 1e-6) chosen = attempt;
+    }
+  }
+
   const positions = new Map<string, Point>();
   positions.set(story.centerId, {
     x: -STORY_HERO.width / 2,
     y: -STORY_HERO.height / 2,
   });
-  const ring = storyRingOrder(story, edges);
-  const n = ring.length;
-  const rx = Math.max(400, (1.1 * n * (STORY_CARD.width + PIN_GAP)) / TAU);
-  const ry = Math.max(240, rx * 0.6);
-  // The satellite with the most story threads sits at the left, where the
-  // landscape canvas has room for the cards around it.
-  const inStory = new Set(story.nodeIds);
-  const degree = (id: string) =>
-    edges.filter(
-      (edge) =>
-        (edge.source === id && inStory.has(edge.target)) ||
-        (edge.target === id && inStory.has(edge.source)),
-    ).length;
-  const hubIndex = ring.reduce(
-    (best, id, index) => (degree(id) > degree(ring[best]) ? index : best),
-    0,
+  sequence.forEach((id, index) =>
+    positions.set(id, slotPoint(chosen.slotOf[index])),
   );
-  const angles = new Map<string, number>();
-  const ringPins: Pin[] = [
-    {
-      id: story.centerId,
-      position: positions.get(story.centerId)!,
-      ...STORY_HERO,
-    },
-  ];
-  ring.forEach((id, index) => {
-    const angle = Math.PI + (TAU * (index - hubIndex)) / Math.max(n, 1);
-    angles.set(id, angle);
-    let position = {
-      x: rx * Math.cos(angle) - STORY_CARD.width / 2,
-      y: ry * Math.sin(angle) - STORY_CARD.height / 2,
-    };
-    // Step outward until clear of the cards already placed.
-    for (let step = 0; step < 16; step++) {
-      const pin = { id, position, ...STORY_CARD };
-      if (!ringPins.some((other) => overlaps(pin, other))) break;
-      position = {
-        x: position.x + Math.cos(angle) * 24,
-        y: position.y + Math.sin(angle) * 24,
-      };
-    }
-    positions.set(id, position);
-    ringPins.push({ id, position, ...STORY_CARD });
-  });
-
-  // Each group faces the story cards its hidden members have threads with.
-  const { aggregates } = storyThreads(edges, new Set(story.nodeIds), groups);
-  const wanted = groups.map((group) => {
-    let x = 0;
-    let y = 0;
-    for (const thread of aggregates) {
-      if (thread.target !== group.id) continue;
-      const angle = angles.get(thread.source);
-      if (angle === undefined) continue;
-      x += Math.cos(angle) * thread.count;
-      y += Math.sin(angle) * thread.count;
-    }
-    return { group, angle: x || y ? Math.atan2(y, x) : null };
-  });
-
-  // Groups stand in two columns at the sides, each on the side nearer the
-  // story cards it has threads with; a column may run at most three taller.
-  const ringBounds = ringPins.reduce(
-    (box, pin) => ({
-      minX: Math.min(box.minX, pin.position.x),
-      maxX: Math.max(box.maxX, pin.position.x + (pin.width ?? 0)),
-    }),
-    { minX: Infinity, maxX: -Infinity },
-  );
-  const leftX = ringBounds.minX - PIN_GAP * 1.5 - STORY_GROUP.width;
-  const rightX = ringBounds.maxX + PIN_GAP * 1.5;
-  const reach = (group: StoryGroup, x: number) =>
-    aggregates
-      .filter((thread) => thread.target === group.id)
-      .reduce((sum, thread) => {
-        const at = positions.get(thread.source)!;
-        return sum + thread.count * Math.abs(at.x + STORY_CARD.width / 2 - x);
-      }, 0);
-  /** Extra thread length from standing on the right rather than the left. */
-  const preference = (entry: (typeof wanted)[number]) =>
-    reach(entry.group, rightX + STORY_GROUP.width / 2) -
-    reach(entry.group, leftX + STORY_GROUP.width / 2);
-  const left = wanted.filter((entry) => preference(entry) > 0);
-  const right = wanted.filter((entry) => preference(entry) < 0);
-  for (const entry of wanted.filter((item) => preference(item) === 0))
-    (left.length <= right.length ? left : right).push(entry);
-  while (Math.abs(left.length - right.length) > 3) {
-    const [from, to] =
-      left.length > right.length ? [left, right] : [right, left];
-    from.sort((a, b) => Math.abs(preference(a)) - Math.abs(preference(b)));
-    to.push(from.shift()!);
-  }
-  const rowHeight = STORY_GROUP.height + PIN_GAP;
-  const column = (entries: typeof wanted, x: number) => {
-    const desired = (entry: (typeof wanted)[number]) =>
-      entry.angle === null ? 0 : ry * Math.sin(entry.angle);
-    const sorted = [...entries].sort((a, b) => desired(a) - desired(b));
-    const top = -((sorted.length - 1) * rowHeight) / 2 - STORY_GROUP.height / 2;
-    sorted.forEach((entry, index) =>
-      positions.set(entry.group.id, { x, y: top + index * rowHeight }),
-    );
-  };
-  column(left, leftX);
-  column(right, rightX);
   return positions;
 }
 

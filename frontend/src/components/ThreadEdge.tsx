@@ -40,7 +40,7 @@ export const ThreadEdge = memo(function ThreadEdge(
     props.sourcePosition === Position.Left ||
     props.sourcePosition === Position.Right;
   const labelWidth = horizontal
-    ? Math.max(64, Math.min(166, Math.abs(props.targetX - props.sourceX) - 4))
+    ? Math.max(88, Math.min(166, Math.abs(props.targetX - props.sourceX) - 4))
     : 166;
   return (
     <>
@@ -56,7 +56,7 @@ export const ThreadEdge = memo(function ThreadEdge(
           type="button"
           className={`thread-label nodrag nopan ${data.kind} thread-${data.category} ${props.selected || data.isFocused ? "is-selected" : ""} ${data.isDimmed ? "is-dimmed" : ""} ${data.quiet ? "is-quiet" : ""} ${data.hovered ? "is-hovered" : ""} ${data.aggregateCount ? "is-aggregate" : ""}`}
           style={{
-            transform: `translate(-50%, -50%) translate(${x + (horizontal ? 0 : (data.labelOffset ?? 0) * 4.6)}px, ${y + (horizontal ? (data.labelOffset ?? 0) : 0)}px)`,
+            transform: `translate(-50%, -50%) translate(${x + (horizontal ? 0 : (data.labelOffset ?? 0) * 4.25)}px, ${y + (horizontal ? (data.labelOffset ?? 0) : 0)}px)`,
             maxWidth: labelWidth,
           }}
           onClick={(event) => {
