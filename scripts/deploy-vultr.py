@@ -156,7 +156,6 @@ def deploy(args):
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     config = env_content(args.domain)
     backup = backup_config(args)
-    monitor = json.dumps({"domain": args.domain}).encode()
     if not args.instance_id:
         missing = [name for name in ("region", "plan", "os_id", "ssh_key_id") if not getattr(args, name)]
         if missing:
@@ -200,12 +199,12 @@ def deploy(args):
         raise RuntimeError("git archive failed")
     settings = io.BytesIO()
     with tarfile.open(fileobj=settings, mode="w") as archive_file:
-        for name, content in ((".env", config), ("rclone.conf", backup), ("backup-bucket", args.backup_bucket.encode()), ("monitor.json", monitor)):
+        for name, content in ((".env", config), ("rclone.conf", backup), ("backup-bucket", args.backup_bucket.encode())):
             info = tarfile.TarInfo(name)
             info.mode = 0o600
             info.size = len(content)
             archive_file.addfile(info, io.BytesIO(content))
-    settings_command = f"umask 077; tar -xf - -C {REMOTE}; chmod 600 {REMOTE}/.env {REMOTE}/rclone.conf {REMOTE}/backup-bucket {REMOTE}/monitor.json"
+    settings_command = f"umask 077; tar -xf - -C {REMOTE}; chmod 600 {REMOTE}/.env {REMOTE}/rclone.conf {REMOTE}/backup-bucket"
     run(ssh + ["flock -x /run/lock/mapletrace.lock sh -c " + shlex.quote(settings_command)], input=settings.getvalue())
     storage_script = (ROOT / "scripts" / "mount-vultr-storage.sh").read_bytes()
     storage_args = ["sh", "-s", "--", mount_id, "yes" if created_volume else "no",
@@ -248,7 +247,6 @@ systemctl enable --now mapletrace-backup.timer
     # Run one backup now so missing bucket permissions or credentials fail deployment.
     run(ssh + ["systemctl start mapletrace-backup.service"])
     run(ssh + ["/usr/bin/python3 /opt/mapletrace/current/scripts/configure-vultr-lifecycle.py"])
-    run(ssh + ["install -m 0644 /opt/mapletrace/current/scripts/mapletrace-monitor.service /opt/mapletrace/current/scripts/mapletrace-monitor.timer /etc/systemd/system/ && systemctl daemon-reload && systemctl enable --now mapletrace-monitor.timer && systemctl start mapletrace-monitor.service"])
     print(f"Deployed {revision} to https://{args.domain}/ (instance {instance_id}).", flush=True)
 
 

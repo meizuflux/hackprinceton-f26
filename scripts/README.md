@@ -85,16 +85,6 @@ sudo systemctl start mapletrace-backup.service
 rclone --config /opt/mapletrace/rclone.conf lsf vultr:PRIVATE_BUCKET
 ```
 
-A successful deployment runs one backup immediately; later runs follow the timer. Failed jobs are recorded in the journal and detected by the local monitoring service. Check the journal and bucket regularly. The filesystem must be mounted and the backend running for the job to run. Backup files are stored in the bucket without client-side encryption; protect the bucket and credentials. The archive is temporarily written on the instance's primary disk and deleted after the run.
+A successful deployment runs one backup immediately; later runs follow the timer. Failed jobs are recorded in the journal. Check the journal and bucket regularly. The filesystem must be mounted and the backend running for the job to run. Backup files are stored in the bucket without client-side encryption; protect the bucket and credentials. The archive is temporarily written on the instance's primary disk and deleted after the run.
 
 To test a restore without touching live data, download an archive with `rclone --config /opt/mapletrace/rclone.conf copyto vultr:PRIVATE_BUCKET/OBJECT_NAME /tmp/mapletrace-restore.tar.gz`, extract it into a new empty temporary directory with `tar -xzf`, and verify the case contents and database integrity. To restore live data, stop the backend and timer, preserve a backup of the current volume, verify the target mount and archive, restore to an empty directory on the mounted volume, set ownership for UID 10001, then restart the backend and timer. Never overwrite the live case directory while the backend is writing. Practice this process before relying on it.
-
-## Local monitoring
-
-The host checks frontend and backend HTTPS health, the case mount, free space on the primary and case disks (warning below 15%), backup service/timer state, and whether a successful backup is older than 36 hours. Checks run every five minutes. A backend health check is skipped while a backup is running; other checks continue. Status changes are written to the system journal. These checks do not send notifications and cannot report a complete server outage.
-
-```sh
-systemctl status mapletrace-monitor.timer
-journalctl -u mapletrace-monitor.service -n 100 --no-pager
-sudo systemctl start mapletrace-monitor.service
-```

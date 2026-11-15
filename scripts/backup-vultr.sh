@@ -30,5 +30,4 @@ bucket=$(cat /opt/mapletrace/backup-bucket)
 # Unique object names preserve older copies; retention is managed in the bucket.
 name="mapletrace-$(date -u +%Y%m%dT%H%M%SZ)-$(basename "$archive")"
 rclone --config /opt/mapletrace/rclone.conf copyto --s3-no-check-bucket "$archive" "vultr:$bucket/$name"
-touch /opt/mapletrace/last-backup-success
 printf 'Uploaded backup %s\n' "$name"
