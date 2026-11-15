@@ -129,17 +129,6 @@ def backup_config(args):
 
 
 
-def monitor_config(domain):
-    webhook = os.environ.get("MAPLETRACE_ALERT_WEBHOOK", "")
-    heartbeat = os.environ.get("MAPLETRACE_HEARTBEAT_URL", "")
-    for label, url, required in (("MAPLETRACE_ALERT_WEBHOOK", webhook, True), ("MAPLETRACE_HEARTBEAT_URL", heartbeat, False)):
-        if not url and not required:
-            continue
-        parsed = urlparse(url)
-        if parsed.scheme != "https" or not parsed.hostname or parsed.username or parsed.password or "\n" in url or "\r" in url:
-            raise ValueError(f"{label} must be an HTTPS URL")
-    return json.dumps({"domain": domain, "webhook": webhook, "heartbeat": heartbeat}).encode()
-
 def prepare_firewall(args):
     if args.firewall_group_id:
         return args.firewall_group_id
@@ -167,7 +156,7 @@ def deploy(args):
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     config = env_content(args.domain)
     backup = backup_config(args)
-    monitor = monitor_config(args.domain)
+    monitor = json.dumps({"domain": args.domain}).encode()
     if not args.instance_id:
         missing = [name for name in ("region", "plan", "os_id", "ssh_key_id") if not getattr(args, name)]
         if missing:

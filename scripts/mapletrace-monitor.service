@@ -1,5 +1,5 @@
 [Unit]
-Description=Check MapleTrace health and send alerts
+Description=Check MapleTrace health and log status
 After=network-online.target
 Wants=network-online.target
 

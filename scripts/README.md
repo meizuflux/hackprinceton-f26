@@ -19,10 +19,6 @@ This deploys a **single Ubuntu VM** using the Vultr v2 API and builds the reposi
 export VULTR_API_KEY='...'
 export VULTR_OBJECT_ACCESS_KEY='...'
 export VULTR_OBJECT_SECRET_KEY='...'
-# JSON webhook accepting POST requests with a text field.
-export MAPLETRACE_ALERT_WEBHOOK='https://YOUR_ALERT_ENDPOINT'
-# Optional external dead-man monitor; alerts if healthy pings stop.
-export MAPLETRACE_HEARTBEAT_URL='https://YOUR_HEARTBEAT_ENDPOINT'
 # Optional: live LLM calls; without a key the backend uses recorded responses.
 export ANTHROPIC_API_KEY='...'
 # Optional: defaults to claude-sonnet-5-5; MAPLETRACE_CORS may also be set.
@@ -89,20 +85,16 @@ sudo systemctl start mapletrace-backup.service
 rclone --config /opt/mapletrace/rclone.conf lsf vultr:PRIVATE_BUCKET
 ```
 
-A successful deployment runs one backup immediately; later runs follow the timer. Failed jobs are recorded in the journal and reported by the monitoring service. Check the journal and bucket regularly. The filesystem must be mounted and the backend running for the job to run. Backup files are stored in the bucket without client-side encryption; protect the bucket and credentials. The archive is temporarily written on the instance's primary disk and deleted after the run.
+A successful deployment runs one backup immediately; later runs follow the timer. Failed jobs are recorded in the journal and detected by the local monitoring service. Check the journal and bucket regularly. The filesystem must be mounted and the backend running for the job to run. Backup files are stored in the bucket without client-side encryption; protect the bucket and credentials. The archive is temporarily written on the instance's primary disk and deleted after the run.
 
 To test a restore without touching live data, download an archive with `rclone --config /opt/mapletrace/rclone.conf copyto vultr:PRIVATE_BUCKET/OBJECT_NAME /tmp/mapletrace-restore.tar.gz`, extract it into a new empty temporary directory with `tar -xzf`, and verify the case contents and database integrity. To restore live data, stop the backend and timer, preserve a backup of the current volume, verify the target mount and archive, restore to an empty directory on the mounted volume, set ownership for UID 10001, then restart the backend and timer. Never overwrite the live case directory while the backend is writing. Practice this process before relying on it.
 
-## Monitoring and alerts
+## Local monitoring
 
-The deployment requires `MAPLETRACE_ALERT_WEBHOOK`, an HTTPS endpoint accepting `POST` JSON such as `{"text":"MapleTrace alert: ..."}`. The URL is stored as root-readable `/opt/mapletrace/monitor.json`; do not put credentials in source control. The host checks frontend and backend HTTPS health, the case mount, free space on the primary and case disks (alert below 15%), backup service/timer state, and whether a successful backup is older than 36 hours. Checks run every five minutes. A backend health check is skipped while a backup is running; other checks continue. Alerts and recovery messages are sent on state changes; failed deliveries are retried on the next check.
-
-Set `MAPLETRACE_HEARTBEAT_URL` to an external dead-man monitor that accepts JSON POSTs if you want detection of server failure or loss of connectivity. The host sends it a ping only when all local checks are healthy. Configure the external monitor to alert when pings stop; allow at least 15 minutes of grace, and note that a prolonged backup or failed alert endpoint can delay pings. Without this external monitor, a fully stopped server cannot send its own alert. The endpoint and its alerts are configured separately; the deploy script does not provision that service.
+The host checks frontend and backend HTTPS health, the case mount, free space on the primary and case disks (warning below 15%), backup service/timer state, and whether a successful backup is older than 36 hours. Checks run every five minutes. A backend health check is skipped while a backup is running; other checks continue. Status changes are written to the system journal. These checks do not send notifications and cannot report a complete server outage.
 
 ```sh
 systemctl status mapletrace-monitor.timer
 journalctl -u mapletrace-monitor.service -n 100 --no-pager
 sudo systemctl start mapletrace-monitor.service
 ```
-
-Monitor startup runs a local check but does not send a test notification when the system is healthy. Verify the webhook using the provider's test facility and test the external heartbeat monitor independently. Webhook and heartbeat failures are logged without printing their URLs.

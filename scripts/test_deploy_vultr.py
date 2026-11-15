@@ -83,16 +83,9 @@ class DeployTests(unittest.TestCase):
         self.assertEqual(api.call_args_list[0].args, ("PATCH", "/instances/instance-1", {"backups": "enabled"}))
         self.assertEqual(api.call_args_list[1].args[2]["type"], "daily")
 
-    def test_monitor_requires_https_webhook_and_accepts_optional_heartbeat(self):
-        with patch.dict(os.environ, {}, clear=True):
-            with self.assertRaisesRegex(ValueError, 'MAPLETRACE_ALERT_WEBHOOK'):
-                deploy.monitor_config('maple.example.org')
-        with patch.dict(os.environ, {'MAPLETRACE_ALERT_WEBHOOK': 'https://alerts.example.org/hook', 'MAPLETRACE_HEARTBEAT_URL': 'https://monitor.example.org/ping'}, clear=True):
-            self.assertIn(b'monitor.example.org', deploy.monitor_config('maple.example.org'))
-
     def test_create_requires_instance_settings_before_api_call(self):
         args = deploy.parser().parse_args(["--domain", "maple.example.org", "--volume-id", "block-1", "--firewall-group-id", "fw-1", "--backup-endpoint", "https://ewr1.vultrobjects.com", "--backup-bucket", "mapletrace-backups"])
-        with patch.object(deploy.subprocess, "check_output", side_effect=[b"", "abc\n"]), patch.object(deploy, "backup_config", return_value=b"config"), patch.object(deploy, "monitor_config", return_value=b"{}"), patch.object(deploy, "api") as api:
+        with patch.object(deploy.subprocess, "check_output", side_effect=[b"", "abc\n"]), patch.object(deploy, "backup_config", return_value=b"config"), patch.object(deploy, "api") as api:
             with self.assertRaisesRegex(ValueError, "--region"):
                 deploy.deploy(args)
             api.assert_not_called()

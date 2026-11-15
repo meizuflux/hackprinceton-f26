@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Check local MapleTrace health and send state changes to a JSON webhook."""
+"""Check local MapleTrace health and log state changes to the system journal."""
 import json
 import os
 from pathlib import Path
@@ -7,7 +7,6 @@ import shutil
 import subprocess
 import sys
 import time
-import urllib.request
 
 ROOT = Path('/opt/mapletrace')
 MOUNT = Path('/mnt/mapletrace-data')
@@ -46,14 +45,6 @@ def checks(config):
     return issues
 
 
-def send(url, message):
-    request = urllib.request.Request(url, data=json.dumps({'text': message}).encode(),
-                                     headers={'Content-Type': 'application/json'}, method='POST')
-    with urllib.request.urlopen(request, timeout=10) as response:
-        if not 200 <= response.status < 300:
-            raise RuntimeError('Alert endpoint returned a non-success status')
-
-
 def main():
     config = json.loads((ROOT / 'monitor.json').read_text())
     state_path = ROOT / 'monitor-state.json'
@@ -65,22 +56,10 @@ def main():
     if current != previous:
         message = ('MapleTrace alert: ' + '; '.join(current)) if current else 'MapleTrace recovered: all local checks are healthy.'
         print(message, flush=True)
-        if config.get('webhook'):
-            try:
-                send(config['webhook'], message)
-            except Exception:
-                print('Alert delivery failed; will retry on the next check', file=sys.stderr)
-                return 1
         temporary = state_path.with_suffix('.tmp')
         temporary.write_text(json.dumps({'issues': current}))
         os.chmod(temporary, 0o600)
         temporary.replace(state_path)
-    if not current and config.get('heartbeat'):
-        try:
-            send(config['heartbeat'], 'MapleTrace local checks are healthy')
-        except Exception:
-            print('Heartbeat delivery failed', file=sys.stderr)
-            return 1
     return 1 if current else 0
 
 
